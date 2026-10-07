@@ -27,6 +27,7 @@
 #include "link_rfu.h"
 #include "net_link.h"
 #include "coop.h"
+#include "coop_sync.h"
 #include "constants/rgb.h"
 #include "constants/trade.h"
 
@@ -622,6 +623,12 @@ static void ProcessRecvCmds(u8 unused)
             break;
         case LINKCMD_COOP_POS:
             Coop_ReceivePosition(i, gRecvCmds[i]);
+            break;
+        case LINKCMD_COOP_BULK:
+            // Our own chunks come back to us looped, as the cable did; feeding
+            // them in would overwrite the peer's transfer with our own.
+            if (i != GetMultiplayerId())
+                CoopSync_ReceiveChunk(gRecvCmds[i]);
             break;
         case LINKCMD_SEND_HELD_KEYS:
             gLinkPartnersHeldKeys[i] = gRecvCmds[i][1];

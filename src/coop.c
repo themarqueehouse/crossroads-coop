@@ -1,5 +1,6 @@
 #include "global.h"
 #include "coop.h"
+#include "coop_sync.h"
 #include "link.h"
 #include "net_link.h"
 #include "task.h"
@@ -18,6 +19,8 @@ static EWRAM_DATA u8 sCoopState = 0;
 // Defined with the sprite code below; declared here so the diagnostics can
 // report whether the partner is currently spawned.
 static EWRAM_DATA u8 sPeerObjectId;
+// Cleared with the rest of the session state, so a reconnect re-sends.
+static EWRAM_DATA bool8 sSentPlayer2Record = FALSE;
 static EWRAM_DATA u16 sStateTimer = 0;
 
 // The player data exchange normally gets 600 frames (10s) before the cable
@@ -72,6 +75,12 @@ void Coop_Reset(void)
     sCoopState = COOP_STATE_OFF;
     sStateTimer = 0;
     gCoopPeer.valid = FALSE;
+
+    // A reconnect must re-send Player 2's record: the two sides may have been
+    // apart long enough for it to have changed, and a half-finished transfer
+    // from the dropped session would otherwise be stitched into the new one.
+    sSentPlayer2Record = FALSE;
+    CoopSync_Reset();
 }
 
 static void CoopSendPositionCB(void);
@@ -181,6 +190,16 @@ void Coop_Update(void)
         // puts us back; checking for NULL each frame heals that automatically.
         if (gLinkCallback == NULL)
             gLinkCallback = CoopSendPositionCB;
+
+        // Player 1 owns the save, so Player 1 hands Player 2 their stored
+        // character. Sent once per session, on the first frame the link is
+        // actually usable.
+        if (!sSentPlayer2Record && NetLink_IsMaster())
+        {
+            CoopSync_Send(COOP_STREAM_PLAYER2, GetCoopPlayer2(),
+                          sizeof(struct CoopPlayer2));
+            sSentPlayer2Record = TRUE;
+        }
         break;
 
     case COOP_STATE_LOST:
@@ -243,6 +262,14 @@ static void CoopSendPositionCB(void)
     struct ObjectEvent *me;
 
     if (gReceivedRemoteLinkPlayers != TRUE)
+        return;
+
+    // A bulk transfer owns the command slot until it finishes. One command per
+    // frame is the whole budget, so position updates pause for the second or so
+    // a transfer takes. That is deliberate: the alternative is interleaving,
+    // which doubles the transfer time to keep a partner's walk smooth during a
+    // wait they are already sitting through.
+    if (CoopSync_SendChunk(gSendCmd))
         return;
 
     me = &gObjectEvents[gPlayerAvatar.objectEventId];
