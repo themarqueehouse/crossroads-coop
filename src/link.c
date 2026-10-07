@@ -627,6 +627,9 @@ static void ProcessRecvCmds(u8 unused)
         case LINKCMD_COOP_DELTA:
             Coop_ReceiveDelta(i, gRecvCmds[i]);
             break;
+        case LINKCMD_COOP_GATE:
+            Coop_ReceiveGate(i, gRecvCmds[i]);
+            break;
         case LINKCMD_COOP_BULK:
             // Our own chunks come back to us looped, as the cable did; feeding
             // them in would overwrite the peer's transfer with our own.

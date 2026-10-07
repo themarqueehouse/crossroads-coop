@@ -48,6 +48,7 @@
 #include "rotating_tile_puzzle.h"
 #include "rtc.h"
 #include "script.h"
+#include "coop.h"
 #include "script_menu.h"
 #include "script_movement.h"
 #include "script_pokemon_util.h"
@@ -881,6 +882,25 @@ bool8 ScrCmd_delay(struct ScriptContext *ctx)
 
     sPauseCounter = frames;
     SetupNativeScript(ctx, RunPauseTimer);
+    return TRUE;
+}
+
+// Co-op sync gate: hold the script here until the other player reaches the same
+// gate. On a console with no partner it is a no-op, so the ROM still runs
+// single-player.
+static bool8 RunCoopGate(void)
+{
+    return Coop_GateIsOpen();
+}
+
+bool8 ScrCmd_coopgate(struct ScriptContext *ctx)
+{
+    u16 gateId = ScriptReadHalfword(ctx);
+
+    Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
+
+    Coop_BeginGate(gateId);
+    SetupNativeScript(ctx, RunCoopGate);
     return TRUE;
 }
 

@@ -1939,6 +1939,16 @@
 	.4byte \msg
 	.endm
 
+	@ Co-op sync gate: stop here until the other player reaches the same gate.
+	@ The id just has to be the same on both sides for the same moment, which it
+	@ is automatically -- both consoles run this very script out of the same ROM.
+	@ Ids are per-moment, not per-map, so use GATE_* constants rather than bare
+	@ numbers. 0 is reserved for "no gate".
+	.macro coopgate id:req
+	.byte SCR_OP_COOPGATE
+	.2byte \id
+	.endm
+
 	.macro dynmultistack left:req, top:req, ignoreBPress:req, maxBeforeScroll:req, shouldSort:req, initialSelected:req, callbacks:req
 	_dynmultichoice \left, \top, \ignoreBPress, \maxBeforeScroll, \shouldSort, \initialSelected, \callbacks, NULL
 	.endm

@@ -200,6 +200,198 @@ void Coop_ReceiveDelta(u8 playerId, const u16 *cmd)
     gNetMailbox.deltasRecv++;
 }
 
+// ---------------------------------------------------------------------------
+// Sync gates.
+//
+// A point in a script that neither player passes alone. The script blocks on
+// Coop_GateIsOpen, so the game simply stops where it is until the partner
+// arrives at the same gate.
+//
+// The protocol is one command: "I am at gate G, and this is the Nth gate I
+// have arrived at". The transport below is ordered and lossless -- it is a ring
+// the relay drains in order, not a datagram socket -- so a gate id broadcast
+// once WILL arrive, and the peer's last report can simply be remembered. That
+// is what makes this need no retransmission and no acknowledgement: whoever
+// arrives second finds the first player's report already recorded and opens
+// immediately, and whoever arrives first is opened by the report that follows.
+//
+// The arrival counter is the part that is easy to leave out and wrong to.
+// Without it, a remembered report is indistinguishable from a present partner:
+// walk back into a door you have both already been through and your own console
+// would see the peer's stale "I am at gate G" and open the gate with the
+// partner three towns away. The counter changes on every arrival, so a report
+// can be recognised as one already used.
+// ---------------------------------------------------------------------------
+
+// The gate this console is sat at, or 0. Gate id 0 is reserved for "none", so
+// scripts number from 1.
+static EWRAM_DATA u16 sGateId = 0;
+// Which arrival this is, counting from 1 and skipping 0 on wrap. Sent with the
+// gate id so the peer can tell a fresh arrival from a remembered one.
+static EWRAM_DATA u16 sGateSeq = 0;
+static EWRAM_DATA bool8 sGateOpen = FALSE;
+// Frames spent waiting. For the wait screen and the diagnostics.
+static EWRAM_DATA u16 sGateWaitFrames = 0;
+
+// The arrival still to be announced, held apart from the live gate above.
+//
+// It has to be separate, and the reason is the case that looks like it needs no
+// announcement at all: the partner got here first, so our gate opens on the
+// frame we arrive and the script walks straight on. Tie the broadcast to the
+// live gate and that is precisely when it is cancelled before being sent -- and
+// the partner, who is waiting to hear from US, waits for ever. Arriving at a
+// gate is announced whether or not we stop at it.
+static EWRAM_DATA u16 sGateSendId = 0;
+static EWRAM_DATA u16 sGateSendSeq = 0;
+// How many more times to put it on the wire. One would do, given ordered
+// delivery; more costs nothing and covers a reconnect clearing the ring
+// mid-wait.
+static EWRAM_DATA u8 sGateSendsLeft = 0;
+
+// The peer's last report, remembered across their arrivals and ours.
+static EWRAM_DATA u16 sPeerGateId = 0;
+static EWRAM_DATA u16 sPeerGateSeq = 0;
+// The peer arrival that opened our last gate. Compared against, so that the
+// same report cannot open two gates.
+static EWRAM_DATA u16 sUsedPeerGateSeq = 0;
+
+#define GATE_SEND_REPEATS 4
+
+// Has the partner reported arriving at our gate, with an arrival we have not
+// already spent?
+static bool8 PeerIsAtOurGate(void)
+{
+    return sPeerGateId == sGateId && sPeerGateSeq != sUsedPeerGateSeq;
+}
+
+void Coop_BeginGate(u16 gateId)
+{
+    sGateId = gateId;
+    sGateWaitFrames = 0;
+
+    if (++sGateSeq == 0)
+        sGateSeq = 1;
+
+    sGateSendId = gateId;
+    sGateSendSeq = sGateSeq;
+    sGateSendsLeft = GATE_SEND_REPEATS;
+
+    // Whether there is a partner is asked once, here, and not again.
+    //
+    // The two cases look identical from any single frame and want opposite
+    // answers. Nobody ever joined: open, or the ROM hangs on the first story
+    // beat the moment it is played on its own. The partner was here and
+    // dropped: keep waiting, because the alternative is one console walking the
+    // shared story forward alone and there is one save between the two of them.
+    // That case recovers -- a reconnect brings them back to the same gate -- so
+    // waiting costs a pause while opening costs a playthrough. Asking every
+    // frame would answer the first question with the second one's facts.
+    if (!IsCoopSessionEngaged())
+    {
+        sGateOpen = TRUE;
+        return;
+    }
+
+    // Open at once if the partner is already sat here. Their report arrived
+    // before we did and has been waiting for us.
+    sGateOpen = PeerIsAtOurGate();
+    if (sGateOpen)
+        sUsedPeerGateSeq = sPeerGateSeq;
+}
+
+bool8 Coop_GateIsOpen(void)
+{
+    if (sGateId == 0)
+        return TRUE;
+    if (!sGateOpen)
+        return FALSE;
+
+    // This call is the one that releases the script, so the gate is done with.
+    // The announcement is not: it lives in sGateSend* and goes out regardless.
+    sGateId = 0;
+    sGateWaitFrames = 0;
+    return TRUE;
+}
+
+bool8 Coop_IsWaitingAtGate(void)
+{
+    return sGateId != 0 && !sGateOpen;
+}
+
+// The handshake runs here, once a frame, rather than inside Coop_GateIsOpen.
+//
+// Putting it in the getter looked tidier and was wrong twice over: a predicate
+// that only resolves when something happens to ask it is a predicate that does
+// not resolve while the asking script is the thing being blocked, and it cannot
+// be observed by anything that is not a script -- which is exactly what the
+// test rig is.
+void Coop_UpdateGate(void)
+{
+    if (sGateId == 0 || sGateOpen)
+        return;
+
+    if (PeerIsAtOurGate())
+    {
+        sUsedPeerGateSeq = sPeerGateSeq;
+        sGateOpen = TRUE;
+        return;
+    }
+
+    if (sGateWaitFrames < 0xFFFF)
+        sGateWaitFrames++;
+}
+
+// Announce our arrival, if it still needs announcing. Returns TRUE if it wrote
+// a command.
+static bool8 CoopSendGate(u16 *sendCmd)
+{
+    if (sGateSendId == 0 || sGateSendsLeft == 0)
+        return FALSE;
+
+    sendCmd[0] = LINKCMD_COOP_GATE;
+    sendCmd[1] = sGateSendId;
+    sendCmd[2] = sGateSendSeq;
+    sGateSendsLeft--;
+
+    return TRUE;
+}
+
+void Coop_ReceiveGate(u8 playerId, const u16 *cmd)
+{
+    if (playerId == GetMultiplayerId())
+        return;
+
+    sPeerGateId = cmd[1];
+    sPeerGateSeq = cmd[2];
+}
+
+static void ResetGates(void)
+{
+    // sGateId is deliberately left alone: a script may be sat on it right now,
+    // and a dropped link is not a reason to let one console past a story beat
+    // on its own. It re-announces instead, so the gate closes again over the
+    // new session rather than resolving on stale state.
+    sGateOpen = FALSE;
+    sGateWaitFrames = 0;
+    if (sGateId != 0)
+    {
+        sGateSendId = sGateId;
+        sGateSendSeq = sGateSeq;
+        sGateSendsLeft = GATE_SEND_REPEATS;
+    }
+    else
+    {
+        sGateSendId = 0;
+        sGateSendsLeft = 0;
+    }
+    // The peer's report belongs to the session that carried it. Keeping it
+    // across a reconnect would let a gate open on a partner who was standing
+    // there before the drop and has since walked off.
+    sPeerGateId = 0;
+    sPeerGateSeq = 0;
+    sUsedPeerGateSeq = 0;
+}
+
 // The bag as a flat run of slots. Its five pockets are contiguous and all the
 // same type, so the whole thing can be walked in one loop rather than five.
 #define BAG_SLOT_COUNT (sizeof(struct Bag) / sizeof(struct ItemSlot))
@@ -434,6 +626,7 @@ void Coop_Reset(void)
     // best and would re-apply something since undone at worst.
     sDeltaHead = 0;
     sDeltaTail = 0;
+    ResetGates();
     CoopSync_Reset();
 }
 
@@ -456,11 +649,13 @@ static void PublishDiagnostics(void)
     if (gLinkCallback == CoopSendPositionCB)      flags |= COOP_DIAG_CALLBACK_ARMED;
     if (gCoopPeer.valid)                          flags |= COOP_DIAG_PEER_VALID;
     if (PeerIsOnOurMap())                         flags |= COOP_DIAG_PEER_SAME_MAP;
+    if (Coop_IsWaitingAtGate())                   flags |= COOP_DIAG_AT_GATE;
 
     gNetMailbox.coopState = sCoopState;
     gNetMailbox.linkFlags = flags;
     gNetMailbox.joinStep = sJoinStep;
     gNetMailbox.deltasDropped = sDeltasDropped;
+    gNetMailbox.gateId = sGateId;
     gNetMailbox.peerMap = gCoopPeer.mapGroup | ((u16)gCoopPeer.mapNum << 8);
     gNetMailbox.peerX = gCoopPeer.x;
     gNetMailbox.peerY = gCoopPeer.y;
@@ -664,6 +859,7 @@ void Coop_Update(void)
         break;
     }
 
+    Coop_UpdateGate();
     PublishDiagnostics();
 }
 
@@ -719,6 +915,11 @@ static void CoopSendPositionCB(void)
     // which doubles the transfer time to keep a partner's walk smooth during a
     // wait they are already sitting through.
     if (CoopSync_SendChunk(gSendCmd))
+        return;
+
+    // Gates first. Everything else can wait a frame; a partner sat on a dark
+    // screen cannot, and there are at most four of these per gate.
+    if (CoopSendGate(gSendCmd))
         return;
 
     // Changes before positions. A missed position costs one frame of smoothness

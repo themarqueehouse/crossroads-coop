@@ -80,6 +80,8 @@
 #define LINKCMD_COOP_BULK               0x3334
 // Co-op: one live change to shared state (a flag, a var, a dex entry).
 #define LINKCMD_COOP_DELTA              0x3335
+// Co-op: which sync gate this player is waiting at, 0 for none.
+#define LINKCMD_COOP_GATE               0x3336
 #define LINKCMD_SEND_HELD_KEYS          0xCAFE
 #define LINKCMD_SEND_BLOCK_REQ          0xCCCC
 #define LINKCMD_START_TRADE             0xCCDD

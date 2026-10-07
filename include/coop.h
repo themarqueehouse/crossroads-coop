@@ -107,6 +107,31 @@ void Coop_ReceiveDelta(u8 playerId, const u16 *cmd);
 // cannot collide with a real NPC's id on any map.
 #define COOP_PEER_LOCAL_ID 0xF0
 
+// Sync gates: a point in a script neither player passes alone.
+//
+// Story doors and cutscenes use these. A player who arrives first waits on a
+// dark screen until the other reaches the same gate, then both carry on
+// together.
+//
+// Gate ids are chosen by whoever writes the script, and both consoles must use
+// the same one for the same moment -- which they do automatically, because both
+// run the same script from the same ROM.
+
+/** Arrive at a gate and start waiting. */
+void Coop_BeginGate(u16 gateId);
+
+/** TRUE once the partner has reached the same gate. Polled each frame. */
+bool8 Coop_GateIsOpen(void);
+
+/** TRUE while this console is sat at a gate -- used to draw the wait screen. */
+bool8 Coop_IsWaitingAtGate(void);
+
+/** Called once per frame from the overworld to run the gate handshake. */
+void Coop_UpdateGate(void);
+
+/** Unpack a partner's gate broadcast. Called from ProcessRecvCmds. */
+void Coop_ReceiveGate(u8 playerId, const u16 *cmd);
+
 /**
  * True if this object event is the co-op partner.
  *

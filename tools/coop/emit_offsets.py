@@ -28,6 +28,33 @@ import sys
 from pathlib import Path
 
 OBJ = Path("build/emerald/src/coop_offsets_probe.o")
+ELF = Path("pokeemerald.elf")
+
+# EWRAM symbols the harness has to find. These used to be copied out of the
+# linker map into stage1.mjs by hand, which is a constant that goes stale on
+# every build that moves anything -- and goes stale silently, because a wrong
+# EWRAM address reads as plausible zeroes rather than failing.
+#
+# The file-local gate statics are in here too. A test that cannot see the state
+# it is checking has to infer it from behaviour, and the behaviour is what is
+# under test.
+WANTED_SYMBOLS = {
+    # The blocks themselves, not gSaveBlock1Ptr: the pointers live in IWRAM,
+    # and the harness addresses memory as one run of EWRAM from the mailbox
+    # outwards, so an IWRAM address is not somewhere it can reach.
+    "gNetMailbox": "mailboxAddr",
+    "gSaveblock1": "saveBlock1Addr",
+    "gSaveblock2": "saveBlock2Addr",
+    "sGateId": "gateIdAddr",
+    "sGateSeq": "gateSeqAddr",
+    "sGateOpen": "gateOpenAddr",
+    "sGateSendId": "gateSendIdAddr",
+    "sGateSendSeq": "gateSendSeqAddr",
+    "sGateSendsLeft": "gateSendsLeftAddr",
+    "sPeerGateId": "peerGateIdAddr",
+    "sPeerGateSeq": "peerGateSeqAddr",
+    "sUsedPeerGateSeq": "usedPeerGateSeqAddr",
+}
 
 # Symbol -> the field names its entries carry, in order.
 ARRAYS = {
@@ -54,6 +81,25 @@ def symbols():
         m = re.match(r"^([0-9a-f]+)\s+([0-9a-f]+)\s+\S\s+(\S+)$", line.strip())
         if m:
             found[m.group(3)] = (int(m.group(1), 16), int(m.group(2), 16))
+    return found
+
+
+def ewram_symbols():
+    """Address of each WANTED_SYMBOLS entry, from the linked ELF.
+
+    Local statics are in the ELF symbol table too -- lowercase 'b' rather than
+    'B' -- so the gate state is reachable without exporting it from the module
+    just to be testable.
+    """
+    out = subprocess.run(
+        ["arm-none-eabi-nm", "--defined-only", str(ELF)],
+        capture_output=True, text=True,
+    ).stdout
+    found = {}
+    for line in out.splitlines():
+        m = re.match(r"^([0-9a-f]{8})\s+\S\s+(\S+)$", line.strip())
+        if m and m.group(2) in WANTED_SYMBOLS:
+            found[WANTED_SYMBOLS[m.group(2)]] = int(m.group(1), 16)
     return found
 
 
@@ -98,6 +144,26 @@ def main(argv):
         print(f"error: coopPlayer2 ends at {end}, past SaveBlock1's "
               f"{data['sizeofSaveBlock1']} bytes.", file=sys.stderr)
         return 1
+
+    if not ELF.exists():
+        print(f"error: {ELF} not found. Run `make modern` first.", file=sys.stderr)
+        return 1
+
+    addrs = ewram_symbols()
+    missing = sorted(set(WANTED_SYMBOLS.values()) - set(addrs))
+    if missing:
+        print(f"error: {', '.join(missing)} not found in {ELF}. Were the "
+              "co-op sources renamed or optimised out?", file=sys.stderr)
+        return 1
+
+    for key, addr in addrs.items():
+        if not (0x02000000 <= addr < 0x02040000):
+            print(f"error: {key} is 0x{addr:08X}, outside EWRAM. The harness "
+                  "addresses memory relative to the mailbox and cannot reach "
+                  "it.", file=sys.stderr)
+            return 1
+
+    data.update(addrs)
 
     if data["flags"] == 0 or data["dexSeen"] == 0:
         print("error: flags/dexSeen resolved to offset 0, which is pos. "

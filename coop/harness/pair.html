@@ -43,10 +43,11 @@ const OFF = {
   // The diagnostics block the ROM publishes about itself.
   coopState: 0x190, linkFlags: 0x191, posSent: 0x192, posRecv: 0x194,
   selfMap: 0x19c, joinStep: 0x19f,
-  deltasSent: 0x1a0, deltasRecv: 0x1a2, deltasDropped: 0x1a4,
+  deltasSent: 0x1a0, deltasRecv: 0x1a2, deltasDropped: 0x1a4, gateId: 0x1a6,
 };
 const COOP_STATE = ['OFF', 'OPENING', 'EXCHANGING', 'ACTIVE', 'LOST'];
-const JOIN_STEP = ['SEND_P2', 'AWAIT_P2', 'AWAIT_WORLD', 'DONE'];
+// Must match enum CoopJoinStep in src/coop.c, in order.
+const JOIN_STEP = ['SEND_PLAYER2', 'SEND_WORLD', 'AWAIT_PLAYER2', 'DONE'];
 const RING_SLOTS = 8, RING_MASK = 7, FRAME_BYTES = 16;
 
 class Core {
@@ -230,7 +231,7 @@ window.__pair = {
   mailbox(which) {
     const c = cores[which];
     const flags = [[1, 'LINK_OPEN'], [2, 'PLAYERS_RECEIVED'], [4, 'CALLBACK_ARMED'],
-                   [8, 'PEER_VALID'], [16, 'PEER_SAME_MAP']]
+                   [8, 'PEER_VALID'], [16, 'PEER_SAME_MAP'], [32, 'AT_GATE']]
       .filter(([b]) => c.byte(OFF.linkFlags) & b).map(([, n]) => n);
     return {
       id: which,
@@ -242,6 +243,7 @@ window.__pair = {
       posRecv: c.u16(OFF.posRecv),
       deltas: `${c.u16(OFF.deltasSent)} sent / ${c.u16(OFF.deltasRecv)} recv`,
       deltasDropped: c.u16(OFF.deltasDropped),
+      gateId: c.u16(OFF.gateId),
       heartbeat: c.u16(OFF.heartbeat),
       outPending: (c.byte(OFF.outHead) - c.byte(OFF.outTail)) & RING_MASK,
     };

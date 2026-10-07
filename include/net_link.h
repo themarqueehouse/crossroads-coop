@@ -103,6 +103,7 @@ struct NetMailbox
     /*0x1A0*/ volatile u16 deltasSent;   // live changes broadcast
     /*0x1A2*/ volatile u16 deltasRecv;   // live changes applied from the peer
     /*0x1A4*/ volatile u16 deltasDropped; // queue overflowed -- should stay 0
+    /*0x1A6*/ volatile u16 gateId;       // sync gate we are sat at, 0 if none
 }; // sizeof = 0x1A8
 
 // Bits in NetMailbox.linkFlags.
@@ -111,6 +112,7 @@ struct NetMailbox
 #define COOP_DIAG_CALLBACK_ARMED   (1 << 2) // our position sender is installed
 #define COOP_DIAG_PEER_VALID       (1 << 3) // we have heard from the peer
 #define COOP_DIAG_PEER_SAME_MAP    (1 << 4) // ...and they are on our map
+#define COOP_DIAG_AT_GATE          (1 << 5) // waiting at a sync gate
 
 extern struct NetMailbox gNetMailbox;
 

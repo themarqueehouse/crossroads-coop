@@ -24,20 +24,23 @@ import server, { setRom } from './serve.mjs';
 const PORT = 8779;
 const ROM = process.argv[2] || '/home/claude/crossroads/pokeemerald.gba';
 
-// From the linker map. The rig finds the mailbox by scanning for its magic, so
-// these two together give the heap offset of anything else in EWRAM.
-const MAILBOX_ADDR = 0x02031f08;
-const SAVEBLOCK1_ADDR = 0x020106b4;
-const SAVEBLOCK2_ADDR = 0x020148b4;
 // struct SaveBlock2: playerName is first, playerGender at 16.
 const SB2_PLAYERNAME = 0;
 
-// Offsets come from the compiler, via tools/coop/emit_offsets.py. Deriving them
-// here is what broke the first run: sizeof(struct CoopPlayer2) is 632, not the
-// 636 its fields sum to, so "block size minus record size" landed four bytes
-// early and read plausible nonsense.
+// Offsets AND EWRAM addresses come from the build, via tools/coop/emit_offsets.py.
+//
+// Deriving the offsets here is what broke the first run: sizeof(struct
+// CoopPlayer2) is 632, not the 636 its fields sum to, so "block size minus
+// record size" landed four bytes early and read plausible nonsense.
+//
+// The addresses used to be three hex constants copied out of the linker map.
+// They were 7 KB stale by the time anyone looked -- and a stale EWRAM address
+// does not fail, it reads zeroes that look exactly like a feature not working.
 const OFFSETS = JSON.parse(
   readFileSync(new URL('./coop-offsets.json', import.meta.url), 'utf8'));
+const MAILBOX_ADDR = OFFSETS.mailboxAddr;
+const SAVEBLOCK1_ADDR = OFFSETS.saveBlock1Addr;
+const SAVEBLOCK2_ADDR = OFFSETS.saveBlock2Addr;
 
 // Emerald's text encoding: 0xBB..0xD4 are A..Z, 0xD5..0xEE are a..z, 0xFF ends.
 function decodeName(bytes) {
