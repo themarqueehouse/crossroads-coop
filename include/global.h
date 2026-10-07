@@ -1091,6 +1091,48 @@ struct Bag
     struct ItemSlot berries[BAG_BERRIES_COUNT];
 };
 
+// Everything about Player 2 that has to outlive a session.
+//
+// This is the whole point of "one save": Player 2 has no save file. Their
+// character lives here, inside Player 1's, and is handed back to them when they
+// reconnect. Anything shared -- badges, the Pokedex, the bag, money, the PC --
+// is deliberately NOT in here, because shared state already has exactly one
+// copy in the surrounding SaveBlock1 and a second copy is how the two drift
+// apart.
+//
+// Measured at 636 bytes against 3,704 free in SaveBlock1 on this base, so there
+// is no need to reclaim anything with the FREE_* switches to make room.
+//
+// `pos` plus `location` is genuinely all that is needed to put a player back
+// where they were: on load the avatar is rebuilt from pos via
+// GetCameraFocusCoords, and the player's own entry in objectEvents[] is
+// discarded. Storing the ObjectEvent would be 36 wasted bytes and a second
+// source of truth.
+struct CoopPlayer2
+{
+    // Identity. Mirrors the fields SaveBlock2 holds for Player 1; Player 2 has
+    // no SaveBlock2 of its own in a shared save.
+    /*0x000*/ u8 playerName[PLAYER_NAME_LENGTH + 1];
+    /*0x008*/ u8 playerGender;
+    /*0x009*/ u8 playerTrainerId[TRAINER_ID_LENGTH];
+    /*0x00D*/ u8 partyCount;
+    /*0x00E*/ u16 playTimeHours;
+    /*0x010*/ u8 playTimeMinutes;
+    /*0x011*/ u8 playTimeSeconds;
+
+    // TRUE once Player 2 has created a character. Until then a joining player
+    // is new and makes one; afterwards they get this one back.
+    /*0x012*/ bool8 claimed;
+    /*0x013*/ u8 padding;
+
+    // Where they were standing. pos is in map coordinates WITHOUT MAP_OFFSET,
+    // matching gSaveBlock1Ptr->pos rather than ObjectEvent::currentCoords.
+    /*0x014*/ struct Coords16 pos;
+    /*0x018*/ struct WarpData location;
+
+    /*0x020*/ struct Pokemon party[PARTY_SIZE];
+}; // 636 bytes
+
 struct SaveBlock1
 {
     /*0x00*/ struct Coords16 pos;
@@ -1203,6 +1245,14 @@ struct SaveBlock1
     u32 towerChallengeId;
     struct TrainerTower trainerTower[NUM_TOWER_CHALLENGE_TYPES];
     struct DaycareMon route5DayCareMon;
+
+    // Player 2's character. See struct CoopPlayer2 above: in a shared save the
+    // second player has no save file of their own, so their trainer and party
+    // live in the first player's. Last in the struct deliberately -- it is the
+    // newest field and keeping it at the end means a save from before co-op
+    // differs from one after it only by a tail, which is the easiest shape to
+    // reason about if a migration is ever needed.
+    struct CoopPlayer2 coopPlayer2;
     // sizeof: 0x3???
 };
 

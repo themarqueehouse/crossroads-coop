@@ -31,6 +31,21 @@ static EWRAM_DATA u16 sStateTimer = 0;
 // only signal available.
 #define PEER_SILENCE_FRAMES 300 // 5 seconds
 
+// ---------------------------------------------------------------------------
+// The shared save.
+//
+// Player 2 has no save file. Their character lives inside Player 1's, and the
+// session hands it back to them when they reconnect. Everything SHARED --
+// badges, the Pokedex, the bag, the PC -- is deliberately absent from that
+// record: shared state has exactly one copy, in the surrounding SaveBlock1, and
+// a second copy is how two copies drift apart.
+// ---------------------------------------------------------------------------
+
+struct CoopPlayer2 *GetCoopPlayer2(void)
+{
+    return &gSaveBlock1Ptr->coopPlayer2;
+}
+
 bool8 IsCoopLinkActive(void)
 {
     return sCoopState == COOP_STATE_ACTIVE;

@@ -53,6 +53,9 @@ struct CoopPeer
 
 extern struct CoopPeer gCoopPeer;
 
+/** Player 2's stored character, inside Player 1's save. */
+struct CoopPlayer2 *GetCoopPlayer2(void);
+
 /**
  * True while a co-op session is running.
  *
