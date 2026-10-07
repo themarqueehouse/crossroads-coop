@@ -10,6 +10,7 @@
 #include "decompress.h"
 #include "event_data.h"
 #include "event_object_movement.h"
+#include "coop.h"
 #include "event_scripts.h"
 #include "faraway_island.h"
 #include "field_camera.h"
@@ -6610,6 +6611,15 @@ u32 GetObjectObjectCollidesWith(struct ObjectEvent *objectEvent, s16 x, s16 y, b
     if (objectEvent->localId == OBJ_EVENT_ID_FOLLOWER)
         return OBJECT_EVENTS_COUNT; // follower cannot collide with other objects, but they can collide with it
 
+    // The co-op partner passes through everything, and everything passes
+    // through them. Not cosmetic: a solid partner stands in the doorway and the
+    // "both of you on the door" gate can never fire, because two players cannot
+    // share a tile. One-tile gaps are also everywhere in this game -- corridors,
+    // stairs, ledges, cave mouths -- and blocking each other in them is
+    // constant and maddening for no gain.
+    if (Coop_IsPartnerObject(objectEvent))
+        return OBJECT_EVENTS_COUNT;
+
     if (addCoords)
     {
         x += objectEvent->currentCoords.x;
@@ -6621,6 +6631,7 @@ u32 GetObjectObjectCollidesWith(struct ObjectEvent *objectEvent, s16 x, s16 y, b
         curObject = &gObjectEvents[i];
         if (curObject->active && (curObject->movementType != MOVEMENT_TYPE_FOLLOW_PLAYER || objectEvent != &gObjectEvents[gPlayerAvatar.objectEventId]) && curObject != objectEvent
          && !FollowerNPC_IsCollisionExempt(curObject, objectEvent)
+         && !Coop_IsPartnerObject(curObject)
          )
         {
             // check for collision if curObject is active, not the object in question, and not exempt from collisions

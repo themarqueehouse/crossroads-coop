@@ -74,6 +74,11 @@ static EWRAM_DATA u16 sStateTimer = 0;
 // a second copy is how two copies drift apart.
 // ---------------------------------------------------------------------------
 
+bool8 Coop_IsPartnerObject(const struct ObjectEvent *obj)
+{
+    return obj != NULL && obj->active && obj->localId == COOP_PEER_LOCAL_ID;
+}
+
 struct CoopPlayer2 *GetCoopPlayer2(void)
 {
     return &gSaveBlock1Ptr->coopPlayer2;
@@ -674,7 +679,6 @@ void Coop_Update(void)
 
 // Local id for the partner's object event. Map-authored NPCs use small ids, so
 // this sits well clear of them.
-#define COOP_PEER_LOCAL_ID 0xF0
 
 // Object-event slot the partner currently occupies, or OBJECT_EVENTS_COUNT.
 static EWRAM_DATA u16 sFrameCounter = 0;

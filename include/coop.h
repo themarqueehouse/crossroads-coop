@@ -101,6 +101,21 @@ void Coop_QueueDelta(u8 kind, u16 id, u16 value);
 /** Apply a change from the partner. Called from ProcessRecvCmds. */
 void Coop_ReceiveDelta(u8 playerId, const u16 *cmd);
 
+// The local id the partner's map object is spawned under.
+//
+// Well clear of the 1..n range maps use for their own object events, so it
+// cannot collide with a real NPC's id on any map.
+#define COOP_PEER_LOCAL_ID 0xF0
+
+/**
+ * True if this object event is the co-op partner.
+ *
+ * Used to exempt them from collision in both directions. See the call site in
+ * GetObjectObjectCollidesWith for why that is load-bearing rather than a
+ * nicety.
+ */
+bool8 Coop_IsPartnerObject(const struct ObjectEvent *obj);
+
 /** Player 2's stored character, inside Player 1's save. */
 struct CoopPlayer2 *GetCoopPlayer2(void);
 
