@@ -1,5 +1,6 @@
 #include "global.h"
 #include "money.h"
+#include "config/coop.h"
 #include "graphics.h"
 #include "event_data.h"
 #include "string_util.h"
@@ -77,10 +78,14 @@ void SetMoney(u32 *moneyPtr, u32 newValue)
 
 bool8 IsEnoughMoney(u32 *moneyPtr, u32 cost)
 {
+#if COOP_UNLIMITED_MONEY == TRUE
+    return TRUE;
+#else
     if (GetMoney(moneyPtr) >= cost)
         return TRUE;
     else
         return FALSE;
+#endif
 }
 
 void AddMoney(u32 *moneyPtr, u32 toAdd)
@@ -105,7 +110,17 @@ void AddMoney(u32 *moneyPtr, u32 toAdd)
 
 void RemoveMoney(u32 *moneyPtr, u32 toSub)
 {
-    u32 toSet = GetMoney(moneyPtr);
+    u32 toSet;
+
+#if COOP_UNLIMITED_MONEY == TRUE
+    // Nothing is ever spent. Deliberately a no-op here rather than a refusal
+    // further up: every shop, vendor and script keeps working exactly as it
+    // does normally, and the only observable difference is that the figure in
+    // the corner does not go down.
+    return;
+#endif
+
+    toSet = GetMoney(moneyPtr);
 
     // can't subtract more than you already have
     if (toSet < toSub)

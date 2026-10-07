@@ -76,9 +76,27 @@ struct CoopPlayer2 *GetCoopPlayer2(void)
     return &gSaveBlock1Ptr->coopPlayer2;
 }
 
-// Snapshot the shared world: badges and story flags, and the Pokedex.
+// The bag as a flat run of slots. Its five pockets are contiguous and all the
+// same type, so the whole thing can be walked in one loop rather than five.
+#define BAG_SLOT_COUNT (sizeof(struct Bag) / sizeof(struct ItemSlot))
+
+// Snapshot the shared world: badges and story flags, the Pokedex, the bag.
+//
+// Bag quantities are stored XOR'd with gSaveBlock2Ptr->encryptionKey, and that
+// key is drawn from Random32() on every heap reset -- so the two consoles have
+// DIFFERENT keys. Copying those bytes across untouched does not give the other
+// player slightly wrong quantities, it gives them meaningless ones: a single
+// Potion arriving as sixty thousand Potions, or zero. They go over the wire
+// decrypted and are re-encrypted on arrival under the receiver's own key.
+//
+// PC items are not obfuscated at all, so they copy straight across. That
+// asymmetry is in the game, not here: BagPocket_SetSlotDataPC applies no XOR
+// while the bag equivalent does.
 static void GatherWorldState(struct CoopWorldState *out)
 {
+    const struct ItemSlot *src = (const struct ItemSlot *)&gSaveBlock1Ptr->bag;
+    struct ItemSlot *dst = (struct ItemSlot *)&out->bag;
+    u32 key = gSaveBlock2Ptr->encryptionKey;
     u16 i;
 
     for (i = 0; i < NUM_FLAG_BYTES; i++)
@@ -89,6 +107,15 @@ static void GatherWorldState(struct CoopWorldState *out)
         out->dexSeen[i] = gSaveBlock1Ptr->dexSeen[i];
         out->dexCaught[i] = gSaveBlock1Ptr->dexCaught[i];
     }
+
+    for (i = 0; i < BAG_SLOT_COUNT; i++)
+    {
+        dst[i].itemId = src[i].itemId;
+        dst[i].quantity = src[i].quantity ^ (u16)key;
+    }
+
+    for (i = 0; i < PC_ITEMS_COUNT; i++)
+        out->pcItems[i] = gSaveBlock1Ptr->pcItems[i];
 }
 
 // Bring this console up to date with the shared world.
@@ -118,6 +145,23 @@ static void ApplyWorldState(const struct CoopWorldState *in)
         gSaveBlock1Ptr->dexSeen[i] |= in->dexSeen[i];
         gSaveBlock1Ptr->dexCaught[i] |= in->dexCaught[i];
     }
+
+    // Quantities arrived decrypted; re-encrypt under OUR key, which is not the
+    // sender's. See GatherWorldState.
+    {
+        const struct ItemSlot *src = (const struct ItemSlot *)&in->bag;
+        struct ItemSlot *dst = (struct ItemSlot *)&gSaveBlock1Ptr->bag;
+        u32 key = gSaveBlock2Ptr->encryptionKey;
+
+        for (i = 0; i < BAG_SLOT_COUNT; i++)
+        {
+            dst[i].itemId = src[i].itemId;
+            dst[i].quantity = src[i].quantity ^ (u16)key;
+        }
+    }
+
+    for (i = 0; i < PC_ITEMS_COUNT; i++)
+        gSaveBlock1Ptr->pcItems[i] = in->pcItems[i];
 }
 
 // Take over the character Player 1 handed back.

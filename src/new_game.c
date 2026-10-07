@@ -1,5 +1,6 @@
 #include "global.h"
 #include "new_game.h"
+#include "config/coop.h"
 #include "random.h"
 #include "pokemon.h"
 #include "roamer.h"
@@ -184,7 +185,13 @@ void NewGameInitData(void)
     ResetGabbyAndTy();
     ClearSecretBases();
     ClearBerryTrees();
+#if COOP_UNLIMITED_MONEY == TRUE
+    // Start rich, since it is never spent anyway. Shops that check whether you
+    // can afford something should always say yes from the first minute.
+    SetMoney(&gSaveBlock1Ptr->money, MAX_MONEY);
+#else
     SetMoney(&gSaveBlock1Ptr->money, 3000);
+#endif
     SetCoins(0);
     ResetLinkContestBoolean();
     ResetGameStats();

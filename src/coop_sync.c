@@ -7,7 +7,10 @@
 
 // The largest payload any stream carries. Sized to struct CoopPlayer2 with room
 // to spare; the static assert below is what actually keeps it honest.
-#define COOP_SYNC_BUFFER_SIZE 768
+// Sized by the largest stream, which is the shared world. The static asserts
+// below are what actually keep this honest; they have already caught one
+// overflow when the bag was added.
+#define COOP_SYNC_BUFFER_SIZE 2048
 
 STATIC_ASSERT(sizeof(struct CoopPlayer2) <= COOP_SYNC_BUFFER_SIZE, CoopSyncBufferTooSmallForPlayer2);
 STATIC_ASSERT(sizeof(struct CoopWorldState) <= COOP_SYNC_BUFFER_SIZE, CoopSyncBufferTooSmallForWorld);

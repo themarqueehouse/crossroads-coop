@@ -36,4 +36,6 @@ const unsigned gCoopWorldOffsets[] = {
     NUM_DEX_FLAG_BYTES,
     FLAG_BADGE01_GET,
     TEMP_FLAGS_SIZE,
+    offsetof(struct SaveBlock1, bag),
+    offsetof(struct SaveBlock2, encryptionKey),
 };

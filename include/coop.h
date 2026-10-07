@@ -67,7 +67,12 @@ struct CoopWorldState
     u8 flags[NUM_FLAG_BYTES];
     u8 dexSeen[NUM_DEX_FLAG_BYTES];
     u8 dexCaught[NUM_DEX_FLAG_BYTES];
-}; // 653 bytes
+
+    // Bag and PC items. Quantities travel DECRYPTED -- see GatherWorldState for
+    // why that is not optional.
+    struct Bag bag;
+    struct ItemSlot pcItems[PC_ITEMS_COUNT];
+}; // about 1.6 KB
 
 /** Player 2's stored character, inside Player 1's save. */
 struct CoopPlayer2 *GetCoopPlayer2(void);

@@ -217,6 +217,11 @@ window.__pair = {
     return true;
   },
 
+  writeAt(which, addr, bytes) {
+    cores[which].heap().set(Uint8Array.from(bytes), addr);
+    return true;
+  },
+
   readAt(which, addr, len) {
     return Array.from(cores[which].heap().subarray(addr, addr + len));
   },

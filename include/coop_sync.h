@@ -2,6 +2,7 @@
 #define GUARD_COOP_SYNC_H
 
 #include "global.h"
+#include "link.h"
 
 // Bulk transfer for co-op, on top of the one-command-per-frame link.
 //
@@ -25,7 +26,21 @@
 // not a datagram socket. If that ever stops being true, this needs a rethink
 // rather than a patch.
 
-#define COOP_CHUNK_BYTES 12
+// Payload bytes per command.
+//
+// A link command is CMD_LENGTH (8) words. Three carry the header -- the command
+// id, the stream-and-chunk word, and the total size -- leaving five words, so
+// TEN bytes, not twelve.
+//
+// Getting this wrong was not a short read; it was an out-of-bounds one. Writing
+// a sixth payload word ran off the end of gSendCmd, and reading it ran off the
+// end of gRecvCmds[i] into gRecvCmds[i + 1][0] -- the NEXT player's command id.
+// So every chunk's last two bytes were quietly replaced by whatever the peer
+// happened to be sending, usually LINKCMD_COOP_POS. Two bytes in every twelve,
+// corrupted, in every transfer. It surfaced as a bag quantity of 0x3333.
+#define COOP_CHUNK_BYTES 10
+
+STATIC_ASSERT(COOP_CHUNK_BYTES / 2 + 3 <= CMD_LENGTH, CoopChunkOverrunsCommand);
 
 // Which payload a transfer carries. Sent in the high nibble of the sequence
 // word, so there is room for 15 of these and 4095 chunks each (49 KB).

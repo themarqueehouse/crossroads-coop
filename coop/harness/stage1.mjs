@@ -163,7 +163,26 @@ async function main() {
     await page.evaluate(([off, v]) => window.__pair.orByte(0, off, v),
                         [sb1(0) + OFFSETS.dexCaught, 0x01]);
 
-    console.log('\nset badge 1 and a dex catch on Player 1');
+    // An item in Player 1's bag, with a known quantity.
+    //
+    // This is the encryption test, and it is the whole reason it is here.
+    // Quantities are XOR'd with a key each console draws from Random32() at
+    // boot, so the two keys DIFFER. If the sync copies those bytes untouched,
+    // the item does not arrive slightly wrong -- it arrives as nonsense. So:
+    // write a known plaintext quantity under Player 1's key, and afterwards
+    // read it back under Player 2's. Only correct handling survives that.
+    const u32At = async (which, addr) => {
+      const b = await page.evaluate(([w, a]) => window.__pair.readAt(w, a, 4), [which, addr]);
+      return (b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0;
+    };
+    const key1 = await u32At(0, heapOf(SAVEBLOCK2_ADDR) + OFFSETS.encryptionKey);
+    const ITEM_ID = 13, QTY = 7;
+    const enc = (QTY ^ (key1 & 0xffff)) & 0xffff;
+    await page.evaluate(([w, a, b]) => window.__pair.writeAt(w, a, b),
+      [0, heapOf(SAVEBLOCK1_ADDR) + OFFSETS.bag,
+       [ITEM_ID & 0xff, ITEM_ID >> 8, enc & 0xff, enc >> 8]]);
+
+    console.log(`\nset badge 1, a dex catch, and item ${ITEM_ID} x${QTY} on Player 1`);
 
     // --- adoption ------------------------------------------------------
     //
@@ -190,6 +209,26 @@ async function main() {
       console.log('PASS: badge and dex crossed to Player 2');
     else
       console.log('FAIL: shared progression did not cross');
+
+    const key2 = await u32At(1, heapOf(SAVEBLOCK2_ADDR) + OFFSETS.encryptionKey);
+    const slot = await page.evaluate(([w, a]) => window.__pair.readAt(w, a, 4),
+      [1, heapOf(SAVEBLOCK1_ADDR) + OFFSETS.bag]);
+    const gotId = slot[0] | (slot[1] << 8);
+    const gotQty = ((slot[2] | (slot[3] << 8)) ^ (key2 & 0xffff)) & 0xffff;
+    console.log(`player 2 bag slot 0: item ${gotId} x${gotQty} ` +
+                `(keys ${key1 === key2 ? 'MATCH - test is weak' : 'differ - good'})`);
+    const raw1 = await page.evaluate(([w, a]) => window.__pair.readAt(w, a, 4),
+      [0, heapOf(SAVEBLOCK1_ADDR) + OFFSETS.bag]);
+    console.log(`  p1 raw slot: ${raw1.map((x) => x.toString(16).padStart(2, '0')).join(' ')}` +
+                `  key1=0x${key1.toString(16)}`);
+    console.log(`  p2 raw slot: ${slot.map((x) => x.toString(16).padStart(2, '0')).join(' ')}` +
+                `  key2=0x${key2.toString(16)}`);
+    console.log(`  p1 decrypted: ${((raw1[2] | (raw1[3] << 8)) ^ (key1 & 0xffff)) & 0xffff}`);
+
+    if (gotId === ITEM_ID && gotQty === QTY)
+      console.log('PASS: the item survived the key change');
+    else
+      console.log(`FAIL: expected item ${ITEM_ID} x${QTY}, got ${gotId} x${gotQty}`);
 
     console.log(`player 2 after reconnect: ${p2After}  (stored: ${name})`);
     if (p2After === name)
