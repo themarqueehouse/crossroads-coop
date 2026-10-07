@@ -133,6 +133,17 @@ bool8 Coop_GateIsOpen(void);
 /** TRUE while this console is sat at a gate -- used to draw the wait screen. */
 bool8 Coop_IsWaitingAtGate(void);
 
+/**
+ * Put up "Waiting for your partner" once the wait has gone on a moment, and
+ * take it down again. Called from the gate's native wait.
+ *
+ * Without it a gate is indistinguishable from a crash: the game stops and
+ * nothing says why. Does nothing if a message box is already up, so a gate in
+ * the middle of a scene leaves the scene's own dialogue alone.
+ */
+void Coop_UpdateWaitMessage(void);
+void Coop_EndWaitMessage(void);
+
 /** Called once per frame from the overworld to run the gate handshake. */
 void Coop_UpdateGate(void);
 

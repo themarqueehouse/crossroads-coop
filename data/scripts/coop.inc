@@ -15,6 +15,11 @@ CoopText_PartnerNotHere:
 	.string "This won't happen without your\n"
 	.string "partner here.$"
 
+@ Shown while sat at a sync gate. Not through a script: the gate is a native
+@ wait, so src/coop.c puts this up itself and takes it down when the gate opens.
+CoopText_WaitingForPartner::
+	.string "Waiting for your partner…$"
+
 @ For the scene test in the debug menu's Scripts list.
 CoopText_TestBothHere:
 	.string "You're both here.\p"

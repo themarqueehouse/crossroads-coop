@@ -3,6 +3,7 @@
 
 // Co-op. See data/scripts/coop.inc.
 extern const u8 CoopEventScript_PartnerNotHere[];
+extern const u8 CoopText_WaitingForPartner[];
 
 extern const u8 EventScript_Follower[];
 extern const u8 EventScript_FollowerEnd[];

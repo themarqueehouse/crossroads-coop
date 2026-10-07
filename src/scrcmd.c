@@ -890,7 +890,14 @@ bool8 ScrCmd_delay(struct ScriptContext *ctx)
 // single-player.
 static bool8 RunCoopGate(void)
 {
-    return Coop_GateIsOpen();
+    if (Coop_GateIsOpen())
+    {
+        Coop_EndWaitMessage();
+        return TRUE;
+    }
+
+    Coop_UpdateWaitMessage();
+    return FALSE;
 }
 
 bool8 ScrCmd_coopgate(struct ScriptContext *ctx)
@@ -937,11 +944,19 @@ static bool8 RunCoopSceneGate(void)
 {
     if (Coop_GateTimedOut())
     {
+        Coop_EndWaitMessage();
         ScriptContext_Abort();
         return TRUE;
     }
 
-    return Coop_GateIsOpen();
+    if (Coop_GateIsOpen())
+    {
+        Coop_EndWaitMessage();
+        return TRUE;
+    }
+
+    Coop_UpdateWaitMessage();
+    return FALSE;
 }
 
 bool8 ScrCmd_coopscenewait(struct ScriptContext *ctx)

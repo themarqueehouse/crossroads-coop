@@ -15,6 +15,8 @@
 #include "event_data.h"
 #include "pokedex.h"
 #include "item.h"
+#include "field_message_box.h"
+#include "event_scripts.h"
 #include "constants/event_objects.h"
 
 // ---------------------------------------------------------------------------
@@ -371,6 +373,49 @@ void Coop_UpdateGate(void)
 
     if (sGateCanTimeOut && sGateWaitFrames >= SCENE_GATE_TIMEOUT_FRAMES)
         sGateTimedOut = TRUE;
+}
+
+// ---------------------------------------------------------------------------
+// Telling the waiting player what is going on.
+//
+// Without this a gate is indistinguishable from a crash: the game simply stops
+// and nothing on screen says why. That is the whole experience of the feature
+// for whoever gets there first, so it is not a polish item.
+//
+// A message box rather than the dark screen the design called for. It is the
+// game's own furniture, it leaves the world visible behind it, and it does not
+// involve driving a palette fade from inside a script that is mid-cutscene.
+// ---------------------------------------------------------------------------
+
+// Long enough that a gate whose partner is already waiting -- which opens on
+// the frame it is reached -- does not flash a box up and take it away again.
+#define WAIT_MESSAGE_DELAY_FRAMES 30
+
+static EWRAM_DATA bool8 sShowingWaitMessage = FALSE;
+
+void Coop_UpdateWaitMessage(void)
+{
+    if (sShowingWaitMessage || !Coop_IsWaitingAtGate())
+        return;
+
+    if (sGateWaitFrames < WAIT_MESSAGE_DELAY_FRAMES)
+        return;
+
+    // Returns FALSE when a box is already up, which is exactly right for a
+    // gate in the middle of a scene: the scene's own dialogue stays, and we
+    // simply do not get one. Paired with the flag below, that is also what
+    // stops us closing a box we did not open.
+    if (ShowFieldMessage(CoopText_WaitingForPartner))
+        sShowingWaitMessage = TRUE;
+}
+
+void Coop_EndWaitMessage(void)
+{
+    if (!sShowingWaitMessage)
+        return;
+
+    HideFieldMessageBox();
+    sShowingWaitMessage = FALSE;
 }
 
 // Announce our arrival, if it still needs announcing. Returns TRUE if it wrote

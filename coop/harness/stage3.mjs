@@ -174,6 +174,48 @@ async function main() {
     t.check('the partner got it too, and only once', gained[1] === 3,
             gained[1] === 0 ? 'the shared bag did not cross' : '');
 
+    // --- a partner who is busy, not absent -----------------------------
+    //
+    // Player 2 is left in a conversation with the bedroom television. The
+    // scene cannot start underneath that, so Player 1 should sit at the gate
+    // saying so -- and the scene should still be waiting its turn on Player 2,
+    // not thrown away. Then the moment Player 2's box closes, it runs.
+    //
+    // This is also the only check that gets "Waiting for your partner" on
+    // screen: when both players are ready the gate opens in a frame or two and
+    // the message never appears. The screenshot is the record of it.
+    console.log('\n--- player 2 is mid-conversation when the scene starts ---');
+    await clearBoxes(rig, 0);
+    await clearBoxes(rig, 1);
+    await rig.tap(1, 'A', 8);   // player 2 talks to the television
+    await rig.wait(40);
+
+    await rig.clearGateLog();
+    await runDebugScript(rig, 0, 1);
+    await rig.wait(120);
+
+    const waiting = await rig.mailbox(0);
+    t.note('player 1', `gate=${waiting.gateId} flags=${waiting.flags}`);
+    t.check('player 1 is held at the gate', waiting.gateId === GATE_TEST &&
+            waiting.flags.includes('AT_GATE'));
+    t.check('player 2 has not started it yet',
+            (await rig.gateLog(1)).length === 0);
+    await rig.shot('/tmp/claude-0/stage3-waiting');
+
+    // Let player 2 out of the conversation. B rather than A: A would just
+    // read the television again.
+    await clearBoxes(rig, 1);
+    await rig.wait(120);
+    const freed = (await rig.gateLog(1)).includes(GATE_TEST);
+    t.check('the scene starts as soon as player 2 is free', freed,
+            freed ? '' : 'the deferred scene was dropped');
+
+    for (let i = 0; i < 6; i++) { await rig.tap('both', 'A', 8); await rig.wait(25); }
+    await rig.wait(90);
+    t.check('and both get through it',
+            (await rig.gateLog(0)).includes(GATE_TEST_SECOND) &&
+            (await rig.gateLog(1)).includes(GATE_TEST_SECOND));
+
     // --- and it must NOT run when the partner is elsewhere -------------
     //
     // Player 2's map number is changed underneath it so its position
