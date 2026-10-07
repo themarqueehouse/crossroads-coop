@@ -970,6 +970,19 @@ bool8 ScrCmd_coopscenewait(struct ScriptContext *ctx)
     return TRUE;
 }
 
+// Refuse to go on without the other player on this map. Nothing is mirrored --
+// see the macro in asm/macros/event.inc for why a gym leader must not be.
+bool8 ScrCmd_coopneedpartner(struct ScriptContext *ctx)
+{
+    Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
+
+    if (Coop_PartnerIsHere())
+        return FALSE;
+
+    ScriptContext_SetupScript(CoopEventScript_PartnerNotHere);
+    return TRUE;
+}
+
 // Skip the part of a mirrored scene that must only happen once. See the macro
 // in asm/macros/event.inc for which parts those are and why.
 bool8 ScrCmd_goto_if_coop_guest(struct ScriptContext *ctx)

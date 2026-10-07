@@ -188,6 +188,14 @@ bool8 Coop_GateTimedOut(void);
  */
 bool8 Coop_BroadcastScene(const u8 *resume, u16 gateId);
 
+/**
+ * Is the other player standing on this map?
+ *
+ * TRUE when nobody has joined, so single-player is never blocked by a rule
+ * about a partner who does not exist.
+ */
+bool8 Coop_PartnerIsHere(void);
+
 /** Unpack a scene broadcast. Called from ProcessRecvCmds. */
 void Coop_ReceiveScene(u8 playerId, const u16 *cmd);
 

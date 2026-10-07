@@ -245,6 +245,38 @@ async function main() {
     t.check('player 1 is not stuck waiting',
             (await rig.mailbox(0)).gateId === 0);
     await rig.shot('/tmp/claude-0/stage3-refused');
+
+    // --- the gym shape: refused when alone, allowed when not -----------
+    //
+    // Script 3 is coop_require_partner followed by a Potion. Not mirrored --
+    // which is the point of it being its own thing. Mirroring a gym leader
+    // would start two separate battles against two copies of the leader, and
+    // whoever won first would set the badge out from under the other's fight.
+    //
+    // Player 2 is still displaced from the check above, so the refusal case
+    // comes first and for free.
+    console.log('\n--- a gym-shaped script, with the partner away ---');
+    const beforeAway = await countItem(rig, 0, ITEM_POTION);
+    await runDebugScript(rig, 0, 3);
+    await rig.wait(120);
+    t.check('refused while alone',
+            (await countItem(rig, 0, ITEM_POTION)) === beforeAway);
+
+    console.log('\n--- and with the partner here ---');
+    await clearBoxes(rig, 0);
+    await rig.setU8(1, OFFSETS.saveBlock1Addr + SB1_LOCATION_MAPNUM, realMapNum);
+    await rig.wait(120);
+    t.check('player 1 sees the partner again',
+            (await rig.mailbox(0)).flags.includes('PEER_SAME_MAP'));
+
+    const beforeTogether = [await countItem(rig, 0, ITEM_POTION),
+                            await countItem(rig, 1, ITEM_POTION)];
+    await runDebugScript(rig, 0, 3);
+    await rig.wait(150);
+    const after3 = [await countItem(rig, 0, ITEM_POTION) - beforeTogether[0],
+                    await countItem(rig, 1, ITEM_POTION) - beforeTogether[1]];
+    t.note('potions gained', after3.join(' / '));
+    t.check('allowed with the partner here, once each side', after3[0] === 1 && after3[1] === 1);
     const ok = t.summary();
     process.exitCode = ok ? 0 : 1;
   } finally {

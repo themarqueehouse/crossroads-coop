@@ -486,18 +486,28 @@ static u16 PeerMapWord(void)
     return gCoopPeer.mapGroup | ((u16)gCoopPeer.mapNum << 8);
 }
 
-bool8 Coop_BroadcastScene(const u8 *resume, u16 gateId)
+bool8 Coop_PartnerIsHere(void)
 {
-    // Nobody to mirror to. The scene runs, because a ROM that refuses to play
-    // its own story when nobody has joined is not playable at all.
+    // Nobody has joined. Everything is allowed, because a ROM that refuses to
+    // play its own story when there is no second player is not playable at
+    // all -- and that is the state it boots in.
     if (!IsCoopSessionEngaged())
         return TRUE;
 
-    // There IS a partner, and they are somewhere else. This is the case the
-    // whole mechanism exists for: the scene does not happen without them. The
-    // trigger is left unfired, so it runs again when they are both here.
-    if (!IsCoopLinkActive() || !gCoopPeer.valid || PeerMapWord() != OurMapWord())
+    return IsCoopLinkActive() && gCoopPeer.valid && PeerMapWord() == OurMapWord();
+}
+
+bool8 Coop_BroadcastScene(const u8 *resume, u16 gateId)
+{
+    // There IS a partner and they are somewhere else: the scene does not
+    // happen. The trigger is left unfired, so it runs again when they are both
+    // here. (Or nobody has joined, in which case this is TRUE and the scene
+    // plays as it would single-player.)
+    if (!Coop_PartnerIsHere())
         return FALSE;
+
+    if (!IsCoopSessionEngaged())
+        return TRUE;
 
     sSceneSendPtr = resume;
     sSceneSendGate = gateId;

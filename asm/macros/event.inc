@@ -2002,6 +2002,22 @@
 	.4byte \dest
 	.endm
 
+	@ Refuse to go on unless the other player is standing on this map.
+	@
+	@ Says so and ends the script, having changed nothing, so the moment can
+	@ simply be had again once they are both here.
+	@
+	@ Unlike coopscene this does NOT mirror the script, so use it where running
+	@ the same thing twice would be wrong rather than merely pointless -- a gym
+	@ leader above all. Mirroring that would start two separate battles against
+	@ two separate copies of the leader, and whoever won first would set the
+	@ badge out from under the other one's fight.
+	@
+	@ Does nothing when nobody has joined, so single-player plays as normal.
+	.macro coop_require_partner
+	.byte SCR_OP_COOPNEEDPARTNER
+	.endm
+
 	.macro dynmultistack left:req, top:req, ignoreBPress:req, maxBeforeScroll:req, shouldSort:req, initialSelected:req, callbacks:req
 	_dynmultichoice \left, \top, \ignoreBPress, \maxBeforeScroll, \shouldSort, \initialSelected, \callbacks, NULL
 	.endm

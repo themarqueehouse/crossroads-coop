@@ -257,6 +257,7 @@ gScriptCmdTable::
 	script_cmd_table_entry SCR_OP_COOPSCENE                     ScrCmd_coopscene,                   requests_effects=1  @ 0xe8
 	script_cmd_table_entry SCR_OP_COOPSCENEWAIT                 ScrCmd_coopscenewait,               requests_effects=1  @ 0xe9
 	script_cmd_table_entry SCR_OP_COOPGUESTGOTO                 ScrCmd_goto_if_coop_guest,          requests_effects=1  @ 0xea
+	script_cmd_table_entry SCR_OP_COOPNEEDPARTNER               ScrCmd_coopneedpartner,             requests_effects=1  @ 0xeb
 
 	.if ALLOCATE_SCRIPT_CMD_TABLE
 gScriptCmdTableEnd::

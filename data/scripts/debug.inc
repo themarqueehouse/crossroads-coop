@@ -230,8 +230,14 @@ Debug_EventScript_Script_2_Done:
 	releaseall
 	end
 
+@ Co-op presence test (R+Start, Scripts…, Script 3). This is the shape the gym
+@ leaders use: not mirrored, just refused when you are on your own. One Potion
+@ into the shared bag if it went ahead, nothing at all if it did not.
 Debug_EventScript_Script_3::
-	release
+	coop_require_partner
+	lockall
+	additem ITEM_POTION, 1
+	releaseall
 	end
 
 Debug_EventScript_Script_4::
