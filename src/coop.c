@@ -14,6 +14,7 @@
 #include "constants/vars.h"
 #include "event_data.h"
 #include "pokedex.h"
+#include "item.h"
 #include "constants/event_objects.h"
 
 // ---------------------------------------------------------------------------
@@ -193,6 +194,12 @@ void Coop_ReceiveDelta(u8 playerId, const u16 *cmd)
         break;
     case COOP_DELTA_DEX_CAUGHT:
         GetSetPokedexFlag(id, FLAG_SET_CAUGHT);
+        break;
+    case COOP_DELTA_ITEM_ADD:
+        AddBagItem(id, value);
+        break;
+    case COOP_DELTA_ITEM_REMOVE:
+        RemoveBagItem(id, value);
         break;
     }
 
@@ -412,6 +419,12 @@ static EWRAM_DATA u16 sSceneSendGate = 0;
 static EWRAM_DATA const u8 *sPendingScene = NULL;
 static EWRAM_DATA u16 sPendingSceneFrames = 0;
 
+// Set while running a scene handed to us rather than triggered by us. Cleared
+// when that script finishes, which is the only honest end for it: a script can
+// stop at any one of a hundred commands, so the state has to be watched out
+// rather than reset by whatever is presumed to be the last one.
+static EWRAM_DATA bool8 sInGuestScene = FALSE;
+
 // How long a received scene waits for a safe frame before being dropped. Paired
 // with the sender's gate timeout: the sender gives up at the same point, so
 // neither side is left holding half an agreement.
@@ -515,6 +528,19 @@ void Coop_UpdatePendingScene(void)
 
     ScriptContext_SetupScript(sPendingScene);
     sPendingScene = NULL;
+    sInGuestScene = TRUE;
+}
+
+bool8 Coop_IsSceneGuest(void)
+{
+    return sInGuestScene;
+}
+
+// Notice the guest scene ending. Called every frame, before scripts run.
+static void UpdateGuestScene(void)
+{
+    if (sInGuestScene && !ScriptContext_IsEnabled())
+        sInGuestScene = FALSE;
 }
 
 static void ResetScenes(void)
@@ -523,6 +549,7 @@ static void ResetScenes(void)
     sSceneSendGate = 0;
     sPendingScene = NULL;
     sPendingSceneFrames = 0;
+    sInGuestScene = FALSE;
 }
 
 static void ResetGates(void)
@@ -1022,6 +1049,7 @@ void Coop_Update(void)
     }
 
     Coop_UpdateGate();
+    UpdateGuestScene();
     Coop_UpdatePendingScene();
     PublishDiagnostics();
 }

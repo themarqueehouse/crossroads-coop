@@ -1977,6 +1977,31 @@
 	.2byte \id
 	.endm
 
+	@ Jump if this console was HANDED the scene rather than triggering it.
+	@
+	@ A mirrored scene runs on both consoles, so everything in it happens
+	@ twice. Flags, vars and Pokedex entries do not care -- setting them again
+	@ lands on the same answer. Handing over an item or a Pokemon does.
+	@
+	@ So: leave the scene alone and both players get one each, which is what
+	@ the starters want. Put the giving part behind this and only the player
+	@ who triggered the scene gets one, which is what everything else wants.
+	@
+	@	coopscene GATE_OLD_MAN_GIFT
+	@	lockall
+	@	msgbox Text_TakeThis
+	@	goto_if_coop_guest 1f
+	@	additem ITEM_POTION
+	@ 1:
+	@	releaseall
+	@	end
+	@
+	@ Outside co-op this never jumps, so the same script plays single-player.
+	.macro goto_if_coop_guest dest:req
+	.byte SCR_OP_COOPGUESTGOTO
+	.4byte \dest
+	.endm
+
 	.macro dynmultistack left:req, top:req, ignoreBPress:req, maxBeforeScroll:req, shouldSort:req, initialSelected:req, callbacks:req
 	_dynmultichoice \left, \top, \ignoreBPress, \maxBeforeScroll, \shouldSort, \initialSelected, \callbacks, NULL
 	.endm

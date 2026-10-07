@@ -955,6 +955,20 @@ bool8 ScrCmd_coopscenewait(struct ScriptContext *ctx)
     return TRUE;
 }
 
+// Skip the part of a mirrored scene that must only happen once. See the macro
+// in asm/macros/event.inc for which parts those are and why.
+bool8 ScrCmd_goto_if_coop_guest(struct ScriptContext *ctx)
+{
+    const u8 *dest = (const u8 *)ScriptReadWord(ctx);
+
+    Script_RequestEffects(SCREFF_V1);
+
+    if (Coop_IsSceneGuest())
+        ScriptJump(ctx, dest);
+
+    return FALSE;
+}
+
 bool8 ScrCmd_initclock(struct ScriptContext *ctx)
 {
     u8 hour = VarGet(ScriptReadHalfword(ctx));

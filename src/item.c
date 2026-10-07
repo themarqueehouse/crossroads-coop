@@ -1,4 +1,5 @@
 #include "global.h"
+#include "coop.h"
 #include "item.h"
 #include "berry.h"
 #include "pokeball.h"
@@ -347,6 +348,8 @@ static bool32 NONNULL BagPocket_AddItem(struct BagPocket *pocket, enum Item item
 
 bool32 AddBagItem(enum Item itemId, u16 count)
 {
+    bool32 added;
+
     if (GetItemPocket(itemId) >= POCKETS_COUNT)
         return FALSE;
 
@@ -354,7 +357,17 @@ bool32 AddBagItem(enum Item itemId, u16 count)
     if (CurrentBattlePyramidLocation() != PYRAMID_LOCATION_NONE || FlagGet(FLAG_STORING_ITEMS_IN_PYRAMID_BAG) == TRUE)
         return AddPyramidBagItem(itemId, count);
 
-    return BagPocket_AddItem(&gBagPockets[GetItemPocket(itemId)], itemId, count);
+    added = BagPocket_AddItem(&gBagPockets[GetItemPocket(itemId)], itemId, count);
+
+    // Co-op: one bag between the two players. Synced at join, but only at
+    // join, which means anything either of them picked up afterwards was
+    // invisible to the other until a reconnect -- and gone for good once
+    // Player 1 saved. The pyramid bag above is deliberately not synced: it is
+    // a per-run thing, not part of the shared save.
+    if (added)
+        Coop_QueueDelta(COOP_DELTA_ITEM_ADD, itemId, count);
+
+    return added;
 }
 
 static bool32 NONNULL BagPocket_RemoveItem(struct BagPocket *pocket, enum Item itemId, u16 count)
@@ -403,6 +416,8 @@ static bool32 NONNULL BagPocket_RemoveItem(struct BagPocket *pocket, enum Item i
 
 bool32 RemoveBagItem(enum Item itemId, u16 count)
 {
+    bool32 removed;
+
     if (GetItemPocket(itemId) >= POCKETS_COUNT || itemId == ITEM_NONE)
         return FALSE;
 
@@ -410,7 +425,14 @@ bool32 RemoveBagItem(enum Item itemId, u16 count)
     if (CurrentBattlePyramidLocation() != PYRAMID_LOCATION_NONE || FlagGet(FLAG_STORING_ITEMS_IN_PYRAMID_BAG) == TRUE)
         return RemovePyramidBagItem(itemId, count);
 
-    return BagPocket_RemoveItem(&gBagPockets[GetItemPocket(itemId)], itemId, count);
+    removed = BagPocket_RemoveItem(&gBagPockets[GetItemPocket(itemId)], itemId, count);
+
+    // The other half of the shared bag. Without it, using the last Potion
+    // leaves the partner holding a Potion that is not there.
+    if (removed)
+        Coop_QueueDelta(COOP_DELTA_ITEM_REMOVE, itemId, count);
+
+    return removed;
 }
 
 // Unsafe function: Only use with functions that already check the slot and count are valid

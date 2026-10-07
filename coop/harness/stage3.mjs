@@ -52,7 +52,7 @@ async function clearBoxes(rig, which) {
   }
 }
 
-async function runDebugScript1(rig, which) {
+async function runDebugScript(rig, which, slot) {
   await clearBoxes(rig, which);
   await rig.hold(which, 'R');
   await rig.wait(6);
@@ -66,8 +66,34 @@ async function runDebugScript1(rig, which) {
   }
   await rig.tap(which, 'A', 8);   // open Scripts...
   await rig.wait(25);
-  await rig.tap(which, 'A', 8);   // run Script 1
+  for (let i = 1; i < slot; i++) {
+    await rig.tap(which, 'Down', 6);
+    await rig.wait(8);
+  }
+  await rig.tap(which, 'A', 8);   // run Script <slot>
   await rig.wait(25);
+}
+
+const runDebugScript1 = (rig, which) => runDebugScript(rig, which, 1);
+
+// How many of `itemId` are in a console's bag, decrypted under its own key.
+//
+// Scanned rather than read from slot 0: the game starts you with items, and
+// which slot a new one lands in is the bag's business.
+const ITEM_POTION = 28;
+const BAG_SCAN_SLOTS = 60;
+
+async function countItem(rig, which, itemId) {
+  const key = await rig.u32(which, OFFSETS.saveBlock2Addr + OFFSETS.encryptionKey);
+  const raw = await rig.readAt(which, OFFSETS.saveBlock1Addr + OFFSETS.bag,
+                               BAG_SCAN_SLOTS * 4);
+  let total = 0;
+  for (let i = 0; i < BAG_SCAN_SLOTS; i++) {
+    const id = raw[i * 4] | (raw[i * 4 + 1] << 8);
+    if (id !== itemId) continue;
+    total += ((raw[i * 4 + 2] | (raw[i * 4 + 3] << 8)) ^ (key & 0xffff)) & 0xffff;
+  }
+  return total;
 }
 
 async function main() {
@@ -119,6 +145,34 @@ async function main() {
     t.check('neither is left waiting at a gate',
             done.every((x) => x.gateId === 0));
     await rig.shot('/tmp/claude-0/stage3-played');
+
+    // --- a gift in a mirrored scene happens once, not twice ------------
+    //
+    // Script 2 adds three Potions behind goto_if_coop_guest. The bag is
+    // shared, so the right answer is three between them. Each of the three
+    // possible wrong answers is distinguishable:
+    //
+    //   3 / 3  correct
+    //   3 / 0  the bag change never crossed -- the shared bag is sync-at-join
+    //          only, which is how it was before this
+    //   6 / 6  the guard did nothing and both consoles handed over a gift
+    console.log('\n--- a gift inside a mirrored scene ---');
+    const before = [await countItem(rig, 0, ITEM_POTION),
+                    await countItem(rig, 1, ITEM_POTION)];
+    t.note('potions before', before.join(' / '));
+
+    await runDebugScript(rig, 0, 2);
+    await rig.wait(120);
+    for (let i = 0; i < 4; i++) { await rig.tap('both', 'A', 8); await rig.wait(25); }
+    await rig.wait(120);
+
+    const gained = [await countItem(rig, 0, ITEM_POTION) - before[0],
+                    await countItem(rig, 1, ITEM_POTION) - before[1]];
+    t.note('potions gained', gained.join(' / '));
+    t.check('the trigger got the gift', gained[0] === 3,
+            gained[0] === 6 ? 'both consoles handed one over' : '');
+    t.check('the partner got it too, and only once', gained[1] === 3,
+            gained[1] === 0 ? 'the shared bag did not cross' : '');
 
     // --- and it must NOT run when the partner is elsewhere -------------
     //

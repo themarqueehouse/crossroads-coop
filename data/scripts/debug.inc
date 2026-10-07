@@ -216,8 +216,18 @@ Debug_EventScript_Script_1::
 	releaseall
 	end
 
+@ Co-op gift test. Run it from ONE console (R+Start, Scripts…, Script 2).
+@
+@ Both players should end up with three Potions between them -- not three each.
+@ The bag is shared, so the player who did not trigger it must not add a second
+@ lot of its own; goto_if_coop_guest is what stops it.
 Debug_EventScript_Script_2::
-	release
+	coopscene GATE_TEST_GIFT
+	lockall
+	goto_if_coop_guest Debug_EventScript_Script_2_Done
+	additem ITEM_POTION, 3
+Debug_EventScript_Script_2_Done:
+	releaseall
 	end
 
 Debug_EventScript_Script_3::

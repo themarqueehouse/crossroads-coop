@@ -6,7 +6,7 @@
 // first is the thing that silently reads plausible garbage when it drifts, and
 // the second took several goes to make reliable.
 import { chromium } from 'playwright';
-import { globSync, readFileSync } from 'node:fs';
+import { globSync, readFileSync, statSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { basename } from 'node:path';
 import server, { setRom } from './serve.mjs';
@@ -18,8 +18,26 @@ import server, { setRom } from './serve.mjs';
 // linker map. They were stale by the time this was written -- the mailbox had
 // moved 7 KB -- and a stale EWRAM address does not fail, it reads zeroes that
 // look like a feature not working. Nothing here is hand-copied now.
-export const OFFSETS = JSON.parse(
-  readFileSync(new URL('./coop-offsets.json', import.meta.url), 'utf8'));
+const OFFSETS_PATH = new URL('./coop-offsets.json', import.meta.url);
+export const OFFSETS = JSON.parse(readFileSync(OFFSETS_PATH, 'utf8'));
+
+// Refuse to run against offsets older than the ROM.
+//
+// Every EWRAM address in here moves when anything before it in the build does,
+// and a stale one does not fail -- it reads zeroes, or someone else's variable,
+// which looks exactly like the feature under test not working. That is not a
+// hypothetical: regenerating this was forgotten after one rebuild and a suite
+// that had passed 17/17 came back 5/17, with twelve plausible, detailed and
+// entirely fictional failures.
+function assertOffsetsFresh(rom) {
+  const romTime = statSync(rom).mtimeMs;
+  const offTime = statSync(OFFSETS_PATH).mtimeMs;
+  if (offTime >= romTime) return;
+  throw new Error(
+    `coop-offsets.json is older than ${rom}.\n` +
+    '  Every address in it may have moved. Run:\n' +
+    '      python3 tools/coop/emit_offsets.py coop/harness/coop-offsets.json');
+}
 
 // Emerald's text encoding: 0xBB..0xD4 are A..Z, 0xD5..0xEE are a..z, 0xFF ends.
 export function decodeName(bytes) {
@@ -41,6 +59,7 @@ export function decodeName(bytes) {
 const NUDGE = [null, 'A', 'A', 'A', 'Start', null, 'A', 'Start'];
 
 export async function startRig({ rom, port, introLoops = 300, settle = 1200 }) {
+  assertOffsetsFresh(rom);
   const { size } = await stat(rom);
   console.log(`rom: ${rom} (${(size / 1048576).toFixed(1)} MiB)`);
   setRom(rom);

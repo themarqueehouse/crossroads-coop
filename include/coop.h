@@ -87,6 +87,13 @@ enum CoopDeltaKind
     COOP_DELTA_VAR,
     COOP_DELTA_DEX_SEEN,
     COOP_DELTA_DEX_CAUGHT,
+    // The bag. Sent as the change rather than the resulting slot, because the
+    // two consoles hold their quantities XOR'd under different keys and a slot
+    // copied across raw is not slightly wrong, it is meaningless. Applied
+    // through the game's own AddBagItem/RemoveBagItem, which encrypt under the
+    // receiver's key and find the right pocket without being told.
+    COOP_DELTA_ITEM_ADD,
+    COOP_DELTA_ITEM_REMOVE,
 };
 
 /**
@@ -182,6 +189,22 @@ void Coop_ReceiveScene(u8 playerId, const u16 *cmd);
  * what makes waiting for a quiet frame safe.
  */
 void Coop_UpdatePendingScene(void);
+
+/**
+ * True while running a scene this console was HANDED rather than triggered.
+ *
+ * Mirroring means a scene's effects happen twice, once on each console, and
+ * most of them do not mind: setting a flag that is already set, or a Pokedex
+ * entry, or a var to the value it already holds, all land on the same answer
+ * however many times they run. Handing over an item does not. Nor does handing
+ * over a Pokemon -- though there that is sometimes exactly what is wanted, which
+ * is why this is a question a script asks rather than a rule applied to it.
+ *
+ * So: leave a scene alone and both players get one each, which is right for the
+ * starters. Guard the giving part with goto_if_coop_guest and only the player
+ * who triggered it gets one, which is right for everything else.
+ */
+bool8 Coop_IsSceneGuest(void);
 
 /**
  * True if this object event is the co-op partner.
