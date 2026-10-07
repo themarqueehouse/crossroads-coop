@@ -65,3 +65,12 @@ tools/aif2pcm/aif2pcm
 *.smolTM
 __pycache__
 .map_version
+
+# Co-op: the blanket *.js rule above is for build artifacts in tools/, but it
+# silently swallows the relay and browser wrapper, which are hand-written
+# source. Re-include them explicitly.
+!coop/**/*.js
+!coop/**/*.json
+!coop/**/*.html
+!coop/**/*.css
+!tools/coop/*.py

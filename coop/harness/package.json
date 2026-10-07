@@ -1,0 +1,14 @@
+{
+  "name": "emerald-coop-harness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Headless two-player test rig: boots the co-op ROM twice in Chromium and relays the mailbox between them, so connection bugs are reproducible locally instead of over a phone.",
+  "scripts": {
+    "serve": "node serve.mjs",
+    "twoplayer": "node twoplayer.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

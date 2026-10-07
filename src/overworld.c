@@ -33,6 +33,8 @@
 #include "item.h"
 #include "item_icon.h"
 #include "link.h"
+#include "net_link.h"
+#include "coop.h"
 #include "link_rfu.h"
 #include "load_save.h"
 #include "main.h"
@@ -1801,6 +1803,13 @@ u8 UpdateSpritePaletteWithTime(u8 paletteNum)
 
 static void OverworldBasic(void)
 {
+    // Drives the co-op session: brings the link up once both players are
+    // present and keeps track of losing them. Runs before scripts so the rest
+    // of the frame sees a settled state.
+    Coop_Update();
+    // After the state machine, so a session that just went active spawns the
+    // partner on the same frame rather than a frame late.
+    Coop_UpdatePeerSprite();
     ScriptContext_RunScript();
     RunTasks();
     AnimateSprites();
@@ -3317,6 +3326,9 @@ bool32 IsSendingKeysOverCable(void)
 
 static u32 GetLinkSendQueueLength(void)
 {
+    if (gNetLinkActive)
+        return NetLink_GetSendQueueLength();
+
     if (gWirelessCommType != 0)
         return gRfu.sendQueue.count;
     else

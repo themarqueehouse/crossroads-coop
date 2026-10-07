@@ -72,6 +72,10 @@
 #define LINKCMD_READY_FINISH_TRADE      0xABCD
 #define LINKCMD_INIT_BLOCK              0xBBBB
 #define LINKCMD_READY_CANCEL_TRADE      0xBBCC
+// Co-op overworld position broadcast, one per frame. 0x3333 is unused by the
+// cable protocol and does not collide with the RFU command space, which masks
+// on 0xFF00.
+#define LINKCMD_COOP_POS                0x3333
 #define LINKCMD_SEND_HELD_KEYS          0xCAFE
 #define LINKCMD_SEND_BLOCK_REQ          0xCCCC
 #define LINKCMD_START_TRADE             0xCCDD
@@ -104,6 +108,9 @@
 #define LINKTYPE_EREADER_EM            0x5503
 #define LINKTYPE_CONTEST_GMODE         0x6601
 #define LINKTYPE_CONTEST_EMODE         0x6602
+// Co-op overworld. Both ROMs must agree on this before the player data
+// exchange, or it reports EXCHANGE_DIFF_SELECTIONS and tears the link down.
+#define LINKTYPE_COOP                  0x7701
 
 enum {
     BLOCK_REQ_SIZE_NONE, // Identical to 200

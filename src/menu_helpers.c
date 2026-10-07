@@ -3,6 +3,7 @@
 #include "window.h"
 #include "menu.h"
 #include "menu_helpers.h"
+#include "coop.h"
 #include "gpu_regs.h"
 #include "bg.h"
 #include "main.h"
@@ -294,6 +295,13 @@ bool8 IsWritingMailAllowed(enum Item itemId)
 
 bool8 MenuHelpers_IsLinkActive(void)
 {
+    // Co-op holds a link open for an entire play session, but this function is
+    // really asking "am I in a link room, where the bag and party must be
+    // restricted". Answering TRUE for co-op would disable items, mail and
+    // party actions for the whole game. Co-op is a link; it is not that link.
+    if (IsCoopLinkActive() == TRUE)
+        return FALSE;
+
     if (IsOverworldLinkActive() || gReceivedRemoteLinkPlayers)
         return TRUE;
     else

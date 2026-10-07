@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Co-op ROM test rig</title>
+</head>
+<body>
+<canvas id="screen" width="240" height="160"></canvas>
+<pre id="log"></pre>
+<script type="module">
+// Headless test rig: one mGBA core per page, with the mailbox exposed to the
+// driving Playwright process. Deliberately NOT the real wrapper -- the point is
+// to isolate what the ROM does from anything the wrapper's UI might be doing to
+// it, so a failure here is unambiguously the ROM's.
+import mGBA from './mgba.js';
+
+const log = (m) => { document.getElementById('log').textContent += m + '\n'; };
+
+let core = null;
+let frames = 0;
+
+// A fresh view every time: WASM memory growth detaches cached typed arrays, so
+// a long-lived Uint8Array would silently go dead mid-session.
+const heap = () => new Uint8Array(core.coopHeapBuffer);
+
+// mGBA maps the GBA bus into the WASM heap, but not at a fixed offset we can
+// compute. We locate the mailbox the same way the real wrapper does: scan for
+// the magic word. Returns every candidate, because save states and rewind
+// buffers hold stale copies and only the heartbeat distinguishes the live one.
+const MAGIC = 0x504f4f43; // 'COOP'
+
+function findMailboxes() {
+  const h = heap();
+  const dv = new DataView(h.buffer);
+  const hits = [];
+  for (let i = 0; i + 4 <= h.length; i += 4) {
+    if (dv.getUint32(i, true) === MAGIC) hits.push(i);
+  }
+  return hits;
+}
+
+window.__rig = {
+  // Takes a URL, not bytes. Handing a 16-32 MB ROM across the Playwright
+  // bridge means serializing it as a JSON array of integers -- hundreds of
+  // megabytes of text, which simply never finishes. Fetching it in-page keeps
+  // it binary the whole way.
+  async boot(romUrl, romName) {
+    const romBytes = await (await fetch(romUrl)).arrayBuffer();
+    log(`fetched ${(romBytes.byteLength / 1048576).toFixed(1)} MiB`);
+
+    core = await mGBA({ canvas: document.getElementById('screen') });
+    core.setLogger?.(() => {});
+
+    // Save states and rewind each hold a full copy of EWRAM, magic word and
+    // all, which is what makes a mailbox scan return candidates it cannot tell
+    // apart. The real wrapper disables them for the same reason; the rig must
+    // match or it will not reproduce what the wrapper sees.
+    core.setCoreSettings?.({
+      autoSaveStateEnable: false,
+      restoreAutoSaveStateOnLoad: false,
+      rewindEnable: false,
+    });
+
+    // Mounts the Emscripten filesystem. Without it uploadRom writes into a
+    // directory that does not exist yet and throws ErrnoError.
+    await core.FSInit();
+
+    const file = new File([new Uint8Array(romBytes)], romName);
+    await new Promise((res) => core.uploadRom(file, res));
+    const path = `${core.filePaths().gamePath}/${romName}`;
+    if (!core.loadGame(path)) throw new Error('loadGame refused ' + path);
+
+    // Registered after loadGame, as the wrapper does. Fires once per emulated
+    // frame at the point the core samples input -- our only reliable clock.
+    core.addCoreCallbacks({ keysReadCallback: () => { frames++; } });
+
+    log('loaded ' + romName);
+    return true;
+  },
+
+  frames: () => frames,
+  heapBytes: () => (core ? core.coopHeapBuffer.byteLength : 0),
+  findMailboxes,
+
+  read(off, len) {
+    return Array.from(heap().subarray(off, off + len));
+  },
+
+  write(off, bytes) {
+    heap().set(Uint8Array.from(bytes), off);
+  },
+
+  press(name) { core.buttonPress(name); },
+  release(name) { core.buttonUnpress(name); },
+
+  async tap(name, holdFrames = 6) {
+    const until = frames + holdFrames;
+    core.buttonPress(name);
+    while (frames < until) await new Promise((r) => setTimeout(r, 4));
+    core.buttonUnpress(name);
+  },
+
+  async waitFrames(n) {
+    const until = frames + n;
+    // Bail out rather than hang forever if the core has stopped stepping.
+    const deadline = Date.now() + 60000;
+    while (frames < until) {
+      if (Date.now() > deadline) throw new Error(`core stalled at frame ${frames}`);
+      await new Promise((r) => setTimeout(r, 4));
+    }
+    return frames;
+  },
+};
+
+log('rig ready');
+</script>
+</body>
+</html>

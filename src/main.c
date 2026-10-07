@@ -2,6 +2,7 @@
 #include "crt0.h"
 #include "malloc.h"
 #include "link.h"
+#include "net_link.h"
 #include "link_rfu.h"
 #include "librfu.h"
 #include "m4a.h"
@@ -102,6 +103,10 @@ void AgbMain(void)
     InitIntrHandlers();
     m4aSoundInit();
     EnableVCountIntrAtLine150();
+    // Publish the co-op mailbox early: the browser wrapper scans EWRAM for its
+    // magic to decide whether this ROM supports co-op at all, and it may look
+    // before the title screen appears.
+    NetLink_Init();
     InitRFU();
     RtcInit();
     CheckForFlashMemory();
@@ -358,7 +363,16 @@ void SetSerialCallback(IntrCallback callback)
 
 static void VBlankIntr(void)
 {
-    if (gWirelessCommType != 0)
+    // Proves to the host which copy of the mailbox is live. Runs every frame
+    // from boot, before and independently of any connection, because the host
+    // has to disambiguate candidates before it can set hostStatus at all.
+    gNetMailbox.heartbeat++;
+
+    // In net mode there is no cable to clock and no adapter to service; the
+    // wrapper drives the mailbox between frames instead.
+    if (gNetLinkActive)
+        ;
+    else if (gWirelessCommType != 0)
         RfuVSync();
     else if (gLinkVSyncDisabled == FALSE)
         LinkVSync();

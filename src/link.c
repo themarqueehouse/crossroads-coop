@@ -25,6 +25,8 @@
 #include "battle.h"
 #include "link.h"
 #include "link_rfu.h"
+#include "net_link.h"
+#include "coop.h"
 #include "constants/rgb.h"
 #include "constants/trade.h"
 
@@ -383,6 +385,14 @@ void OpenLink(void)
 
 void CloseLink(void)
 {
+    // DisableSerial only touches SIO registers and gLink, neither of which the
+    // net transport uses, so without this a close leaves sNetState at
+    // CONN_ESTABLISHED with the rings still populated. A later OpenLink would
+    // then skip LINK_STATE_START0, never call NetLink_Reset, and deliver
+    // commands left over from the previous session as if they were live.
+    if (gNetLinkActive)
+        NetLink_Reset();
+
     gReceivedRemoteLinkPlayers = FALSE;
     if (gWirelessCommType)
         LinkRfu_Shutdown();
@@ -609,6 +619,9 @@ static void ProcessRecvCmds(u8 unused)
             break;
         case LINKCMD_SEND_BLOCK_REQ:
             SendBlock(0, sBlockRequests[gRecvCmds[i][1]].address, sBlockRequests[gRecvCmds[i][1]].size);
+            break;
+        case LINKCMD_COOP_POS:
+            Coop_ReceivePosition(i, gRecvCmds[i]);
             break;
         case LINKCMD_SEND_HELD_KEYS:
             gLinkPartnersHeldKeys[i] = gRecvCmds[i][1];
@@ -983,6 +996,11 @@ static void UNUSED SendBerryBlenderNoSpaceForPokeblocks(void)
 
 u8 GetMultiplayerId(void)
 {
+    // In net mode there is no SIO multiplayer register to read an id from;
+    // the relay assigns it and the wrapper writes it into the mailbox.
+    if (gNetLinkActive)
+        return NetLink_GetMultiplayerId();
+
     if (gWirelessCommType == TRUE)
         return Rfu_GetMultiplayerId();
 
@@ -1736,6 +1754,18 @@ bool8 HandleLinkConnection(void)
 {
     bool32 main1Failed, main2Failed;
 
+    // Co-op net transport. Takes priority over both hardware paths: once the
+    // browser wrapper has identified itself there is no cable and no adapter
+    // to fall back to. LinkMain2 and everything above it is unchanged.
+    if (NetLink_HostSupportsCoop())
+    {
+        gLinkStatus = NetLinkMain1(&gShouldAdvanceLinkState, gSendCmd, gRecvCmds);
+        LinkMain2(&gMain.heldKeys);
+        if ((gLinkStatus & LINK_STAT_RECEIVED_NOTHING) && IsSendingKeysOverCable() == TRUE)
+            return TRUE;
+        return FALSE;
+    }
+
     if (gWirelessCommType == 0)
     {
         gLinkStatus = LinkMain1(&gShouldAdvanceLinkState, gSendCmd, gRecvCmds);
@@ -1778,6 +1808,9 @@ void SetWirelessCommType0(void)
 
 u32 GetLinkRecvQueueLength(void)
 {
+    if (gNetLinkActive)
+        return NetLink_GetRecvQueueLength();
+
     if (gWirelessCommType != 0)
         return GetRfuRecvQueueLength();
 
