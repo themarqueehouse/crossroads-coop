@@ -16,6 +16,7 @@
 #include "pokedex.h"
 #include "item.h"
 #include "field_message_box.h"
+#include "field_control_avatar.h"
 #include "event_scripts.h"
 #include "constants/event_objects.h"
 
@@ -460,9 +461,23 @@ void Coop_ReceiveGate(u8 playerId, const u16 *cmd)
 static EWRAM_DATA const u8 *sSceneSendPtr = NULL;
 static EWRAM_DATA u16 sSceneSendGate = 0;
 
+// Which object event the scene was started by talking to, if any.
+//
+// Most story scenes begin with `lock` and `faceplayer`, and both of those act
+// on whatever this console last talked to -- which, on the console that was
+// handed the scene, is some unrelated NPC it spoke to ten minutes ago, or
+// nothing. So the trigger says who it was.
+//
+// It travels as the map's local id, not as the object event index. The index
+// is an allocation slot and the two consoles do not allocate alike: the co-op
+// partner takes one of them. The local id comes from the map data and is the
+// same number on both.
+static EWRAM_DATA u16 sSceneSendLocalId = 0;
+
 // Received, waiting for a frame where starting it is safe.
 static EWRAM_DATA const u8 *sPendingScene = NULL;
 static EWRAM_DATA u16 sPendingSceneFrames = 0;
+static EWRAM_DATA u16 sPendingSceneLocalId = 0;
 
 // Set while running a scene handed to us rather than triggered by us. Cleared
 // when that script finishes, which is the only honest end for it: a script can
@@ -511,6 +526,7 @@ bool8 Coop_BroadcastScene(const u8 *resume, u16 gateId)
 
     sSceneSendPtr = resume;
     sSceneSendGate = gateId;
+    sSceneSendLocalId = gSpecialVar_LastTalked;
     return TRUE;
 }
 
@@ -532,6 +548,7 @@ static bool8 CoopSendScene(u16 *sendCmd)
     // were on it when we checked, but a warp one frame later is a scene whose
     // object events and coordinates belong somewhere else.
     sendCmd[4] = OurMapWord();
+    sendCmd[5] = sSceneSendLocalId;
 
     sSceneSendPtr = NULL;
     return TRUE;
@@ -558,6 +575,32 @@ void Coop_ReceiveScene(u8 playerId, const u16 *cmd)
 
     sPendingScene = (const u8 *)(ROM_BASE + off);
     sPendingSceneFrames = 0;
+    sPendingSceneLocalId = cmd[5];
+}
+
+// Point this console at the same NPC the trigger was talking to.
+//
+// Resolved from the local id rather than copied as an index: both consoles
+// have the same map loaded, so the local id finds the same NPC on each, while
+// the index is an allocation slot that the co-op partner's own sprite has
+// already shifted.
+static void AdoptSceneSpeaker(void)
+{
+    u8 id;
+
+    if (sPendingSceneLocalId == LOCALID_NONE || sPendingSceneLocalId == 0)
+        return;
+
+    // The var first and unconditionally: scripts compare VAR_LAST_TALKED, and
+    // that comparison has to give the same answer on both consoles whether or
+    // not the NPC happens to be spawned on this one.
+    gSpecialVar_LastTalked = sPendingSceneLocalId;
+
+    id = GetObjectEventIdByLocalIdAndMap(sPendingSceneLocalId,
+                                         gSaveBlock1Ptr->location.mapNum,
+                                         gSaveBlock1Ptr->location.mapGroup);
+    if (id < OBJECT_EVENTS_COUNT)
+        gSelectedObjectEvent = id;
 }
 
 void Coop_UpdatePendingScene(void)
@@ -581,6 +624,7 @@ void Coop_UpdatePendingScene(void)
         || !IsPlayerStandingStill())
         return;
 
+    AdoptSceneSpeaker();
     ScriptContext_SetupScript(sPendingScene);
     sPendingScene = NULL;
     sInGuestScene = TRUE;
@@ -604,6 +648,8 @@ static void ResetScenes(void)
     sSceneSendGate = 0;
     sPendingScene = NULL;
     sPendingSceneFrames = 0;
+    sPendingSceneLocalId = 0;
+    sSceneSendLocalId = 0;
     sInGuestScene = FALSE;
 }
 
@@ -894,6 +940,11 @@ static void PublishDiagnostics(void)
     if (gCoopPeer.valid)                          flags |= COOP_DIAG_PEER_VALID;
     if (PeerIsOnOurMap())                         flags |= COOP_DIAG_PEER_SAME_MAP;
     if (Coop_IsWaitingAtGate())                   flags |= COOP_DIAG_AT_GATE;
+    // Why a mirrored scene is waiting its turn, and what the tests use to
+    // stage "your partner is mid-conversation" rather than pressing A and
+    // hoping.
+    if (ArePlayerFieldControlsLocked() || ScriptContext_IsEnabled())
+                                                  flags |= COOP_DIAG_SCRIPT_BUSY;
 
     gNetMailbox.coopState = sCoopState;
     gNetMailbox.linkFlags = flags;

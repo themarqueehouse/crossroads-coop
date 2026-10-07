@@ -216,6 +216,12 @@ Route101_EventScript_RouteSign::
 	end
 
 Route101_EventScript_BirchsBag::
+	@ Co-op: both players get a starter, which is why there is no
+	@ goto_if_coop_guest guarding the part that hands one over. A mirrored
+	@ scene runs on both consoles, so both choose, both battle the Zigzagoon
+	@ and both end up in Birch's lab. This is the one place in the game where
+	@ running the whole thing twice is the point.
+	coopscene GATE_STORY_STARTERS
 	lock
 	faceplayer
 	setflag FLAG_SYS_POKEMON_GET

@@ -113,6 +113,12 @@ struct NetMailbox
 #define COOP_DIAG_PEER_VALID       (1 << 3) // we have heard from the peer
 #define COOP_DIAG_PEER_SAME_MAP    (1 << 4) // ...and they are on our map
 #define COOP_DIAG_AT_GATE          (1 << 5) // waiting at a sync gate
+// The player is not in control: a script is running, a message is on screen,
+// or a menu is open. Deliberately NOT GetFieldMessageBoxMode, which goes back
+// to "hidden" the moment the text has finished PRINTING and so reads as "no
+// box" while a box sits on screen waiting to be dismissed. This is also the
+// exact condition a mirrored scene defers on, so it says why one is waiting.
+#define COOP_DIAG_SCRIPT_BUSY      (1 << 6)
 
 extern struct NetMailbox gNetMailbox;
 

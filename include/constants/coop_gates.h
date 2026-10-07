@@ -32,4 +32,8 @@
 // whatever gets inserted later.
 #define GATE_STORY_BASE 100
 
+// Birch's bag on Route 101. The one scene deliberately left unguarded, so that
+// running it on both consoles gives both players a starter.
+#define GATE_STORY_STARTERS (GATE_STORY_BASE + 0)
+
 #endif // GUARD_CONSTANTS_COOP_GATES_H

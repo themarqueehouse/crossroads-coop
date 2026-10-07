@@ -42,18 +42,43 @@ const SB1_LOCATION_MAPNUM = OFFSETS.sb1Location + OFFSETS.warpMapNum;
 // then Scripts... is the sixth entry and Script 1 the first inside it.
 const SCRIPTS_MENU_INDEX = 5;
 
-// Close anything open first. R+Start does nothing while a message box is up,
-// and the previous step always leaves one: the intro is cleared by mashing A,
-// which ends with the player reading the bedroom television.
-async function clearBoxes(rig, which) {
-  for (let i = 0; i < 6; i++) {
+// Whether this console is out of the player's hands: a script running, a
+// message waiting to be dismissed, a menu open.
+const isBusy = async (rig, which) =>
+  (await rig.mailbox(which)).flags.includes('SCRIPT_BUSY');
+
+// Hand control back to the player, and know it rather than hoping.
+//
+// An earlier version counted B presses and moved on. It also asked the ROM
+// whether a message box was open -- and got "no" while one sat on screen,
+// because the game's own flag means "text is printing", not "a box is up". So
+// every section after the first ran its menu presses into a message box and
+// the failures landed three sections later, nowhere near the cause.
+async function freeUp(rig, which) {
+  for (let i = 0; i < 12 && await isBusy(rig, which); i++) {
     await rig.tap(which, 'B', 6);
-    await rig.wait(15);
+    await rig.wait(20);
   }
+  if (await isBusy(rig, which))
+    throw new Error(`core ${which}: would not come back to the player`);
 }
 
-async function runDebugScript(rig, which, slot) {
-  await clearBoxes(rig, which);
+// Get a console into a conversation, for staging "your partner is busy".
+async function openTelevision(rig, which) {
+  for (let i = 0; i < 8 && !(await isBusy(rig, which)); i++) {
+    await rig.tap(which, 'A', 8);
+    await rig.wait(25);
+  }
+  if (!(await isBusy(rig, which)))
+    throw new Error(`core ${which}: could not get into a conversation`);
+}
+
+// `beforeRun` fires with the Scripts submenu open, which is the last moment
+// before the script's first command -- and the only one at which state the
+// script is about to read can be staged, since the field clears some of it
+// every frame the player is in control.
+async function runDebugScript(rig, which, slot, beforeRun) {
+  await freeUp(rig, which);
   await rig.hold(which, 'R');
   await rig.wait(6);
   await rig.tap(which, 'Start', 8);
@@ -70,6 +95,7 @@ async function runDebugScript(rig, which, slot) {
     await rig.tap(which, 'Down', 6);
     await rig.wait(8);
   }
+  if (beforeRun) await beforeRun();
   await rig.tap(which, 'A', 8);   // run Script <slot>
   await rig.wait(25);
 }
@@ -157,6 +183,8 @@ async function main() {
     //          only, which is how it was before this
     //   6 / 6  the guard did nothing and both consoles handed over a gift
     console.log('\n--- a gift inside a mirrored scene ---');
+    await freeUp(rig, 0);
+    await freeUp(rig, 1);
     const before = [await countItem(rig, 0, ITEM_POTION),
                     await countItem(rig, 1, ITEM_POTION)];
     t.note('potions before', before.join(' / '));
@@ -174,6 +202,43 @@ async function main() {
     t.check('the partner got it too, and only once', gained[1] === 3,
             gained[1] === 0 ? 'the shared bag did not cross' : '');
 
+    // --- the mirrored scene knows who was being talked to --------------
+    //
+    // Most story scenes open with `lock` and `faceplayer`, and both act on
+    // whatever THIS console last talked to. On the console handed the scene
+    // that is some unrelated NPC it spoke to earlier, so the trigger has to
+    // say who it was.
+    //
+    // Staged by setting the two consoles' idea of it to different values and
+    // checking the guest ends up with the host's.
+    //
+    // It has to be staged with the debug menu already open. The field clears
+    // gSpecialVar_LastTalked at the top of every frame the player is in
+    // control -- which is correct, it only means anything while a script
+    // started by talking to someone is running -- so a value written any
+    // earlier is gone before the script's first command reads it.
+    console.log('\n--- who the scene was talking to ---');
+    await freeUp(rig, 0);
+    await freeUp(rig, 1);
+    const HOST_SPEAKER = 9;
+    await rig.setU16(1, OFFSETS.lastTalkedAddr, 3);
+
+    await rig.clearGateLog();
+    await runDebugScript(rig, 0, 1, async () => {
+      await rig.setU16(0, OFFSETS.lastTalkedAddr, HOST_SPEAKER);
+      t.note('last talked', `${await rig.u16(0, OFFSETS.lastTalkedAddr)} / ` +
+                            `${await rig.u16(1, OFFSETS.lastTalkedAddr)}`);
+    });
+    await rig.wait(120);
+
+    const guestSpeaker = await rig.u16(1, OFFSETS.lastTalkedAddr);
+    t.note('last talked after', `${await rig.u16(0, OFFSETS.lastTalkedAddr)} / ${guestSpeaker}`);
+    t.check('the guest adopts the host\'s speaker', guestSpeaker === HOST_SPEAKER,
+            guestSpeaker === 3 ? 'it kept its own' : '');
+
+    for (let i = 0; i < 6; i++) { await rig.tap('both', 'A', 8); await rig.wait(25); }
+    await rig.wait(60);
+
     // --- a partner who is busy, not absent -----------------------------
     //
     // Player 2 is left in a conversation with the bedroom television. The
@@ -185,10 +250,10 @@ async function main() {
     // screen: when both players are ready the gate opens in a frame or two and
     // the message never appears. The screenshot is the record of it.
     console.log('\n--- player 2 is mid-conversation when the scene starts ---');
-    await clearBoxes(rig, 0);
-    await clearBoxes(rig, 1);
-    await rig.tap(1, 'A', 8);   // player 2 talks to the television
-    await rig.wait(40);
+    await freeUp(rig, 0);
+    await freeUp(rig, 1);
+    await openTelevision(rig, 1);
+    t.check('player 2 is in a conversation', await isBusy(rig, 1));
 
     await rig.clearGateLog();
     await runDebugScript(rig, 0, 1);
@@ -204,7 +269,12 @@ async function main() {
 
     // Let player 2 out of the conversation. B rather than A: A would just
     // read the television again.
-    await clearBoxes(rig, 1);
+    //
+    // Not freeUp, which waits for control to come back: it never does, because
+    // the moment the conversation ends the deferred scene starts and takes it
+    // again. That is the thing being checked, so waiting for the opposite
+    // would fail on success.
+    for (let i = 0; i < 4; i++) { await rig.tap(1, 'B', 6); await rig.wait(20); }
     await rig.wait(120);
     const freed = (await rig.gateLog(1)).includes(GATE_TEST);
     t.check('the scene starts as soon as player 2 is free', freed,
@@ -223,6 +293,8 @@ async function main() {
     // game confused, which is why it comes last -- but it is the only way to
     // stage "my partner is on another map" without an hour of walking.
     console.log('\n--- player 2 is elsewhere; player 1 triggers the scene ---');
+    await freeUp(rig, 0);
+    await freeUp(rig, 1);
     const realMapNum = await rig.u8(1, OFFSETS.saveBlock1Addr + SB1_LOCATION_MAPNUM);
     await rig.setU8(1, OFFSETS.saveBlock1Addr + SB1_LOCATION_MAPNUM, realMapNum + 1);
     await rig.wait(90);
@@ -256,6 +328,7 @@ async function main() {
     // Player 2 is still displaced from the check above, so the refusal case
     // comes first and for free.
     console.log('\n--- a gym-shaped script, with the partner away ---');
+    await freeUp(rig, 0);
     const beforeAway = await countItem(rig, 0, ITEM_POTION);
     await runDebugScript(rig, 0, 3);
     await rig.wait(120);
@@ -263,7 +336,7 @@ async function main() {
             (await countItem(rig, 0, ITEM_POTION)) === beforeAway);
 
     console.log('\n--- and with the partner here ---');
-    await clearBoxes(rig, 0);
+    await freeUp(rig, 0);
     await rig.setU8(1, OFFSETS.saveBlock1Addr + SB1_LOCATION_MAPNUM, realMapNum);
     await rig.wait(120);
     t.check('player 1 sees the partner again',

@@ -54,6 +54,7 @@ WANTED_SYMBOLS = {
     "sPeerGateId": "peerGateIdAddr",
     "sPeerGateSeq": "peerGateSeqAddr",
     "sUsedPeerGateSeq": "usedPeerGateSeqAddr",
+    "gSpecialVar_LastTalked": "lastTalkedAddr",
 }
 
 # Symbol -> the field names its entries carry, in order.
