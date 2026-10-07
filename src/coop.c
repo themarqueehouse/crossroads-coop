@@ -21,6 +21,9 @@ static EWRAM_DATA u8 sCoopState = 0;
 static EWRAM_DATA u8 sPeerObjectId;
 // Cleared with the rest of the session state, so a reconnect re-sends.
 static EWRAM_DATA bool8 sSentPlayer2Record = FALSE;
+// Staging for an outgoing record. The transfer reads its source across
+// many frames, so it cannot point at a caller's stack.
+static EWRAM_DATA struct CoopPlayer2 sOutgoingRecord = {0};
 static EWRAM_DATA u16 sStateTimer = 0;
 
 // The player data exchange normally gets 600 frames (10s) before the cable
@@ -47,6 +50,42 @@ static EWRAM_DATA u16 sStateTimer = 0;
 struct CoopPlayer2 *GetCoopPlayer2(void)
 {
     return &gSaveBlock1Ptr->coopPlayer2;
+}
+
+// Snapshot whatever this console's player currently is, in the shape the save
+// stores. Player 2 calls this to report itself to Player 1.
+//
+// Reads the LIVE party (gPlayerParty) rather than the saved copy in SaveBlock1.
+// The saved copy is only a snapshot taken at save time, and Player 2 never
+// saves -- so it would be stale or, on a fresh boot, empty.
+static void GatherLocalPlayerRecord(struct CoopPlayer2 *out)
+{
+    u8 i;
+
+    for (i = 0; i < PLAYER_NAME_LENGTH + 1; i++)
+        out->playerName[i] = gSaveBlock2Ptr->playerName[i];
+
+    out->playerGender = gSaveBlock2Ptr->playerGender;
+
+    for (i = 0; i < TRAINER_ID_LENGTH; i++)
+        out->playerTrainerId[i] = gSaveBlock2Ptr->playerTrainerId[i];
+
+    out->playTimeHours = gSaveBlock2Ptr->playTimeHours;
+    out->playTimeMinutes = gSaveBlock2Ptr->playTimeMinutes;
+    out->playTimeSeconds = gSaveBlock2Ptr->playTimeSeconds;
+
+    out->partyCount = gPlayerPartyCount;
+    for (i = 0; i < PARTY_SIZE; i++)
+        out->party[i] = gPlayerParty[i];
+
+    out->pos = gSaveBlock1Ptr->pos;
+    out->location = gSaveBlock1Ptr->location;
+
+    // Claimed the moment a real player reports themselves. Player 1 uses this
+    // to tell "nobody has ever joined" from "the partner I know, currently
+    // away", which decides whether a joiner makes a character or gets one back.
+    out->claimed = TRUE;
+    out->padding = 0;
 }
 
 bool8 IsCoopLinkActive(void)
@@ -194,11 +233,40 @@ void Coop_Update(void)
         // Player 1 owns the save, so Player 1 hands Player 2 their stored
         // character. Sent once per session, on the first frame the link is
         // actually usable.
-        if (!sSentPlayer2Record && NetLink_IsMaster())
+        if (!sSentPlayer2Record)
         {
-            CoopSync_Send(COOP_STREAM_PLAYER2, GetCoopPlayer2(),
-                          sizeof(struct CoopPlayer2));
+            if (NetLink_IsMaster())
+            {
+                CoopSync_Send(COOP_STREAM_PLAYER2, GetCoopPlayer2(),
+                              sizeof(struct CoopPlayer2));
+            }
+            else
+            {
+                // Player 2 reports who it currently is, so Player 1 has
+                // something to store. Staged into a static rather than built on
+                // the stack: the transfer reads the source over the following
+                // second, long after this frame's stack is gone.
+                GatherLocalPlayerRecord(&sOutgoingRecord);
+                CoopSync_Send(COOP_STREAM_PLAYER2, &sOutgoingRecord,
+                              sizeof(sOutgoingRecord));
+            }
             sSentPlayer2Record = TRUE;
+        }
+
+        // A record arriving at Player 1 is Player 2 telling us who they are, so
+        // it goes in the save. Arriving at Player 2 it is the opposite -- their
+        // stored character being handed back -- which is the next piece of work.
+        if (NetLink_IsMaster() && CoopSync_HasReceived(COOP_STREAM_PLAYER2))
+        {
+            u16 size;
+            const void *rec = CoopSync_GetReceived(COOP_STREAM_PLAYER2, &size);
+
+            if (rec != NULL && size == sizeof(struct CoopPlayer2))
+            {
+                *GetCoopPlayer2() = *(const struct CoopPlayer2 *)rec;
+                gNetMailbox.coopState = sCoopState; // keep diagnostics honest
+            }
+            CoopSync_Reset();
         }
         break;
 
