@@ -246,6 +246,27 @@
   @media (orientation: portrait) {
     #stage.live #rotate { display: grid; }
   }
+  /* Desktop only: hover:hover and pointer:fine together mean a real mouse,
+     which excludes phones and tablets without excluding a laptop touchscreen. */
+  #keyhelp { display: none; }
+  @media (hover: hover) and (pointer: fine) {
+    #keyhelp {
+      display: block;
+      margin: 10px auto 0;
+      max-width: 640px;
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.9;
+      opacity: 0.75;
+    }
+    #keyhelp kbd {
+      border: 1px solid currentColor;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: inherit;
+      font-size: 11px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -268,6 +289,15 @@
        the only diagnostic available on a phone, where there is no console to
        open, so hiding it the moment things start working was exactly backwards. -->
   <div id="logwrap"><div id="log"></div></div>
+
+  <!-- Keyboard legend, for playing in a desktop browser. Shown only where a
+       real pointer exists: on a phone the on-screen pad is the controls and
+       this would be noise. -->
+  <div id="keyhelp">
+    <b>Keyboard</b> &nbsp; Arrows move &nbsp;·&nbsp; <kbd>X</kbd> A &nbsp;·&nbsp;
+    <kbd>Z</kbd> B &nbsp;·&nbsp; <kbd>A</kbd>/<kbd>S</kbd> L/R &nbsp;·&nbsp;
+    <kbd>Enter</kbd> Start &nbsp;·&nbsp; <kbd>Shift</kbd> Select
+  </div>
 
   <div id="setup">
     <h1>Emerald Co-op</h1>

@@ -20,7 +20,9 @@ import { NetClient } from './netclient.js';
 import {
   DEFAULT_LAYOUT,
   MGBA_NAMES,
+  KEY_MAP,
   resolveTouches,
+  unionButtons,
   InputState,
 } from './controls.js';
 
@@ -301,30 +303,115 @@ export class CoopApp {
 
   attachInput() {
     const el = this.overlay;
-    const handler = (ev) => {
+
+    // Three independent sources, merged on every change. A phone uses only the
+    // first; a desktop browser uses the other two. Keeping them apart matters:
+    // if they shared one set, letting go of a key would clear a direction the
+    // mouse was still holding, and vice versa.
+    this.touchButtons = new Set();
+    this.mouseButtons = new Set();
+    this.keyButtons = new Set();
+
+    const touchHandler = (ev) => {
       ev.preventDefault();
-      this.applyInput(this.input.diff(this.readTouches(ev)));
+      this.touchButtons = this.readTouches(ev);
+      this.syncInput();
     };
 
     // passive: false is required for preventDefault to actually suppress
     // scrolling and the double-tap zoom on iOS.
     const opts = { passive: false };
-    el.addEventListener('touchstart', handler, opts);
-    el.addEventListener('touchmove', handler, opts);
-    el.addEventListener('touchend', handler, opts);
-    el.addEventListener('touchcancel', handler, opts);
+    el.addEventListener('touchstart', touchHandler, opts);
+    el.addEventListener('touchmove', touchHandler, opts);
+    el.addEventListener('touchend', touchHandler, opts);
+    el.addEventListener('touchcancel', touchHandler, opts);
+
+    this.attachMouse(el);
+    this.attachKeyboard();
 
     // A backgrounded tab stops delivering touchend, which would leave a
     // direction stuck down. Release everything when we lose visibility.
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        this.applyInput(this.input.clear());
+        this.releaseAll();
         // Going to the background is the last reliable moment before iOS may
         // kill us outright, so get the save down now.
         this.flushSave();
       }
     });
-    window.addEventListener('blur', () => this.applyInput(this.input.clear()));
+    window.addEventListener('blur', () => this.releaseAll());
+  }
+
+  // Mouse and stylus, so the on-screen pad is usable in a desktop browser.
+  // Deliberately filtered to non-touch pointers: on a phone every touch also
+  // raises pointer events, and handling both would double-count them.
+  attachMouse(el) {
+    const held = new Set();
+
+    const update = (ev) => {
+      const box = el.firstElementChild || el;
+      const rect = box.getBoundingClientRect();
+      const points = [...held].map((p) => ({
+        x: (p.x - rect.left) / rect.width,
+        y: (p.y - rect.top) / rect.height,
+      }));
+      this.mouseButtons = resolveTouches(this.layout, points);
+      this.syncInput();
+    };
+
+    el.addEventListener('pointerdown', (ev) => {
+      if (ev.pointerType === 'touch') return;
+      ev.preventDefault();
+      // Capture so a press that drags off the button still releases cleanly.
+      el.setPointerCapture?.(ev.pointerId);
+      held.clear();
+      held.add({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
+      update(ev);
+    });
+
+    el.addEventListener('pointermove', (ev) => {
+      if (ev.pointerType === 'touch' || held.size === 0) return;
+      held.clear();
+      held.add({ id: ev.pointerId, x: ev.clientX, y: ev.clientY });
+      update(ev);
+    });
+
+    const end = (ev) => {
+      if (ev.pointerType === 'touch') return;
+      held.clear();
+      update(ev);
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+    el.addEventListener('pointerleave', end);
+  }
+
+  attachKeyboard() {
+    const onKey = (ev, down) => {
+      const btn = KEY_MAP[ev.code];
+      if (!btn) return;
+      // Backspace would navigate back and the arrows would scroll the page.
+      ev.preventDefault();
+      if (ev.repeat) return;
+      if (down) this.keyButtons.add(btn);
+      else this.keyButtons.delete(btn);
+      this.syncInput();
+    };
+
+    window.addEventListener('keydown', (ev) => onKey(ev, true));
+    window.addEventListener('keyup', (ev) => onKey(ev, false));
+  }
+
+  syncInput() {
+    this.applyInput(this.input.diff(
+      unionButtons(this.touchButtons, this.mouseButtons, this.keyButtons)));
+  }
+
+  releaseAll() {
+    this.touchButtons = new Set();
+    this.mouseButtons = new Set();
+    this.keyButtons = new Set();
+    this.applyInput(this.input.clear());
   }
 
   readTouches(ev) {

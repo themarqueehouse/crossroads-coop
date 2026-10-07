@@ -13,6 +13,8 @@ import {
   buttonAt,
   resolveTouches,
   InputState,
+  KEY_MAP,
+  unionButtons,
 } from '../src/controls.js';
 
 /** A point at angle `deg` and `frac` of the d-pad radius, in screen coords. */
@@ -254,4 +256,63 @@ test('every button maps to an mGBA input name', () => {
   assert.equal(MGBA_NAMES[BTN.START], 'Start');
   assert.equal(MGBA_NAMES[BTN.SELECT], 'Select');
   assert.equal(MGBA_NAMES[BTN.UP], 'Up');
+});
+
+// --- keyboard and multi-source input ---------------------------------------
+//
+// Added when the wrapper gained desktop support: the page was touch-only, so a
+// computer browser could neither type nor click the on-screen pad.
+
+test('KEY_MAP covers every button the pad has', () => {
+  const mapped = new Set(Object.values(KEY_MAP));
+  for (const btn of Object.values(BTN)) {
+    assert.ok(mapped.has(btn), `no key mapped to ${btn}`);
+  }
+});
+
+test('KEY_MAP is keyed on physical codes, not characters', () => {
+  // KeyboardEvent.code values, so the mapping survives a non-QWERTY layout.
+  // A entry like 'x' or 'ArrowUp '.trim() slipping in would silently never match.
+  for (const code of Object.keys(KEY_MAP)) {
+    assert.match(code, /^(Arrow(Up|Down|Left|Right)|Key[A-Z]|Enter|Backspace|Shift(Left|Right))$/,
+      `${code} is not a KeyboardEvent.code`);
+  }
+});
+
+test('unionButtons merges every source', () => {
+  const out = unionButtons(new Set(['up']), new Set(['a']), new Set(['up', 'b']));
+  assert.deepStrictEqual([...out].sort(), ['a', 'b', 'up']);
+});
+
+test('unionButtons tolerates missing sources', () => {
+  assert.deepStrictEqual([...unionButtons(null, undefined, new Set(['a']))], ['a']);
+  assert.deepStrictEqual([...unionButtons()], []);
+});
+
+test('releasing a key does not cancel a button another source still holds', () => {
+  // The reason the sources are tracked separately. Thumb on the d-pad, hand on
+  // the keyboard: letting go of the key must not clear the d-pad direction.
+  const touch = new Set(['up']);
+  const keys = new Set(['a']);
+  const input = new InputState();
+
+  input.diff(unionButtons(touch, keys));
+  keys.delete('a');
+  const { press, release } = input.diff(unionButtons(touch, keys));
+
+  assert.deepStrictEqual(press, []);
+  assert.deepStrictEqual(release, ['a']);
+  assert.ok(input.pressed.has('up'), 'the held direction was wrongly released');
+});
+
+test('the same button from two sources survives one of them releasing', () => {
+  const touch = new Set(['a']);
+  const keys = new Set(['a']);
+  const input = new InputState();
+
+  input.diff(unionButtons(touch, keys));
+  keys.delete('a');
+  const { release } = input.diff(unionButtons(touch, keys));
+
+  assert.deepStrictEqual(release, [], 'A was released while still held on screen');
 });

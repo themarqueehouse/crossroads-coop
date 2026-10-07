@@ -37,6 +37,47 @@ export const MGBA_NAMES = {
   [BTN.SELECT]: 'Select',
 };
 
+// Keyboard mapping, for playing in a desktop browser.
+//
+// Keyed on KeyboardEvent.code rather than .key so the mapping is physical: the
+// same keys work on a non-QWERTY layout, and holding a modifier does not change
+// what a key reports. X/Z for A/B follows mGBA's own default, which is the core
+// this runs on.
+export const KEY_MAP = {
+  ArrowUp: BTN.UP,
+  ArrowDown: BTN.DOWN,
+  ArrowLeft: BTN.LEFT,
+  ArrowRight: BTN.RIGHT,
+  KeyX: BTN.A,
+  KeyZ: BTN.B,
+  KeyA: BTN.L,
+  KeyS: BTN.R,
+  Enter: BTN.START,
+  Backspace: BTN.SELECT,
+  ShiftLeft: BTN.SELECT,
+  ShiftRight: BTN.SELECT,
+};
+
+/**
+ * Union of every input source, for InputState.diff.
+ *
+ * diff() takes the complete set of buttons held right now, so the sources --
+ * touch, mouse, keyboard -- must be merged before it is called. Tracking them
+ * separately and unioning here means releasing a key cannot cancel a button the
+ * other hand is still holding on screen.
+ *
+ * @param {...Set<string>} sets
+ * @returns {Set<string>}
+ */
+export function unionButtons(...sets) {
+  const out = new Set();
+  for (const s of sets) {
+    if (!s) continue;
+    for (const b of s) out.add(b);
+  }
+  return out;
+}
+
 /**
  * Default landscape layout.
  *
