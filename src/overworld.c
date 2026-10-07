@@ -819,6 +819,21 @@ static void SetWarpDestinationToContinueGameWarp(void)
     sWarpDestination = gSaveBlock1Ptr->continueGameWarp;
 }
 
+// Set the warp destination from a full WarpData, preserving s16 coordinates.
+//
+// Every public setter above funnels through SetWarpData, whose x and y are s8.
+// That is harmless for warp tiles -- they are small, and most callers pass
+// WARP_ID_NONE with coordinates that are then ignored -- but it is wrong for
+// restoring an arbitrary saved position: on any map wider than 127 tiles the
+// coordinate sign-extends and the player lands somewhere else entirely. A
+// two-region hack has a lot of maps that wide.
+//
+// Added for co-op, which restores Player 2's exact saved position.
+void SetWarpDestinationToWarpData(const struct WarpData *warp)
+{
+    sWarpDestination = *warp;
+}
+
 void SetContinueGameWarp(s8 mapGroup, s8 mapNum, s8 warpId, s8 x, s8 y)
 {
     SetWarpData(&gSaveBlock1Ptr->continueGameWarp, mapGroup, mapNum, warpId, x, y);

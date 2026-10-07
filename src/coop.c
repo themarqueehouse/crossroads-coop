@@ -7,6 +7,9 @@
 #include "overworld.h"
 #include "event_object_movement.h"
 #include "field_player_avatar.h"
+#include "script.h"
+#include "field_screen_effect.h"
+#include "constants/maps.h"
 #include "constants/event_objects.h"
 
 // ---------------------------------------------------------------------------
@@ -56,6 +59,63 @@ static EWRAM_DATA u16 sStateTimer = 0;
 struct CoopPlayer2 *GetCoopPlayer2(void)
 {
     return &gSaveBlock1Ptr->coopPlayer2;
+}
+
+// Take over the character Player 1 handed back.
+//
+// Waits for a quiet frame rather than acting the moment the last chunk lands.
+// Replacing the party and the player's identity while a script is mid-cutscene
+// or the avatar is mid-step would leave the game referring to a player that no
+// longer exists; the two predicates below are the game's own tests for "the
+// player is in control and standing still".
+static void TryAdoptPendingRecord(void)
+{
+    struct WarpData warp;
+    u8 i;
+
+    if (!sHasPendingRecord)
+        return;
+
+    if (ArePlayerFieldControlsLocked() || !IsPlayerStandingStill())
+        return;
+
+    // Identity. Set before the warp, because the map reload rebuilds the avatar
+    // from playerGender -- doing it after would leave the wrong sprite until
+    // the next map change.
+    for (i = 0; i < PLAYER_NAME_LENGTH + 1; i++)
+        gSaveBlock2Ptr->playerName[i] = sPendingRecord.playerName[i];
+
+    gSaveBlock2Ptr->playerGender = sPendingRecord.playerGender;
+
+    for (i = 0; i < TRAINER_ID_LENGTH; i++)
+        gSaveBlock2Ptr->playerTrainerId[i] = sPendingRecord.playerTrainerId[i];
+
+    gSaveBlock2Ptr->playTimeHours = sPendingRecord.playTimeHours;
+    gSaveBlock2Ptr->playTimeMinutes = sPendingRecord.playTimeMinutes;
+    gSaveBlock2Ptr->playTimeSeconds = sPendingRecord.playTimeSeconds;
+
+    // Party. Clamped because the count came over a wire -- a corrupt value here
+    // would be a write past the end of the party array.
+    gPlayerPartyCount = sPendingRecord.partyCount <= PARTY_SIZE
+                      ? sPendingRecord.partyCount : PARTY_SIZE;
+    for (i = 0; i < PARTY_SIZE; i++)
+        gPlayerParty[i] = sPendingRecord.party[i];
+
+    // Position. warpId is WARP_ID_NONE so SetPlayerCoordsFromWarp takes the
+    // coordinates verbatim, in the same space as gSaveBlock1Ptr->pos -- which
+    // is what the record stored. Routed through the full-width setter because
+    // the ordinary ones truncate x and y to s8.
+    warp.mapGroup = sPendingRecord.location.mapGroup;
+    warp.mapNum = sPendingRecord.location.mapNum;
+    warp.warpId = WARP_ID_NONE;
+    warp.x = sPendingRecord.pos.x;
+    warp.y = sPendingRecord.pos.y;
+
+    SetWarpDestinationToWarpData(&warp);
+    DoWarp();
+    ResetInitialPlayerAvatarState();
+
+    sHasPendingRecord = FALSE;
 }
 
 // Snapshot whatever this console's player currently is, in the shape the save
@@ -271,6 +331,10 @@ void Coop_Update(void)
                 CoopSync_Reset();
             }
         }
+        else if (sHasPendingRecord)
+        {
+            TryAdoptPendingRecord();
+        }
         else if (!sHandledPlayer2Record && CoopSync_HasReceived(COOP_STREAM_PLAYER2))
         {
             u16 size;
@@ -285,9 +349,9 @@ void Coop_Update(void)
 
                 if (stored->claimed)
                 {
-                    // A character is waiting for us. Taking it over is the next
-                    // piece of work; until then we keep playing as ourselves and
-                    // say nothing, which leaves the stored character intact.
+                    // A character is waiting for us. Held rather than applied
+                    // here: TryAdoptPendingRecord waits for a frame where the
+                    // player is actually in control.
                     sPendingRecord = *stored;
                     sHasPendingRecord = TRUE;
                 }
