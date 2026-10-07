@@ -11,6 +11,9 @@
 #include "field_screen_effect.h"
 #include "constants/maps.h"
 #include "constants/flags.h"
+#include "constants/vars.h"
+#include "event_data.h"
+#include "pokedex.h"
 #include "constants/event_objects.h"
 
 // ---------------------------------------------------------------------------
@@ -76,6 +79,122 @@ struct CoopPlayer2 *GetCoopPlayer2(void)
     return &gSaveBlock1Ptr->coopPlayer2;
 }
 
+// ---------------------------------------------------------------------------
+// Live changes.
+//
+// The join sync is a snapshot. On its own it means a gym beaten by Player 2 is
+// news that never reaches Player 1, and vanishes the moment Player 1 saves.
+// These carry each change as it happens.
+//
+// One change per frame is plenty: the game sets a handful of flags at a story
+// beat, not hundreds, and the ring absorbs the bursts.
+// ---------------------------------------------------------------------------
+
+#define COOP_DELTA_SLOTS 64
+#define COOP_DELTA_MASK  (COOP_DELTA_SLOTS - 1)
+
+struct CoopDelta
+{
+    u8 kind;
+    u16 id;
+    u16 value;
+};
+
+static EWRAM_DATA struct CoopDelta sDeltaRing[COOP_DELTA_SLOTS] = {0};
+static EWRAM_DATA u8 sDeltaHead = 0;
+static EWRAM_DATA u8 sDeltaTail = 0;
+// Set while a partner's change is being applied. Without it, applying their
+// flag would queue it straight back to them, and the two would bounce the same
+// change forever.
+static EWRAM_DATA bool8 sApplyingRemote = FALSE;
+static EWRAM_DATA u16 sDeltasDropped = 0;
+
+void Coop_QueueDelta(u8 kind, u16 id, u16 value)
+{
+    u8 next;
+
+    if (!IsCoopLinkActive() || sApplyingRemote)
+        return;
+
+    // Temp flags and vars are per-map scratch, cleared on every map change and
+    // belonging to whatever script is running on THIS console. Broadcasting
+    // them would be noise at best and would stamp on the partner's running
+    // script at worst.
+    if (kind == COOP_DELTA_FLAG && id < NUM_TEMP_FLAGS)
+        return;
+    if (kind == COOP_DELTA_VAR && id < VARS_START + NUM_TEMP_VARS)
+        return;
+
+    next = (sDeltaHead + 1) & COOP_DELTA_MASK;
+    if (next == sDeltaTail)
+    {
+        // Full. Counted rather than silently discarded: if this is ever
+        // non-zero in the diagnostics, one change per frame is too slow and
+        // the design needs revisiting, not the buffer resizing.
+        sDeltasDropped++;
+        return;
+    }
+
+    sDeltaRing[sDeltaHead].kind = kind;
+    sDeltaRing[sDeltaHead].id = id;
+    sDeltaRing[sDeltaHead].value = value;
+    sDeltaHead = next;
+}
+
+// Emit one queued change. Returns TRUE if it wrote a command.
+static bool8 CoopSendDelta(u16 *sendCmd)
+{
+    const struct CoopDelta *d;
+
+    if (sDeltaHead == sDeltaTail)
+        return FALSE;
+
+    d = &sDeltaRing[sDeltaTail];
+    sendCmd[0] = LINKCMD_COOP_DELTA;
+    sendCmd[1] = d->kind;
+    sendCmd[2] = d->id;
+    sendCmd[3] = d->value;
+    sDeltaTail = (sDeltaTail + 1) & COOP_DELTA_MASK;
+    gNetMailbox.deltasSent++;
+    return TRUE;
+}
+
+void Coop_ReceiveDelta(u8 playerId, const u16 *cmd)
+{
+    u8 kind = cmd[1];
+    u16 id = cmd[2];
+    u16 value = cmd[3];
+
+    // Our own changes come back looped, as the cable did. Applying them is
+    // harmless but queueing them again is not.
+    if (playerId == GetMultiplayerId())
+        return;
+
+    sApplyingRemote = TRUE;
+
+    switch (kind)
+    {
+    case COOP_DELTA_FLAG:
+        if (value)
+            FlagSet(id);
+        else
+            FlagClear(id);
+        break;
+    case COOP_DELTA_VAR:
+        VarSet(id, value);
+        break;
+    case COOP_DELTA_DEX_SEEN:
+        GetSetPokedexFlag(id, FLAG_SET_SEEN);
+        break;
+    case COOP_DELTA_DEX_CAUGHT:
+        GetSetPokedexFlag(id, FLAG_SET_CAUGHT);
+        break;
+    }
+
+    sApplyingRemote = FALSE;
+    gNetMailbox.deltasRecv++;
+}
+
 // The bag as a flat run of slots. Its five pockets are contiguous and all the
 // same type, so the whole thing can be walked in one loop rather than five.
 #define BAG_SLOT_COUNT (sizeof(struct Bag) / sizeof(struct ItemSlot))
@@ -101,6 +220,9 @@ static void GatherWorldState(struct CoopWorldState *out)
 
     for (i = 0; i < NUM_FLAG_BYTES; i++)
         out->flags[i] = gSaveBlock1Ptr->flags[i];
+
+    for (i = 0; i < VARS_COUNT; i++)
+        out->vars[i] = gSaveBlock1Ptr->vars[i];
 
     for (i = 0; i < NUM_DEX_FLAG_BYTES; i++)
     {
@@ -139,6 +261,17 @@ static void ApplyWorldState(const struct CoopWorldState *in)
 
     for (i = TEMP_FLAGS_SIZE; i < NUM_FLAG_BYTES; i++)
         gSaveBlock1Ptr->flags[i] = in->flags[i];
+
+    // Vars, past the temp block, for the same reason the temp flags are
+    // skipped: the first NUM_TEMP_VARS are per-map scratch belonging to
+    // whatever script is running right now.
+    //
+    // NUM_TEMP_VARS, not event_data.c's TEMP_VARS_SIZE -- that one is in BYTES
+    // (it is NUM_TEMP_VARS * 2, for a memset) and this is indexing an array of
+    // u16. Using it here would have skipped twice as many vars as intended and
+    // silently left sixteen real ones unsynced.
+    for (i = NUM_TEMP_VARS; i < VARS_COUNT; i++)
+        gSaveBlock1Ptr->vars[i] = in->vars[i];
 
     for (i = 0; i < NUM_DEX_FLAG_BYTES; i++)
     {
@@ -291,6 +424,11 @@ void Coop_Reset(void)
     sHasPendingRecord = FALSE;
     sGotPlayer2 = FALSE;
     sGotWorld = FALSE;
+    // Changes queued before a dropout are stale: the join sync that follows
+    // sends the whole world anyway, so replaying them would be redundant at
+    // best and would re-apply something since undone at worst.
+    sDeltaHead = 0;
+    sDeltaTail = 0;
     CoopSync_Reset();
 }
 
@@ -317,6 +455,7 @@ static void PublishDiagnostics(void)
     gNetMailbox.coopState = sCoopState;
     gNetMailbox.linkFlags = flags;
     gNetMailbox.joinStep = sJoinStep;
+    gNetMailbox.deltasDropped = sDeltasDropped;
     gNetMailbox.peerMap = gCoopPeer.mapGroup | ((u16)gCoopPeer.mapNum << 8);
     gNetMailbox.peerX = gCoopPeer.x;
     gNetMailbox.peerY = gCoopPeer.y;
@@ -576,6 +715,12 @@ static void CoopSendPositionCB(void)
     // which doubles the transfer time to keep a partner's walk smooth during a
     // wait they are already sitting through.
     if (CoopSync_SendChunk(gSendCmd))
+        return;
+
+    // Changes before positions. A missed position costs one frame of smoothness
+    // and the next one corrects it; a missed flag is a gym badge that never
+    // arrives.
+    if (CoopSendDelta(gSendCmd))
         return;
 
     me = &gObjectEvents[gPlayerAvatar.objectEventId];

@@ -65,6 +65,7 @@ extern struct CoopPeer gCoopPeer;
 struct CoopWorldState
 {
     u8 flags[NUM_FLAG_BYTES];
+    u16 vars[VARS_COUNT];
     u8 dexSeen[NUM_DEX_FLAG_BYTES];
     u8 dexCaught[NUM_DEX_FLAG_BYTES];
 
@@ -73,6 +74,32 @@ struct CoopWorldState
     struct Bag bag;
     struct ItemSlot pcItems[PC_ITEMS_COUNT];
 }; // about 1.6 KB
+
+// Live changes, broadcast as they happen.
+//
+// The join sync brings a player up to date once. Without this, that is ALL it
+// does: beat a gym and your partner's game never hears about it, and when
+// Player 1 saves, everything Player 2 achieved is gone. Shared progression that
+// only works at the moment of joining is not shared progression.
+enum CoopDeltaKind
+{
+    COOP_DELTA_FLAG,
+    COOP_DELTA_VAR,
+    COOP_DELTA_DEX_SEEN,
+    COOP_DELTA_DEX_CAUGHT,
+};
+
+/**
+ * Record a change for broadcast. Called from the game's own mutators.
+ *
+ * Safe to call at any time: it does nothing unless a co-op session is running,
+ * and nothing while a received change is being applied -- otherwise applying a
+ * partner's flag would queue it straight back and the two would echo forever.
+ */
+void Coop_QueueDelta(u8 kind, u16 id, u16 value);
+
+/** Apply a change from the partner. Called from ProcessRecvCmds. */
+void Coop_ReceiveDelta(u8 playerId, const u16 *cmd);
 
 /** Player 2's stored character, inside Player 1's save. */
 struct CoopPlayer2 *GetCoopPlayer2(void);

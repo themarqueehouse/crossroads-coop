@@ -1,5 +1,6 @@
 #include "global.h"
 #include "event_data.h"
+#include "coop.h"
 #include "pokedex.h"
 
 #define SPECIAL_FLAGS_SIZE  (NUM_SPECIAL_FLAGS / 8)  // 8 flags per byte
@@ -215,6 +216,7 @@ bool8 VarSet(u16 id, u16 value)
     if (!ptr)
         return FALSE;
     *ptr = value;
+    Coop_QueueDelta(COOP_DELTA_VAR, id, value);
     return TRUE;
 }
 
@@ -237,11 +239,20 @@ u8 *GetFlagPointer(u16 id)
         return &sSpecialFlags[(id - SPECIAL_FLAGS_START) / 8];
 }
 
+// The three flag mutators tell co-op about every change.
+//
+// This is the whole reason the flag write surface being a CLOSED set matters:
+// GetFlagPointer is public but called nowhere outside this file, so these three
+// functions plus the bulk clears are every way a flag can change in the game.
+// Hooking them catches all 93 FlagSet and 115 FlagClear call sites in C, and
+// the 4000-odd setflag/clearflag in the map scripts too, since those funnel
+// through ScrCmd_setflag into these.
 u8 FlagSet(u16 id)
 {
     u8 *ptr = GetFlagPointer(id);
     if (ptr)
         *ptr |= 1 << (id & 7);
+    Coop_QueueDelta(COOP_DELTA_FLAG, id, 1);
     return 0;
 }
 
@@ -249,7 +260,13 @@ u8 FlagToggle(u16 id)
 {
     u8 *ptr = GetFlagPointer(id);
     if (ptr)
+    {
         *ptr ^= 1 << (id & 7);
+        // Broadcast the resulting STATE, not the toggle. A toggle applied twice
+        // -- once locally, once as it echoes back -- lands where it started;
+        // the state is idempotent.
+        Coop_QueueDelta(COOP_DELTA_FLAG, id, (*ptr & (1 << (id & 7))) ? 1 : 0);
+    }
     return 0;
 }
 
@@ -258,6 +275,7 @@ u8 FlagClear(u16 id)
     u8 *ptr = GetFlagPointer(id);
     if (ptr)
         *ptr &= ~(1 << (id & 7));
+    Coop_QueueDelta(COOP_DELTA_FLAG, id, 0);
     return 0;
 }
 

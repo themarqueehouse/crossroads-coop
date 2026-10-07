@@ -22,7 +22,7 @@ EXPECTED = {
     "NET_MAX_PLAYERS": 2,
     "NET_RING_SLOTS": 8,
     "CMD_LENGTH": 8,
-    "MAILBOX_SIZE": 0x1A0,
+    "MAILBOX_SIZE": 0x1A8,
 }
 
 WANTED = ("gNetMailbox", "gNetLinkActive")

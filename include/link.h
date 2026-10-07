@@ -78,6 +78,8 @@
 #define LINKCMD_COOP_POS                0x3333
 // Co-op bulk transfer: one chunk of a larger payload. See coop_sync.h.
 #define LINKCMD_COOP_BULK               0x3334
+// Co-op: one live change to shared state (a flag, a var, a dex entry).
+#define LINKCMD_COOP_DELTA              0x3335
 #define LINKCMD_SEND_HELD_KEYS          0xCAFE
 #define LINKCMD_SEND_BLOCK_REQ          0xCCCC
 #define LINKCMD_START_TRADE             0xCCDD

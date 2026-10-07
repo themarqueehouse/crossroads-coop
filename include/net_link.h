@@ -100,7 +100,10 @@ struct NetMailbox
     /*0x19C*/ volatile u16 selfMap;
     /*0x19E*/ volatile u8 peerObjectId;     // OBJECT_EVENTS_COUNT when not spawned
     /*0x19F*/ volatile u8 joinStep;      // how far the join handshake has got
-}; // sizeof = 0x1A0
+    /*0x1A0*/ volatile u16 deltasSent;   // live changes broadcast
+    /*0x1A2*/ volatile u16 deltasRecv;   // live changes applied from the peer
+    /*0x1A4*/ volatile u16 deltasDropped; // queue overflowed -- should stay 0
+}; // sizeof = 0x1A8
 
 // Bits in NetMailbox.linkFlags.
 #define COOP_DIAG_LINK_OPEN        (1 << 0) // gLinkStatus has CONN_ESTABLISHED

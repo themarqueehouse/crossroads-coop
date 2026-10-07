@@ -43,6 +43,7 @@ const OFF = {
   // The diagnostics block the ROM publishes about itself.
   coopState: 0x190, linkFlags: 0x191, posSent: 0x192, posRecv: 0x194,
   selfMap: 0x19c, joinStep: 0x19f,
+  deltasSent: 0x1a0, deltasRecv: 0x1a2, deltasDropped: 0x1a4,
 };
 const COOP_STATE = ['OFF', 'OPENING', 'EXCHANGING', 'ACTIVE', 'LOST'];
 const JOIN_STEP = ['SEND_P2', 'AWAIT_P2', 'AWAIT_WORLD', 'DONE'];
@@ -239,6 +240,8 @@ window.__pair = {
       join: JOIN_STEP[c.byte(OFF.joinStep)] ?? c.byte(OFF.joinStep),
       posSent: c.u16(OFF.posSent),
       posRecv: c.u16(OFF.posRecv),
+      deltas: `${c.u16(OFF.deltasSent)} sent / ${c.u16(OFF.deltasRecv)} recv`,
+      deltasDropped: c.u16(OFF.deltasDropped),
       heartbeat: c.u16(OFF.heartbeat),
       outPending: (c.byte(OFF.outHead) - c.byte(OFF.outTail)) & RING_MASK,
     };

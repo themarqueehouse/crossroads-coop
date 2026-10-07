@@ -15,6 +15,7 @@
 #include "overworld.h"
 #include "palette.h"
 #include "pokedex.h"
+#include "coop.h"
 #include "pokedex_area_screen.h"
 #include "pokedex_cry_screen.h"
 #include "pokedex_plus_hgss.h"
@@ -4535,9 +4536,14 @@ s8 GetSetPokedexFlag(enum NationalDexOrder nationalDexNo, u8 caseID)
         break;
     case FLAG_SET_SEEN:
         gSaveBlock1Ptr->dexSeen[index] |= mask;
+        // One dex, completed together. Broadcast the species rather than the
+        // byte: the receiver sets its own bit, so this stays correct however
+        // the two sides' dex happens to differ.
+        Coop_QueueDelta(COOP_DELTA_DEX_SEEN, nationalDexNo + 1, 1);
         break;
     case FLAG_SET_CAUGHT:
         gSaveBlock1Ptr->dexCaught[index] |= mask;
+        Coop_QueueDelta(COOP_DELTA_DEX_CAUGHT, nationalDexNo + 1, 1);
         break;
     }
 
