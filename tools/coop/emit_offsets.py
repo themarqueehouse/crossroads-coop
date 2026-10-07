@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 """Emit coop-offsets.json from the compiled offsets probe.
 
-The harness reads the co-op save record out of emulated memory and needs the
-real offset of coopPlayer2 inside SaveBlock1. Deriving that on the JS side means
-restating the struct layout there, which drifts: sizeof(struct CoopPlayer2) is
-632 rather than the 636 its fields sum to, so a harness computing "block size
-minus record size" lands four bytes early and reads plausible nonsense.
+The test harness reads co-op state straight out of emulated memory, so it needs
+the real offsets of things inside SaveBlock1. Restating the struct layout in
+JavaScript drifts, and drifted twice already: sizeof(struct CoopPlayer2) is 632
+rather than the 636 its fields sum to, so deriving the offset as "block size
+minus record size" landed four bytes early and returned plausible nonsense.
 
-src/coop_offsets_probe.c asks the compiler instead. The array is unreferenced
-and --gc-sections drops it from the ROM, so this costs nothing at runtime; the
-values are read back out of the object file.
+src/coop_offsets_probe.c asks the compiler instead. Its arrays are unreferenced,
+so --gc-sections keeps them out of the ROM entirely and this costs nothing at
+runtime.
+
+Symbols are located by address rather than by assuming they sit in the order
+they were declared -- which they do not. The compiler emitted the second array
+first, and a reader that assumed otherwise got the first array's values for the
+second array's names: all plausible numbers, all wrong.
 
     make modern
     python3 tools/coop/emit_offsets.py coop/harness/coop-offsets.json
 """
 
 import json
+import re
 import struct
 import subprocess
 import sys
@@ -23,64 +29,90 @@ from pathlib import Path
 
 OBJ = Path("build/emerald/src/coop_offsets_probe.o")
 
-FIELDS = [
-    "sizeofSaveBlock1",
-    "sizeofCoopPlayer2",
-    "coopPlayer2",
-    "playerName",
-    "playerGender",
-    "partyCount",
-    "claimed",
-    "pos",
-    "location",
-    "party",
-]
+# Symbol -> the field names its entries carry, in order.
+ARRAYS = {
+    "gCoopOffsets": [
+        "sizeofSaveBlock1", "sizeofCoopPlayer2", "coopPlayer2",
+        "playerName", "playerGender", "partyCount", "claimed",
+        "pos", "location", "party",
+    ],
+    "gCoopWorldOffsets": [
+        "flags", "numFlagBytes", "dexSeen", "dexCaught", "numDexFlagBytes",
+        "flagBadge01", "tempFlagsSize",
+    ],
+}
+
+
+def symbols():
+    """Offset and size of each defined symbol in the object's .rodata."""
+    out = subprocess.run(
+        ["arm-none-eabi-nm", "-S", "--defined-only", str(OBJ)],
+        capture_output=True, text=True,
+    ).stdout
+    found = {}
+    for line in out.splitlines():
+        m = re.match(r"^([0-9a-f]+)\s+([0-9a-f]+)\s+\S\s+(\S+)$", line.strip())
+        if m:
+            found[m.group(3)] = (int(m.group(1), 16), int(m.group(2), 16))
+    return found
 
 
 def main(argv):
-    out = Path(argv[1]) if len(argv) > 1 else Path("coop/harness/coop-offsets.json")
+    out_path = Path(argv[1]) if len(argv) > 1 else Path("coop/harness/coop-offsets.json")
 
     if not OBJ.exists():
         print(f"error: {OBJ} not found. Run `make modern` first.", file=sys.stderr)
         return 1
 
-    raw = subprocess.run(
+    rodata = subprocess.run(
         ["arm-none-eabi-objcopy", "-O", "binary", "--only-section=.rodata",
          str(OBJ), "/dev/stdout"],
         capture_output=True,
     ).stdout
 
-    need = len(FIELDS) * 4
-    if len(raw) < need:
-        print(
-            f"error: probe .rodata is {len(raw)} bytes, expected at least {need}.\n"
-            "Did src/coop_offsets_probe.c change without this script being updated?",
-            file=sys.stderr,
-        )
-        return 1
+    syms = symbols()
+    data = {}
 
-    values = struct.unpack(f"<{len(FIELDS)}I", raw[:need])
-    data = dict(zip(FIELDS, values))
+    for name, fields in ARRAYS.items():
+        if name not in syms:
+            print(f"error: {name} not in {OBJ}. Did the probe change?", file=sys.stderr)
+            return 1
 
-    # A sanity check the harness cannot do for itself: the record must sit
-    # wholly inside the block it claims to live in.
+        off, size = syms[name]
+        want = len(fields) * 4
+        if size != want:
+            print(
+                f"error: {name} is {size} bytes, expected {want} for "
+                f"{len(fields)} entries. src/coop_offsets_probe.c and this "
+                "script disagree about its contents.",
+                file=sys.stderr,
+            )
+            return 1
+
+        values = struct.unpack(f"<{len(fields)}I", rodata[off:off + size])
+        data.update(zip(fields, values))
+
+    # Checks the harness cannot make for itself.
     end = data["coopPlayer2"] + data["sizeofCoopPlayer2"]
     if end > data["sizeofSaveBlock1"]:
-        print(
-            f"error: coopPlayer2 ends at {end}, past SaveBlock1's "
-            f"{data['sizeofSaveBlock1']} bytes.",
-            file=sys.stderr,
-        )
+        print(f"error: coopPlayer2 ends at {end}, past SaveBlock1's "
+              f"{data['sizeofSaveBlock1']} bytes.", file=sys.stderr)
+        return 1
+
+    if data["flags"] == 0 or data["dexSeen"] == 0:
+        print("error: flags/dexSeen resolved to offset 0, which is pos. "
+              "The arrays were almost certainly read in the wrong order.",
+              file=sys.stderr)
         return 1
 
     data["_comment"] = "Generated by tools/coop/emit_offsets.py. Do not edit."
-    out.parent.mkdir(parents=True, exist_ok=True)
-    with open(out, "w") as fh:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w") as fh:
         json.dump(data, fh, indent=2, sort_keys=True)
         fh.write("\n")
 
-    print(f"wrote {out}: coopPlayer2 at {data['coopPlayer2']}, "
-          f"{data['sizeofCoopPlayer2']} bytes")
+    print(f"wrote {out_path}: coopPlayer2 at {data['coopPlayer2']}, "
+          f"flags at {data['flags']}, dexSeen at {data['dexSeen']}")
     return 0
 
 

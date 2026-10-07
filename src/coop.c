@@ -10,6 +10,7 @@
 #include "script.h"
 #include "field_screen_effect.h"
 #include "constants/maps.h"
+#include "constants/flags.h"
 #include "constants/event_objects.h"
 
 // ---------------------------------------------------------------------------
@@ -23,7 +24,22 @@ static EWRAM_DATA u8 sCoopState = 0;
 // report whether the partner is currently spawned.
 static EWRAM_DATA u8 sPeerObjectId;
 // Cleared with the rest of the session state, so a reconnect re-sends.
-static EWRAM_DATA bool8 sSentPlayer2Record = FALSE;
+// Where the join handshake has got to. Both consoles run the same enum through
+// different branches, which is why the names describe the step rather than the
+// side.
+enum CoopJoinStep
+{
+    COOP_JOIN_SEND_PLAYER2,
+    COOP_JOIN_SEND_WORLD,
+    COOP_JOIN_AWAIT_PLAYER2,
+    COOP_JOIN_DONE,
+};
+static EWRAM_DATA u8 sJoinStep = COOP_JOIN_SEND_PLAYER2;
+static EWRAM_DATA struct CoopWorldState sOutgoingWorld = {0};
+// Player 2 only: which halves of the join have arrived. Tracked separately
+// because the two arrive independently and in no guaranteed order.
+static EWRAM_DATA bool8 sGotPlayer2 = FALSE;
+static EWRAM_DATA bool8 sGotWorld = FALSE;
 // Staging for an outgoing record. The transfer reads its source across
 // many frames, so it cannot point at a caller's stack.
 static EWRAM_DATA struct CoopPlayer2 sOutgoingRecord = {0};
@@ -32,7 +48,6 @@ static EWRAM_DATA struct CoopPlayer2 sOutgoingRecord = {0};
 // and party needs a safe moment, not whichever frame the last chunk landed on.
 static EWRAM_DATA struct CoopPlayer2 sPendingRecord = {0};
 static EWRAM_DATA bool8 sHasPendingRecord = FALSE;
-static EWRAM_DATA bool8 sHandledPlayer2Record = FALSE;
 static EWRAM_DATA u16 sStateTimer = 0;
 
 // The player data exchange normally gets 600 frames (10s) before the cable
@@ -59,6 +74,50 @@ static EWRAM_DATA u16 sStateTimer = 0;
 struct CoopPlayer2 *GetCoopPlayer2(void)
 {
     return &gSaveBlock1Ptr->coopPlayer2;
+}
+
+// Snapshot the shared world: badges and story flags, and the Pokedex.
+static void GatherWorldState(struct CoopWorldState *out)
+{
+    u16 i;
+
+    for (i = 0; i < NUM_FLAG_BYTES; i++)
+        out->flags[i] = gSaveBlock1Ptr->flags[i];
+
+    for (i = 0; i < NUM_DEX_FLAG_BYTES; i++)
+    {
+        out->dexSeen[i] = gSaveBlock1Ptr->dexSeen[i];
+        out->dexCaught[i] = gSaveBlock1Ptr->dexCaught[i];
+    }
+}
+
+// Bring this console up to date with the shared world.
+//
+// Flags are taken wholesale, because Player 1 owns the save and a joining
+// player's own flags are not a second opinion worth merging -- they are the
+// leftovers of whatever game its console happened to boot.
+//
+// Except the temp flags. The first TEMP_FLAGS_SIZE bytes are per-map scratch,
+// cleared on every map change and used by whatever script is mid-run right now.
+// Overwriting those with another console's scratch would corrupt a script in
+// progress, and they carry no shared meaning, so they are left alone.
+//
+// The Pokedex is merged rather than replaced, by OR. Its flags are only ever
+// set -- GetSetPokedexFlag has no clear path at all -- so the union of two
+// consoles' dex is exactly right, needs no authority, and cannot lose a catch
+// made while the two were apart.
+static void ApplyWorldState(const struct CoopWorldState *in)
+{
+    u16 i;
+
+    for (i = TEMP_FLAGS_SIZE; i < NUM_FLAG_BYTES; i++)
+        gSaveBlock1Ptr->flags[i] = in->flags[i];
+
+    for (i = 0; i < NUM_DEX_FLAG_BYTES; i++)
+    {
+        gSaveBlock1Ptr->dexSeen[i] |= in->dexSeen[i];
+        gSaveBlock1Ptr->dexCaught[i] |= in->dexCaught[i];
+    }
 }
 
 // Take over the character Player 1 handed back.
@@ -184,9 +243,10 @@ void Coop_Reset(void)
     // A reconnect must re-send Player 2's record: the two sides may have been
     // apart long enough for it to have changed, and a half-finished transfer
     // from the dropped session would otherwise be stitched into the new one.
-    sSentPlayer2Record = FALSE;
-    sHandledPlayer2Record = FALSE;
+    sJoinStep = COOP_JOIN_SEND_PLAYER2;
     sHasPendingRecord = FALSE;
+    sGotPlayer2 = FALSE;
+    sGotWorld = FALSE;
     CoopSync_Reset();
 }
 
@@ -212,6 +272,7 @@ static void PublishDiagnostics(void)
 
     gNetMailbox.coopState = sCoopState;
     gNetMailbox.linkFlags = flags;
+    gNetMailbox.joinStep = sJoinStep;
     gNetMailbox.peerMap = gCoopPeer.mapGroup | ((u16)gCoopPeer.mapNum << 8);
     gNetMailbox.peerX = gCoopPeer.x;
     gNetMailbox.peerY = gCoopPeer.y;
@@ -298,75 +359,107 @@ void Coop_Update(void)
         if (gLinkCallback == NULL)
             gLinkCallback = CoopSendPositionCB;
 
-        // The character hand-over. Strictly ordered, and the ordering is the
-        // whole point.
+        // The join handshake.
         //
-        // Both sides sending on connect looked symmetric and was wrong twice
-        // over. Player 2 reporting its CURRENT identity would land at Player 1
-        // and overwrite the stored character before it could be handed back --
-        // destroying the partner's save on every join. And two transfers of the
-        // same stream in flight at once interleave in CoopSync's single receive
-        // buffer, because chunk 0 from either one restarts it.
+        // Player 1 pushes both payloads back to back without waiting for an
+        // answer; Player 2 replies whenever it is ready. An earlier version
+        // chained them -- Player 1 sent the world only after Player 2 answered,
+        // and Player 2 answered only after adopting its character, and adoption
+        // waits for the player to be standing still and out of menus. So a
+        // player who joined mid-cutscene, or just happened to be in a menu,
+        // never received the badges and Pokedex at all. Two of three test runs
+        // failed that way. Adoption and world sync have no reason to depend on
+        // each other and no longer do.
         //
-        // So it is a request and a response. Player 1 speaks first, always;
-        // Player 2 answers only when it has something to say. One transfer in
-        // flight, ever.
+        // Simultaneous transfers in OPPOSITE directions are safe: each console
+        // has its own receive buffer and only ever receives from the peer. What
+        // is not safe is two transfers arriving at the SAME receiver, since
+        // chunk 0 of either restarts the shared buffer -- which is why Player 1
+        // waits for its first send to drain before starting the second.
         if (NetLink_IsMaster())
         {
-            if (!sSentPlayer2Record)
+            switch (sJoinStep)
             {
+            case COOP_JOIN_SEND_PLAYER2:
                 CoopSync_Send(COOP_STREAM_PLAYER2, GetCoopPlayer2(),
                               sizeof(struct CoopPlayer2));
-                sSentPlayer2Record = TRUE;
+                sJoinStep = COOP_JOIN_SEND_WORLD;
+                break;
+
+            case COOP_JOIN_SEND_WORLD:
+                if (!CoopSync_IsSending())
+                {
+                    GatherWorldState(&sOutgoingWorld);
+                    CoopSync_Send(COOP_STREAM_WORLD, &sOutgoingWorld,
+                                  sizeof(sOutgoingWorld));
+                    sJoinStep = COOP_JOIN_AWAIT_PLAYER2;
+                }
+                break;
+
+            case COOP_JOIN_AWAIT_PLAYER2:
+                if (CoopSync_HasReceived(COOP_STREAM_PLAYER2))
+                {
+                    u16 size;
+                    const void *rec = CoopSync_GetReceived(COOP_STREAM_PLAYER2, &size);
+
+                    if (rec != NULL && size == sizeof(struct CoopPlayer2))
+                        *GetCoopPlayer2() = *(const struct CoopPlayer2 *)rec;
+
+                    CoopSync_Reset();
+                    sJoinStep = COOP_JOIN_DONE;
+                }
+                break;
             }
-            else if (CoopSync_HasReceived(COOP_STREAM_PLAYER2))
+        }
+        else
+        {
+            // Player 2 takes whatever arrives, in whichever order, and answers
+            // once it has settled who it is.
+            if (CoopSync_HasReceived(COOP_STREAM_PLAYER2))
             {
-                // Player 2 answering with who they are. Store it.
                 u16 size;
                 const void *rec = CoopSync_GetReceived(COOP_STREAM_PLAYER2, &size);
 
                 if (rec != NULL && size == sizeof(struct CoopPlayer2))
-                    *GetCoopPlayer2() = *(const struct CoopPlayer2 *)rec;
+                {
+                    const struct CoopPlayer2 *stored = rec;
 
+                    if (stored->claimed)
+                    {
+                        // Held, not applied: adoption waits for a frame where
+                        // the player is actually in control.
+                        sPendingRecord = *stored;
+                        sHasPendingRecord = TRUE;
+                    }
+                    sGotPlayer2 = TRUE;
+                }
                 CoopSync_Reset();
             }
-        }
-        else if (sHasPendingRecord)
-        {
-            TryAdoptPendingRecord();
-        }
-        else if (!sHandledPlayer2Record && CoopSync_HasReceived(COOP_STREAM_PLAYER2))
-        {
-            u16 size;
-            const void *rec = CoopSync_GetReceived(COOP_STREAM_PLAYER2, &size);
-
-            if (rec != NULL && size == sizeof(struct CoopPlayer2))
+            else if (CoopSync_HasReceived(COOP_STREAM_WORLD))
             {
-                const struct CoopPlayer2 *stored = rec;
+                u16 size;
+                const void *w = CoopSync_GetReceived(COOP_STREAM_WORLD, &size);
 
-                sHandledPlayer2Record = TRUE;
+                if (w != NULL && size == sizeof(struct CoopWorldState))
+                    ApplyWorldState(w);
+
                 CoopSync_Reset();
-
-                if (stored->claimed)
-                {
-                    // A character is waiting for us. Held rather than applied
-                    // here: TryAdoptPendingRecord waits for a frame where the
-                    // player is actually in control.
-                    sPendingRecord = *stored;
-                    sHasPendingRecord = TRUE;
-                }
-                else
-                {
-                    // Nobody has ever joined this save. We are the first, so we
-                    // claim the slot with whoever we currently are.
-                    GatherLocalPlayerRecord(&sOutgoingRecord);
-                    CoopSync_Send(COOP_STREAM_PLAYER2, &sOutgoingRecord,
-                                  sizeof(sOutgoingRecord));
-                }
+                sGotWorld = TRUE;
             }
-            else
+
+            if (sHasPendingRecord)
+                TryAdoptPendingRecord();
+
+            // Answer once there is nothing left to take over, and never before:
+            // a pre-adoption identity sent to Player 1 overwrites the very
+            // character it was about to receive.
+            if (sGotPlayer2 && sGotWorld && !sHasPendingRecord
+                && sJoinStep != COOP_JOIN_DONE && !CoopSync_IsSending())
             {
-                CoopSync_Reset();
+                GatherLocalPlayerRecord(&sOutgoingRecord);
+                CoopSync_Send(COOP_STREAM_PLAYER2, &sOutgoingRecord,
+                              sizeof(sOutgoingRecord));
+                sJoinStep = COOP_JOIN_DONE;
             }
         }
         break;

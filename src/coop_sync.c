@@ -9,7 +9,8 @@
 // to spare; the static assert below is what actually keeps it honest.
 #define COOP_SYNC_BUFFER_SIZE 768
 
-STATIC_ASSERT(sizeof(struct CoopPlayer2) <= COOP_SYNC_BUFFER_SIZE, CoopSyncBufferTooSmall);
+STATIC_ASSERT(sizeof(struct CoopPlayer2) <= COOP_SYNC_BUFFER_SIZE, CoopSyncBufferTooSmallForPlayer2);
+STATIC_ASSERT(sizeof(struct CoopWorldState) <= COOP_SYNC_BUFFER_SIZE, CoopSyncBufferTooSmallForWorld);
 
 // Outgoing. src points at the caller's data and is read chunk by chunk rather
 // than copied, which is safe because every sender here is a long-lived save

@@ -53,6 +53,22 @@ struct CoopPeer
 
 extern struct CoopPeer gCoopPeer;
 
+// The world both players share, as it goes over the wire.
+//
+// Not a save structure: there is exactly one copy of each of these in
+// SaveBlock1 already, and giving Player 2 a second copy is how two copies drift
+// apart. This is the shape used to bring a joining player up to date.
+//
+// Flags carry all eight badges -- they are plain flags, FLAG_BADGE01_GET and
+// friends -- along with every story flag in the game, so syncing this array is
+// what makes it one playthrough rather than two.
+struct CoopWorldState
+{
+    u8 flags[NUM_FLAG_BYTES];
+    u8 dexSeen[NUM_DEX_FLAG_BYTES];
+    u8 dexCaught[NUM_DEX_FLAG_BYTES];
+}; // 653 bytes
+
 /** Player 2's stored character, inside Player 1's save. */
 struct CoopPlayer2 *GetCoopPlayer2(void);
 

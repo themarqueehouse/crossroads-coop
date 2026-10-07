@@ -35,6 +35,8 @@ enum CoopStream
     // Player 2's character: identity, party, position. Player 1 holds it in
     // the save; this is how it gets handed over in each direction.
     COOP_STREAM_PLAYER2,
+    // Shared progression: flags (badges and story), and the Pokedex.
+    COOP_STREAM_WORLD,
 };
 
 /** Begin sending `size` bytes from `src` as `stream`. */

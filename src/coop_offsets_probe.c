@@ -12,6 +12,7 @@
 // --gc-sections drops it from the ROM, costing nothing; the harness reads it
 // out of the object file. Regenerate with tools/coop/emit_offsets.py.
 #include "global.h"
+#include "constants/flags.h"
 
 const unsigned gCoopOffsets[] = {
     sizeof(struct SaveBlock1),
@@ -24,4 +25,15 @@ const unsigned gCoopOffsets[] = {
     offsetof(struct CoopPlayer2, pos),
     offsetof(struct CoopPlayer2, location),
     offsetof(struct CoopPlayer2, party),
+};
+
+// Flag and Pokedex offsets, for the harness's shared-progression check.
+const unsigned gCoopWorldOffsets[] = {
+    offsetof(struct SaveBlock1, flags),
+    NUM_FLAG_BYTES,
+    offsetof(struct SaveBlock1, dexSeen),
+    offsetof(struct SaveBlock1, dexCaught),
+    NUM_DEX_FLAG_BYTES,
+    FLAG_BADGE01_GET,
+    TEMP_FLAGS_SIZE,
 };

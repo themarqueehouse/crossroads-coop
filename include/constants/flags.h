@@ -45,6 +45,12 @@
 #define TEMP_FLAGS_END   FLAG_TEMP_1F
 #define NUM_TEMP_FLAGS   (TEMP_FLAGS_END - TEMP_FLAGS_START + 1)
 
+// Bytes of flag storage the temp flags occupy, from the start of the array.
+// Lifted out of event_data.c so co-op can skip them when it overwrites the flag
+// array: they are per-map scratch belonging to whatever script is running right
+// now, and another console's scratch is not a second opinion worth taking.
+#define TEMP_FLAGS_SIZE (NUM_TEMP_FLAGS / 8)
+
 #define FLAG_UNUSED_0x020    0x20 // Unused Flag
 #define FLAG_UNUSED_0x021    0x21 // Unused Flag
 #define FLAG_UNUSED_0x022    0x22 // Unused Flag

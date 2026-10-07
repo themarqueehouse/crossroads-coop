@@ -142,6 +142,29 @@ async function main() {
       console.log(`FAIL: stored "${name}" but Player 2 is "${liveNames[1]}"`);
     }
 
+    // --- shared progression ---------------------------------------------
+    //
+    // Set a badge and a Pokedex entry on Player 1 directly in memory, then
+    // reconnect and see whether they reach Player 2. Badges are plain flags
+    // (FLAG_BADGE01_GET), so this exercises the whole flag array at once.
+    const sb1 = (which) => heapOf(SAVEBLOCK1_ADDR);
+    const badgeByte = OFFSETS.flags + Math.floor(OFFSETS.flagBadge01 / 8);
+    const badgeBit = 1 << (OFFSETS.flagBadge01 % 8);
+
+    await page.evaluate(([off, v]) => {
+      const h = new Uint8Array(window.__pairHeap(0));
+      h[off] |= v;
+    }, [sb1(0) + badgeByte, badgeBit]).catch(async () => {
+      // No raw-write helper on the rig; add one inline.
+      await page.evaluate(([off, v]) => window.__pair.orByte(0, off, v),
+                          [sb1(0) + badgeByte, badgeBit]);
+    });
+    // Pokedex entry for species 1 (bit 0 of the first byte).
+    await page.evaluate(([off, v]) => window.__pair.orByte(0, off, v),
+                        [sb1(0) + OFFSETS.dexCaught, 0x01]);
+
+    console.log('\nset badge 1 and a dex catch on Player 1');
+
     // --- adoption ------------------------------------------------------
     //
     // Second connect. The stored slot is claimed now, so Player 1 hands the
@@ -156,6 +179,17 @@ async function main() {
       ([w, off, len]) => window.__pair.readAt(w, off, len),
       [1, heapOf(SAVEBLOCK2_ADDR) + SB2_PLAYERNAME, 8]);
     const p2After = decodeName(after);
+
+    const p2Badge = await page.evaluate(([off]) => window.__pair.readAt(1, off, 1),
+                                        [heapOf(SAVEBLOCK1_ADDR) + badgeByte]);
+    const p2Dex = await page.evaluate(([off]) => window.__pair.readAt(1, off, 1),
+                                      [heapOf(SAVEBLOCK1_ADDR) + OFFSETS.dexCaught]);
+    console.log(`player 2 badge bit: ${(p2Badge[0] & badgeBit) ? 'SET' : 'clear'}`);
+    console.log(`player 2 dex bit:   ${(p2Dex[0] & 1) ? 'SET' : 'clear'}`);
+    if ((p2Badge[0] & badgeBit) && (p2Dex[0] & 1))
+      console.log('PASS: badge and dex crossed to Player 2');
+    else
+      console.log('FAIL: shared progression did not cross');
 
     console.log(`player 2 after reconnect: ${p2After}  (stored: ${name})`);
     if (p2After === name)

@@ -99,7 +99,7 @@ struct NetMailbox
     /*0x19A*/ volatile u16 peerY;
     /*0x19C*/ volatile u16 selfMap;
     /*0x19E*/ volatile u8 peerObjectId;     // OBJECT_EVENTS_COUNT when not spawned
-    /*0x19F*/ volatile u8 diagPad;
+    /*0x19F*/ volatile u8 joinStep;      // how far the join handshake has got
 }; // sizeof = 0x1A0
 
 // Bits in NetMailbox.linkFlags.
