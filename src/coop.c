@@ -24,6 +24,12 @@ static EWRAM_DATA bool8 sSentPlayer2Record = FALSE;
 // Staging for an outgoing record. The transfer reads its source across
 // many frames, so it cannot point at a caller's stack.
 static EWRAM_DATA struct CoopPlayer2 sOutgoingRecord = {0};
+// Player 2 only: the stored character handed back by Player 1, waiting to be
+// taken over. Held rather than applied immediately because adopting an identity
+// and party needs a safe moment, not whichever frame the last chunk landed on.
+static EWRAM_DATA struct CoopPlayer2 sPendingRecord = {0};
+static EWRAM_DATA bool8 sHasPendingRecord = FALSE;
+static EWRAM_DATA bool8 sHandledPlayer2Record = FALSE;
 static EWRAM_DATA u16 sStateTimer = 0;
 
 // The player data exchange normally gets 600 frames (10s) before the cable
@@ -119,6 +125,8 @@ void Coop_Reset(void)
     // apart long enough for it to have changed, and a half-finished transfer
     // from the dropped session would otherwise be stitched into the new one.
     sSentPlayer2Record = FALSE;
+    sHandledPlayer2Record = FALSE;
+    sHasPendingRecord = FALSE;
     CoopSync_Reset();
 }
 
@@ -230,43 +238,72 @@ void Coop_Update(void)
         if (gLinkCallback == NULL)
             gLinkCallback = CoopSendPositionCB;
 
-        // Player 1 owns the save, so Player 1 hands Player 2 their stored
-        // character. Sent once per session, on the first frame the link is
-        // actually usable.
-        if (!sSentPlayer2Record)
+        // The character hand-over. Strictly ordered, and the ordering is the
+        // whole point.
+        //
+        // Both sides sending on connect looked symmetric and was wrong twice
+        // over. Player 2 reporting its CURRENT identity would land at Player 1
+        // and overwrite the stored character before it could be handed back --
+        // destroying the partner's save on every join. And two transfers of the
+        // same stream in flight at once interleave in CoopSync's single receive
+        // buffer, because chunk 0 from either one restarts it.
+        //
+        // So it is a request and a response. Player 1 speaks first, always;
+        // Player 2 answers only when it has something to say. One transfer in
+        // flight, ever.
+        if (NetLink_IsMaster())
         {
-            if (NetLink_IsMaster())
+            if (!sSentPlayer2Record)
             {
                 CoopSync_Send(COOP_STREAM_PLAYER2, GetCoopPlayer2(),
                               sizeof(struct CoopPlayer2));
+                sSentPlayer2Record = TRUE;
             }
-            else
+            else if (CoopSync_HasReceived(COOP_STREAM_PLAYER2))
             {
-                // Player 2 reports who it currently is, so Player 1 has
-                // something to store. Staged into a static rather than built on
-                // the stack: the transfer reads the source over the following
-                // second, long after this frame's stack is gone.
-                GatherLocalPlayerRecord(&sOutgoingRecord);
-                CoopSync_Send(COOP_STREAM_PLAYER2, &sOutgoingRecord,
-                              sizeof(sOutgoingRecord));
-            }
-            sSentPlayer2Record = TRUE;
-        }
+                // Player 2 answering with who they are. Store it.
+                u16 size;
+                const void *rec = CoopSync_GetReceived(COOP_STREAM_PLAYER2, &size);
 
-        // A record arriving at Player 1 is Player 2 telling us who they are, so
-        // it goes in the save. Arriving at Player 2 it is the opposite -- their
-        // stored character being handed back -- which is the next piece of work.
-        if (NetLink_IsMaster() && CoopSync_HasReceived(COOP_STREAM_PLAYER2))
+                if (rec != NULL && size == sizeof(struct CoopPlayer2))
+                    *GetCoopPlayer2() = *(const struct CoopPlayer2 *)rec;
+
+                CoopSync_Reset();
+            }
+        }
+        else if (!sHandledPlayer2Record && CoopSync_HasReceived(COOP_STREAM_PLAYER2))
         {
             u16 size;
             const void *rec = CoopSync_GetReceived(COOP_STREAM_PLAYER2, &size);
 
             if (rec != NULL && size == sizeof(struct CoopPlayer2))
             {
-                *GetCoopPlayer2() = *(const struct CoopPlayer2 *)rec;
-                gNetMailbox.coopState = sCoopState; // keep diagnostics honest
+                const struct CoopPlayer2 *stored = rec;
+
+                sHandledPlayer2Record = TRUE;
+                CoopSync_Reset();
+
+                if (stored->claimed)
+                {
+                    // A character is waiting for us. Taking it over is the next
+                    // piece of work; until then we keep playing as ourselves and
+                    // say nothing, which leaves the stored character intact.
+                    sPendingRecord = *stored;
+                    sHasPendingRecord = TRUE;
+                }
+                else
+                {
+                    // Nobody has ever joined this save. We are the first, so we
+                    // claim the slot with whoever we currently are.
+                    GatherLocalPlayerRecord(&sOutgoingRecord);
+                    CoopSync_Send(COOP_STREAM_PLAYER2, &sOutgoingRecord,
+                                  sizeof(sOutgoingRecord));
+                }
             }
-            CoopSync_Reset();
+            else
+            {
+                CoopSync_Reset();
+            }
         }
         break;
 
