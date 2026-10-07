@@ -306,13 +306,27 @@ u32 NetLinkMain1(u8 *shouldAdvanceLinkState, u16 *sendCmd, u16 (*recvCmds)[CMD_L
     if (sNetState == LINK_STATE_CONN_ESTABLISHED)
         retVal |= LINK_STAT_CONN_ESTABLISHED;
 
-    // A vanished peer is only an error for activities that genuinely cannot
-    // continue without one -- a trade or a link battle. During co-op overworld
-    // play the session layer handles it: it closes the link cleanly and
-    // rebuilds when the peer returns. Throwing the game to an error screen
-    // there would cost unsaved progress over what is often a brief dropout.
-    if (gNetLinkActive && status == NET_HOST_LOST && !IsCoopLinkActive())
-        retVal |= LINK_STAT_ERROR_HARDWARE;
+    // A vanished peer is never fatal in a co-op build.
+    //
+    // On a cable, LINK_STAT_ERROR_HARDWARE means the wire came out, and
+    // CB2_LinkError's reset-and-complain is the right answer. Over a network a
+    // peer going quiet means a phone locked, a tunnel re-established itself, or
+    // a free-tier relay went to sleep -- all routine, all recoverable, and the
+    // reset costs real unsaved progress.
+    //
+    // This was guarded on IsCoopLinkActive, so the error was only suppressed
+    // once the handshake had finished. That left the opening and exchange phase
+    // -- the longest and least reliable part of a session -- unprotected, and in
+    // testing it produced exactly one "Communication error" per relay wake-up.
+    // Widening the guard to the whole session still left a window each time the
+    // state machine dropped back to OFF to retry.
+    //
+    // So: while a co-op wrapper is present, the session layer and the wrapper
+    // own connection state entirely. The wrapper already shows the player
+    // whether they are connected, which is the honest place for that signal; the
+    // game simply waits. Revisit if link trades or battles ever ride this
+    // transport, since those genuinely cannot continue without a peer -- they
+    // would want a timeout of their own rather than this blunt one.
 
     if (localId >= MAX_LINK_PLAYERS)
         retVal |= LINK_STAT_ERROR_INVALID_ID;

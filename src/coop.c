@@ -36,6 +36,11 @@ bool8 IsCoopLinkActive(void)
     return sCoopState == COOP_STATE_ACTIVE;
 }
 
+bool8 IsCoopSessionEngaged(void)
+{
+    return gNetLinkActive && sCoopState != COOP_STATE_OFF;
+}
+
 bool8 IsCoopSessionPaired(void)
 {
     return gNetLinkActive && NetLink_GetHostStatus() == NET_HOST_READY

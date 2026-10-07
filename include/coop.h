@@ -67,6 +67,19 @@ bool8 IsCoopLinkActive(void);
 /** True once both players are present, whether or not the link is up yet. */
 bool8 IsCoopSessionPaired(void);
 
+/**
+ * True whenever the co-op session layer owns the link -- from the moment it
+ * starts opening one until it gives up, not merely while the link is running.
+ *
+ * This is the right question to ask before turning a dropped peer into a fatal
+ * "Communication error". IsCoopLinkActive is narrower: it means the handshake
+ * finished. Gating the error on that one meant the entire opening and exchange
+ * phase was unprotected, so any blip there -- a relay waking from idle, a phone
+ * switching network -- killed the session outright, at exactly the point where
+ * the session layer was most able to simply retry.
+ */
+bool8 IsCoopSessionEngaged(void);
+
 u8 GetCoopState(void);
 
 /** Called once per frame from the overworld. Drives the state machine. */
