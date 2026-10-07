@@ -97,7 +97,12 @@ async function main() {
 
     // Let the hand-over run: Player 1 sends, Player 2 answers, Player 1 stores.
     console.log('settling, so the hand-over can complete...');
-    await page.evaluate(() => window.__pair.wait(600));
+    for (let i = 0; i < 6; i++) {
+      await page.evaluate(() => window.__pair.wait(200));
+      const m = await page.evaluate(() => [0, 1].map((n) => window.__pair.mailbox(n)));
+      console.log(`  t+${(i + 1) * 200}: ` +
+        m.map((x) => `p${x.id} ${x.state} map=${x.selfMap} out=${x.outPending}`).join('   '));
+    }
 
     // The heap offset of anything in EWRAM, from the mailbox we located.
     const heapOf = (addr) => found[0].base - (MAILBOX_ADDR - addr);
@@ -136,6 +141,27 @@ async function main() {
     } else {
       console.log(`FAIL: stored "${name}" but Player 2 is "${liveNames[1]}"`);
     }
+
+    // --- adoption ------------------------------------------------------
+    //
+    // Second connect. The stored slot is claimed now, so Player 1 hands the
+    // record back and Player 2 should BECOME that character. On the first run
+    // Player 2 was whoever it booted as; if adoption works, its live name after
+    // reconnecting is the stored one.
+    console.log('\ndropping and rebuilding the session...');
+    await page.evaluate(() => window.__pair.reconnect(240));
+    await page.evaluate(() => window.__pair.wait(900));
+
+    const after = await page.evaluate(
+      ([w, off, len]) => window.__pair.readAt(w, off, len),
+      [1, heapOf(SAVEBLOCK2_ADDR) + SB2_PLAYERNAME, 8]);
+    const p2After = decodeName(after);
+
+    console.log(`player 2 after reconnect: ${p2After}  (stored: ${name})`);
+    if (p2After === name)
+      console.log('PASS: Player 2 is the stored character');
+    else
+      console.log(`FAIL: expected "${name}", got "${p2After}"`);
 
     for (const i of [0, 1]) console.log(`mailbox ${i}:`, await page.evaluate(
       (n) => window.__pair.mailbox(n), i));

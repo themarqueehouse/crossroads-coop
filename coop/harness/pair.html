@@ -40,7 +40,11 @@ const OFF = {
   magic: 0x00, hostStatus: 0x05, localId: 0x06, playerCount: 0x07,
   outHead: 0x08, outTail: 0x09, inHead: 0x0a, inTail: 0x0c, heartbeat: 0x0e,
   out: 0x10, in: 0x90,
+  // The diagnostics block the ROM publishes about itself.
+  coopState: 0x190, linkFlags: 0x191, posSent: 0x192, posRecv: 0x194,
+  selfMap: 0x19c,
 };
+const COOP_STATE = ['OFF', 'OPENING', 'EXCHANGING', 'ACTIVE', 'LOST'];
 const RING_SLOTS = 8, RING_MASK = 7, FRAME_BYTES = 16;
 
 class Core {
@@ -173,6 +177,20 @@ window.__pair = {
 
   frames() { return cores.map((c) => c.frames); },
 
+  // Drop and rebuild the session, without restarting either game.
+  //
+  // This is how the adoption path gets exercised. Player 2 claims the stored
+  // slot on the first connect; on the second, Player 1's record is claimed, so
+  // Player 2 should be handed that character back and become it. The record
+  // lives in Player 1's SaveBlock1 in RAM, so none of this needs a save file --
+  // which is what makes testing adoption cheap rather than a save/reload rig.
+  async reconnect(gapFrames = 240) {
+    for (const c of cores) c.setByte(OFF.hostStatus, 3); // NET_HOST_LOST
+    await window.__pair.wait(gapFrames);
+    for (const c of cores) c.setByte(OFF.hostStatus, 2); // NET_HOST_READY
+    return true;
+  },
+
   async tap(which, key, hold = 8) {
     const list = which === 'both' ? cores : [cores[which]];
     for (const c of list) c.press(key);
@@ -197,10 +215,17 @@ window.__pair = {
 
   mailbox(which) {
     const c = cores[which];
+    const flags = [[1, 'LINK_OPEN'], [2, 'PLAYERS_RECEIVED'], [4, 'CALLBACK_ARMED'],
+                   [8, 'PEER_VALID'], [16, 'PEER_SAME_MAP']]
+      .filter(([b]) => c.byte(OFF.linkFlags) & b).map(([, n]) => n);
     return {
-      base: c.base,
+      id: which,
+      state: COOP_STATE[c.byte(OFF.coopState)] ?? c.byte(OFF.coopState),
+      flags: flags.join('|') || '(none)',
+      selfMap: '0x' + c.u16(OFF.selfMap).toString(16),
+      posSent: c.u16(OFF.posSent),
+      posRecv: c.u16(OFF.posRecv),
       heartbeat: c.u16(OFF.heartbeat),
-      localId: c.byte(OFF.localId),
       outPending: (c.byte(OFF.outHead) - c.byte(OFF.outTail)) & RING_MASK,
     };
   },
