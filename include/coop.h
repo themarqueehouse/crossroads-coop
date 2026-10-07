@@ -133,6 +133,57 @@ void Coop_UpdateGate(void);
 void Coop_ReceiveGate(u8 playerId, const u16 *cmd);
 
 /**
+ * A gate that gives up.
+ *
+ * For the gate at the START of a scene only, where nothing has happened yet and
+ * walking away is clean. An ordinary mid-scene gate must never time out: half a
+ * cutscene on one console and all of it on the other is worse than a pause.
+ */
+void Coop_BeginSceneGate(u16 gateId);
+
+/** TRUE once a scene gate has waited long enough to give up on. */
+bool8 Coop_GateTimedOut(void);
+
+// ---------------------------------------------------------------------------
+// Scene mirroring.
+//
+// A gate on its own is not enough for a story scene, and the reason is easy to
+// miss: when you step on a trigger tile, only YOUR console runs that script.
+// Your partner's game has no idea a scene started, so it never reaches the
+// gate, and a gate nobody else can arrive at is a game that stops for ever.
+//
+// So the console that triggers a scene tells the other one where the script is.
+// A ROM address is a perfectly good name for it: both consoles are running the
+// same ROM, so the same address is the same scene on both, with nothing to
+// negotiate and no table to keep in step.
+// ---------------------------------------------------------------------------
+
+/**
+ * Mirror a scene onto the partner's console.
+ *
+ * `resume` is where THEY start, which is past the broadcast command, so the
+ * mirrored copy does not broadcast it back.
+ *
+ * Returns FALSE if the scene must not run at all -- there is a partner, but
+ * they are not here to see it. Returns TRUE with nothing sent when there is no
+ * partner at all, so single-player keeps working.
+ */
+bool8 Coop_BroadcastScene(const u8 *resume, u16 gateId);
+
+/** Unpack a scene broadcast. Called from ProcessRecvCmds. */
+void Coop_ReceiveScene(u8 playerId, const u16 *cmd);
+
+/**
+ * Start a mirrored scene, once this console is in a fit state to.
+ *
+ * Called once per frame. A scene cannot just be started the moment it arrives:
+ * this console might be mid-conversation with an NPC of its own, or mid-step,
+ * or warping. The partner is sat at the scene's opening gate waiting, which is
+ * what makes waiting for a quiet frame safe.
+ */
+void Coop_UpdatePendingScene(void);
+
+/**
  * True if this object event is the co-op partner.
  *
  * Used to exempt them from collision in both directions. See the call site in

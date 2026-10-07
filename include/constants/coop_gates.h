@@ -24,7 +24,8 @@
 #define GATE_NONE 0
 
 // Gates 1-99 are reserved for testing the mechanism itself.
-#define GATE_TEST 1
+#define GATE_TEST        1
+#define GATE_TEST_SECOND 2
 
 // Story gates start at 100, numbered in rough story order with gaps left for
 // whatever gets inserted later.

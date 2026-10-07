@@ -254,6 +254,8 @@ gScriptCmdTable::
 	script_cmd_table_entry SCR_OP_HIDEFOLLOWER                  ScrCmd_hidefollower,                requests_effects=1  @ 0xe5
 	script_cmd_table_entry SCR_OP_GETBRAILLESTRINGWIDTH         ScrCmd_getbraillestringwidth,       requests_effects=1  @ 0xe6
 	script_cmd_table_entry SCR_OP_COOPGATE                      ScrCmd_coopgate,                    requests_effects=1  @ 0xe7
+	script_cmd_table_entry SCR_OP_COOPSCENE                     ScrCmd_coopscene,                   requests_effects=1  @ 0xe8
+	script_cmd_table_entry SCR_OP_COOPSCENEWAIT                 ScrCmd_coopscenewait,               requests_effects=1  @ 0xe9
 
 	.if ALLOCATE_SCRIPT_CMD_TABLE
 gScriptCmdTableEnd::

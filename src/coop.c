@@ -257,6 +257,15 @@ static EWRAM_DATA u16 sUsedPeerGateSeq = 0;
 
 #define GATE_SEND_REPEATS 4
 
+// How long a scene's opening gate waits before giving up. Generous, because the
+// usual reason the partner is slow is that they are mid-conversation with an NPC
+// of their own, and that is not a fault. Only the opening gate ever uses this.
+#define SCENE_GATE_TIMEOUT_FRAMES 600 // 10 seconds
+
+// Whether this gate is allowed to give up, and whether it has.
+static EWRAM_DATA bool8 sGateCanTimeOut = FALSE;
+static EWRAM_DATA bool8 sGateTimedOut = FALSE;
+
 // Has the partner reported arriving at our gate, with an arrival we have not
 // already spent?
 static bool8 PeerIsAtOurGate(void)
@@ -264,10 +273,23 @@ static bool8 PeerIsAtOurGate(void)
     return sPeerGateId == sGateId && sPeerGateSeq != sUsedPeerGateSeq;
 }
 
+void Coop_BeginSceneGate(u16 gateId)
+{
+    Coop_BeginGate(gateId);
+    sGateCanTimeOut = TRUE;
+}
+
+bool8 Coop_GateTimedOut(void)
+{
+    return sGateTimedOut;
+}
+
 void Coop_BeginGate(u16 gateId)
 {
     sGateId = gateId;
     sGateWaitFrames = 0;
+    sGateCanTimeOut = FALSE;
+    sGateTimedOut = FALSE;
 
     if (++sGateSeq == 0)
         sGateSeq = 1;
@@ -339,6 +361,9 @@ void Coop_UpdateGate(void)
 
     if (sGateWaitFrames < 0xFFFF)
         sGateWaitFrames++;
+
+    if (sGateCanTimeOut && sGateWaitFrames >= SCENE_GATE_TIMEOUT_FRAMES)
+        sGateTimedOut = TRUE;
 }
 
 // Announce our arrival, if it still needs announcing. Returns TRUE if it wrote
@@ -365,6 +390,141 @@ void Coop_ReceiveGate(u8 playerId, const u16 *cmd)
     sPeerGateSeq = cmd[2];
 }
 
+// ---------------------------------------------------------------------------
+// Scene mirroring.
+//
+// The console that triggers a story scene tells the other one where the script
+// is, as a ROM address -- the same address is the same scene on both, because
+// both are running the same ROM.
+//
+// The address travels as an offset from the ROM base in two halfwords. 32 MB of
+// ROM does not fit in one.
+// ---------------------------------------------------------------------------
+
+#define ROM_BASE 0x08000000
+
+// Waiting to be sent. One slot: a console can only trigger one scene at a time,
+// because triggering one locks its field controls.
+static EWRAM_DATA const u8 *sSceneSendPtr = NULL;
+static EWRAM_DATA u16 sSceneSendGate = 0;
+
+// Received, waiting for a frame where starting it is safe.
+static EWRAM_DATA const u8 *sPendingScene = NULL;
+static EWRAM_DATA u16 sPendingSceneFrames = 0;
+
+// How long a received scene waits for a safe frame before being dropped. Paired
+// with the sender's gate timeout: the sender gives up at the same point, so
+// neither side is left holding half an agreement.
+#define PENDING_SCENE_TIMEOUT_FRAMES SCENE_GATE_TIMEOUT_FRAMES
+
+static u16 OurMapWord(void)
+{
+    return gSaveBlock1Ptr->location.mapGroup
+         | ((u16)gSaveBlock1Ptr->location.mapNum << 8);
+}
+
+static u16 PeerMapWord(void)
+{
+    return gCoopPeer.mapGroup | ((u16)gCoopPeer.mapNum << 8);
+}
+
+bool8 Coop_BroadcastScene(const u8 *resume, u16 gateId)
+{
+    // Nobody to mirror to. The scene runs, because a ROM that refuses to play
+    // its own story when nobody has joined is not playable at all.
+    if (!IsCoopSessionEngaged())
+        return TRUE;
+
+    // There IS a partner, and they are somewhere else. This is the case the
+    // whole mechanism exists for: the scene does not happen without them. The
+    // trigger is left unfired, so it runs again when they are both here.
+    if (!IsCoopLinkActive() || !gCoopPeer.valid || PeerMapWord() != OurMapWord())
+        return FALSE;
+
+    sSceneSendPtr = resume;
+    sSceneSendGate = gateId;
+    return TRUE;
+}
+
+// Emit a queued scene. Returns TRUE if it wrote a command.
+static bool8 CoopSendScene(u16 *sendCmd)
+{
+    u32 off;
+
+    if (sSceneSendPtr == NULL)
+        return FALSE;
+
+    off = (u32)sSceneSendPtr - ROM_BASE;
+
+    sendCmd[0] = LINKCMD_COOP_SCENE;
+    sendCmd[1] = sSceneSendGate;
+    sendCmd[2] = off & 0xFFFF;
+    sendCmd[3] = off >> 16;
+    // Our map, so the receiver can refuse a scene for a map it is not on. They
+    // were on it when we checked, but a warp one frame later is a scene whose
+    // object events and coordinates belong somewhere else.
+    sendCmd[4] = OurMapWord();
+
+    sSceneSendPtr = NULL;
+    return TRUE;
+}
+
+void Coop_ReceiveScene(u8 playerId, const u16 *cmd)
+{
+    u32 off;
+
+    if (playerId == GetMultiplayerId())
+        return;
+
+    if (cmd[4] != OurMapWord())
+        return;
+
+    off = cmd[2] | ((u32)cmd[3] << 16);
+
+    // A script pointer arriving over a wire gets checked before it is jumped
+    // to. Everything below trusts it completely -- it goes straight into the
+    // script interpreter -- so a corrupt value here is not a wrong scene, it is
+    // arbitrary bytes run as bytecode.
+    if (off >= 0x02000000)
+        return;
+
+    sPendingScene = (const u8 *)(ROM_BASE + off);
+    sPendingSceneFrames = 0;
+}
+
+void Coop_UpdatePendingScene(void)
+{
+    if (sPendingScene == NULL)
+        return;
+
+    if (++sPendingSceneFrames >= PENDING_SCENE_TIMEOUT_FRAMES)
+    {
+        // Give up at the same point the sender does. Their gate has timed out
+        // too, so the scene is off on both sides and its trigger is still
+        // unfired.
+        sPendingScene = NULL;
+        return;
+    }
+
+    // Wait for a frame where starting a script is safe: nothing else running,
+    // the player in control and standing still. The partner is sat at the
+    // scene's opening gate, which is what buys the time to wait.
+    if (ScriptContext_IsEnabled() || ArePlayerFieldControlsLocked()
+        || !IsPlayerStandingStill())
+        return;
+
+    ScriptContext_SetupScript(sPendingScene);
+    sPendingScene = NULL;
+}
+
+static void ResetScenes(void)
+{
+    sSceneSendPtr = NULL;
+    sSceneSendGate = 0;
+    sPendingScene = NULL;
+    sPendingSceneFrames = 0;
+}
+
 static void ResetGates(void)
 {
     // sGateId is deliberately left alone: a script may be sat on it right now,
@@ -373,6 +533,7 @@ static void ResetGates(void)
     // new session rather than resolving on stale state.
     sGateOpen = FALSE;
     sGateWaitFrames = 0;
+    sGateTimedOut = FALSE;
     if (sGateId != 0)
     {
         sGateSendId = sGateId;
@@ -627,6 +788,7 @@ void Coop_Reset(void)
     sDeltaHead = 0;
     sDeltaTail = 0;
     ResetGates();
+    ResetScenes();
     CoopSync_Reset();
 }
 
@@ -860,6 +1022,7 @@ void Coop_Update(void)
     }
 
     Coop_UpdateGate();
+    Coop_UpdatePendingScene();
     PublishDiagnostics();
 }
 
@@ -917,8 +1080,13 @@ static void CoopSendPositionCB(void)
     if (CoopSync_SendChunk(gSendCmd))
         return;
 
-    // Gates first. Everything else can wait a frame; a partner sat on a dark
-    // screen cannot, and there are at most four of these per gate.
+    // Scenes, then gates. A scene has to arrive before the partner can reach
+    // the gate it leads to, so sending them the other way round would spend the
+    // gate's whole timeout waiting for a scene stuck behind it. Everything below
+    // can wait a frame; a partner sat on a dark screen cannot.
+    if (CoopSendScene(gSendCmd))
+        return;
+
     if (CoopSendGate(gSendCmd))
         return;
 

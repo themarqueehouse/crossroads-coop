@@ -82,6 +82,9 @@
 #define LINKCMD_COOP_DELTA              0x3335
 // Co-op: which sync gate this player is waiting at, 0 for none.
 #define LINKCMD_COOP_GATE               0x3336
+// "Run this scene" -- a ROM address, which names the same script on both
+// consoles because both are running the same ROM.
+#define LINKCMD_COOP_SCENE              0x3337
 #define LINKCMD_SEND_HELD_KEYS          0xCAFE
 #define LINKCMD_SEND_BLOCK_REQ          0xCCCC
 #define LINKCMD_START_TRADE             0xCCDD

@@ -904,6 +904,57 @@ bool8 ScrCmd_coopgate(struct ScriptContext *ctx)
     return TRUE;
 }
 
+// Start a scene that needs both players: mirror it onto the partner's console,
+// then fall through to the gate the macro puts right after this.
+//
+// The partner being elsewhere abandons the scene rather than playing it solo.
+// Nothing has happened yet at this point -- this is the first command in the
+// scene -- so the script can simply end, leaving its trigger unfired for when
+// they are both there.
+bool8 ScrCmd_coopscene(struct ScriptContext *ctx)
+{
+    u16 gateId = ScriptReadHalfword(ctx);
+    const u8 *resume = (const u8 *)ScriptReadWord(ctx);
+
+    Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
+
+    if (!Coop_BroadcastScene(resume, gateId))
+    {
+        // Through the game's own message machinery rather than from here: this
+        // needs a text box, and a text box wants a script.
+        ScriptContext_SetupScript(CoopEventScript_PartnerNotHere);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+// The gate at the top of a mirrored scene. Unlike coopgate this one gives up,
+// because at this point nothing in the scene has happened and walking away is
+// clean -- whereas half a cutscene on one console and all of it on the other is
+// worse than any pause.
+static bool8 RunCoopSceneGate(void)
+{
+    if (Coop_GateTimedOut())
+    {
+        ScriptContext_Abort();
+        return TRUE;
+    }
+
+    return Coop_GateIsOpen();
+}
+
+bool8 ScrCmd_coopscenewait(struct ScriptContext *ctx)
+{
+    u16 gateId = ScriptReadHalfword(ctx);
+
+    Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
+
+    Coop_BeginSceneGate(gateId);
+    SetupNativeScript(ctx, RunCoopSceneGate);
+    return TRUE;
+}
+
 bool8 ScrCmd_initclock(struct ScriptContext *ctx)
 {
     u8 hour = VarGet(ScriptReadHalfword(ctx));

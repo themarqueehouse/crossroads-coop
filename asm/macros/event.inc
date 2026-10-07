@@ -1944,8 +1944,36 @@
 	@ is automatically -- both consoles run this very script out of the same ROM.
 	@ Ids are per-moment, not per-map, so use GATE_* constants rather than bare
 	@ numbers. 0 is reserved for "no gate".
+	@
+	@ Use this INSIDE a scene that both players are already running. For the
+	@ start of a scene, use coopscene: a gate on its own cannot help a partner
+	@ whose console never started the script.
 	.macro coopgate id:req
 	.byte SCR_OP_COOPGATE
+	.2byte \id
+	.endm
+
+	@ Start a story scene that needs both players.
+	@
+	@ Put this at the top of the scene. It mirrors the script onto the other
+	@ player's console and then holds both of them here until they are both in
+	@ it, so neither sees the scene alone.
+	@
+	@ If the other player is somewhere else entirely, the scene does not happen:
+	@ the script ends having changed nothing, so its trigger fires again when
+	@ they are both there. Played single-player it does nothing at all and the
+	@ scene runs as normal.
+	@
+	@ The address the mirrored copy starts at is the label below, PAST the
+	@ broadcast -- so the mirrored copy does not broadcast the scene back. The
+	@ assembler works it out, which is the point: the alternative is arithmetic
+	@ on the script pointer in C that breaks the moment this macro changes shape.
+	.macro coopscene id:req
+	.byte SCR_OP_COOPSCENE
+	.2byte \id
+	.4byte 1f
+1:
+	.byte SCR_OP_COOPSCENEWAIT
 	.2byte \id
 	.endm
 

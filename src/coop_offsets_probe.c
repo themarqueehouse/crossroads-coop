@@ -38,4 +38,10 @@ const unsigned gCoopWorldOffsets[] = {
     TEMP_FLAGS_SIZE,
     offsetof(struct SaveBlock1, bag),
     offsetof(struct SaveBlock2, encryptionKey),
+    // Not 0, and not 1 either: SaveBlock1 opens with `struct Coords16 pos`, so
+    // location sits past it. A harness that guessed wrote the map number over
+    // the player's x coordinate and then reported, correctly, that moving the
+    // partner to another map had no effect.
+    offsetof(struct SaveBlock1, location),
+    offsetof(struct WarpData, mapNum),
 };

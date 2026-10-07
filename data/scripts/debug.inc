@@ -202,8 +202,18 @@ Debug_EventScript_Text_OffensiveIVs:
 Debug_EventScript_Text_DefensiveIVs:
 	.string "HP IVs: {STR_VAR_1}, DEF IVs: {STR_VAR_2}, SPDEF IVs: {STR_VAR_3}$"
 
+@ Co-op scene test. Run it from BOTH consoles (R+Start, Scripts…, Script 1).
+@
+@ Whoever runs it first should stop on the message below until the other one
+@ runs it too, then both should see the rest together. Run it with the other
+@ player on a different map and it should refuse instead.
 Debug_EventScript_Script_1::
-	release
+	coopscene GATE_TEST
+	lockall
+	msgbox CoopText_TestBothHere, MSGBOX_DEFAULT
+	coopgate GATE_TEST_SECOND
+	msgbox CoopText_TestStillTogether, MSGBOX_DEFAULT
+	releaseall
 	end
 
 Debug_EventScript_Script_2::

@@ -297,6 +297,22 @@ void ScriptContext_Stop(void)
     sGlobalScriptContextStatus = CONTEXT_WAITING;
 }
 
+// Abandons the running script, exactly as reaching `end` would.
+//
+// Not ScriptContext_Stop, which is the opposite: that parks the context in
+// CONTEXT_WAITING for something to wake it, so using it to give up would hang
+// the field with the controls still locked. This is the shutdown path
+// ScriptContext_RunScript takes when a script runs out, lifted out so a native
+// script function -- which has no ScriptContext to call StopScript on -- can
+// take it too. Co-op uses it to walk away from a scene the other player never
+// turned up for.
+void ScriptContext_Abort(void)
+{
+    StopScript(&sGlobalScriptContext);
+    sGlobalScriptContextStatus = CONTEXT_SHUTDOWN;
+    UnlockPlayerFieldControls();
+}
+
 // Puts the script into running mode.
 void ScriptContext_Enable(void)
 {

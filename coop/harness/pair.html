@@ -42,7 +42,7 @@ const OFF = {
   out: 0x10, in: 0x90,
   // The diagnostics block the ROM publishes about itself.
   coopState: 0x190, linkFlags: 0x191, posSent: 0x192, posRecv: 0x194,
-  selfMap: 0x19c, joinStep: 0x19f,
+  peerMap: 0x196, peerX: 0x198, peerY: 0x19a, selfMap: 0x19c, joinStep: 0x19f,
   deltasSent: 0x1a0, deltasRecv: 0x1a2, deltasDropped: 0x1a4, gateId: 0x1a6,
 };
 const COOP_STATE = ['OFF', 'OPENING', 'EXCHANGING', 'ACTIVE', 'LOST'];
@@ -50,8 +50,23 @@ const COOP_STATE = ['OFF', 'OPENING', 'EXCHANGING', 'ACTIVE', 'LOST'];
 const JOIN_STEP = ['SEND_PLAYER2', 'SEND_WORLD', 'AWAIT_PLAYER2', 'DONE'];
 const RING_SLOTS = 8, RING_MASK = 7, FRAME_BYTES = 16;
 
+function sampleGates() {
+  for (const c of cores) {
+    if (c.base === null) continue;
+    const g = c.u16(OFF.gateId);
+    if (g !== 0 && g !== c.lastGate) c.gateLog.push(g);
+    c.lastGate = g;
+  }
+}
+
 class Core {
-  constructor(id) { this.id = id; this.frames = 0; this.base = null; }
+  constructor(id) {
+    this.id = id;
+    this.frames = 0;
+    this.base = null;
+    this.gateLog = [];
+    this.lastGate = 0;
+  }
 
   async boot(romUrl, romName) {
     const bytes = await (await fetch(romUrl)).arrayBuffer();
@@ -172,11 +187,27 @@ window.__pair = {
     // pace with the cores instead of trailing a driver outside the page.
     if (!pumping) {
       pumping = true;
-      const tick = () => { try { pumpOnce(); } catch (e) { /* mid-reset */ } requestAnimationFrame(tick); };
+      const tick = () => {
+        try { pumpOnce(); sampleGates(); } catch (e) { /* mid-reset */ }
+        requestAnimationFrame(tick);
+      };
       requestAnimationFrame(tick);
     }
     return true;
   },
+
+  // Which gates each core passed through, in order.
+  //
+  // Sampled in the relay tick rather than polled from the test, because a gate
+  // is only held for as long as the partner takes to arrive -- which, when both
+  // are already there, is a frame or two. A poll every thirty frames sees an
+  // empty gate before and after and concludes nothing happened.
+  gateLog(which) { return cores[which].gateLog.slice(); },
+  clearGateLog() { for (const c of cores) c.gateLog = []; return true; },
+
+  // Held keys, for chords like R+Start. tap() cannot express one.
+  hold(which, key) { cores[which].press(key); return true; },
+  letGo(which, key) { cores[which].release(key); return true; },
 
   frames() { return cores.map((c) => c.frames); },
 
@@ -238,6 +269,7 @@ window.__pair = {
       state: COOP_STATE[c.byte(OFF.coopState)] ?? c.byte(OFF.coopState),
       flags: flags.join('|') || '(none)',
       selfMap: '0x' + c.u16(OFF.selfMap).toString(16),
+      peerMap: '0x' + c.u16(OFF.peerMap).toString(16),
       join: JOIN_STEP[c.byte(OFF.joinStep)] ?? c.byte(OFF.joinStep),
       posSent: c.u16(OFF.posSent),
       posRecv: c.u16(OFF.posRecv),

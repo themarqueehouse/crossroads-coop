@@ -80,6 +80,16 @@ export async function startRig({ rom, port, introLoops = 300, settle = 1200 }) {
     const key = NUDGE[i % NUDGE.length];
     if (key) await page.evaluate((k) => window.__pair.tap('both', k, 6), key);
   }
+  // Mashing A through the intro does not stop at the overworld: the player
+  // ends up stood in their bedroom talking to the television, and anything
+  // that needs the field controls free -- the debug menu, a trigger, a warp --
+  // silently does nothing because a message box is open. So back out of
+  // whatever the last A opened, and give it a moment to actually close.
+  console.log('backing out of whatever the intro left open...');
+  for (let i = 0; i < 8; i++) {
+    await page.evaluate(() => window.__pair.tap('both', 'B', 6));
+    await page.evaluate(() => window.__pair.wait(20));
+  }
   if (settle) await page.evaluate((n) => window.__pair.wait(n), settle);
 
   // Every core's mailbox sits at the same EWRAM address; the heap offset it
@@ -95,6 +105,12 @@ export async function startRig({ rom, port, introLoops = 300, settle = 1200 }) {
     tap: (who, key, hold = 6) =>
       page.evaluate(([w, k, h]) => window.__pair.tap(w, k, h), [who, key, hold]),
     mailbox: (which) => page.evaluate((n) => window.__pair.mailbox(n), which),
+    gateLog: (which) => page.evaluate((n) => window.__pair.gateLog(n), which),
+    clearGateLog: () => page.evaluate(() => window.__pair.clearGateLog()),
+    hold: (which, key) =>
+      page.evaluate(([w, k]) => window.__pair.hold(w, k), [which, key]),
+    letGo: (which, key) =>
+      page.evaluate(([w, k]) => window.__pair.letGo(w, k), [which, key]),
     mailboxes: () => page.evaluate(() => [0, 1].map((n) => window.__pair.mailbox(n))),
     reconnect: (gap = 240) => page.evaluate((g) => window.__pair.reconnect(g), gap),
 

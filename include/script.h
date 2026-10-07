@@ -44,6 +44,7 @@ bool8 ScriptContext_RunScript(void);
 void ScriptContext_SetupScript(const u8 *ptr);
 void ScriptContext_ContinueScript(struct ScriptContext *ctx);
 void ScriptContext_Stop(void);
+void ScriptContext_Abort(void);
 void ScriptContext_Enable(void);
 void RunScriptImmediately(const u8 *ptr);
 const u8 *MapHeaderGetScriptTable(u8 tag);
