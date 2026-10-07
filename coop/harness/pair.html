@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Co-op two-core test rig</title>
+<style>
+  body { font: 13px/1.5 monospace; margin: 12px; }
+  canvas { image-rendering: pixelated; width: 360px; height: 240px; border: 1px solid #888; }
+  #log { white-space: pre-wrap; max-height: 40vh; overflow: auto; }
+</style>
+</head>
+<body>
+<div>
+  <canvas id="s0" width="240" height="160"></canvas>
+  <canvas id="s1" width="240" height="160"></canvas>
+</div>
+<pre id="log"></pre>
+<script type="module">
+// Both games in ONE page, with the relay between them running in-process.
+//
+// The previous rig drove the relay from Node over the Playwright bridge. Each
+// pump was a few milliseconds of round-trips while both emulators kept running
+// at full speed, so the mailbox rings -- seven frames deep, filled one frame per
+// frame -- overflowed between pumps and dropped the chunks of a block transfer.
+// That looked exactly like a co-op bug and was not one.
+//
+// Hosting both cores here fixes it at the root: the pump runs inside the same
+// frame callback the cores do, so it cannot fall behind them. It also matches
+// what the real wrapper does, which is the configuration we actually ship.
+import mGBA from './mgba.js';
+
+const log = (m) => {
+  document.getElementById('log').textContent += m + '\n';
+};
+
+const MAGIC = 0x504f4f43; // 'COOP'
+
+// struct NetMailbox, include/net_link.h.
+const OFF = {
+  magic: 0x00, hostStatus: 0x05, localId: 0x06, playerCount: 0x07,
+  outHead: 0x08, outTail: 0x09, inHead: 0x0a, inTail: 0x0c, heartbeat: 0x0e,
+  out: 0x10, in: 0x90,
+};
+const RING_SLOTS = 8, RING_MASK = 7, FRAME_BYTES = 16;
+
+class Core {
+  constructor(id) { this.id = id; this.frames = 0; this.base = null; }
+
+  async boot(romUrl, romName) {
+    const bytes = await (await fetch(romUrl)).arrayBuffer();
+    this.core = await mGBA({ canvas: document.getElementById('s' + this.id) });
+    this.core.setLogger?.(() => {});
+    // Save states and rewind each hold a full copy of EWRAM, magic word and
+    // all, which is what makes the mailbox scan ambiguous. The real wrapper
+    // disables them for the same reason.
+    this.core.setCoreSettings?.({
+      autoSaveStateEnable: false,
+      restoreAutoSaveStateOnLoad: false,
+      rewindEnable: false,
+    });
+    await this.core.FSInit();
+    const file = new File([new Uint8Array(bytes)], romName);
+    await new Promise((res) => this.core.uploadRom(file, res));
+    if (!this.core.loadGame(`${this.core.filePaths().gamePath}/${romName}`))
+      throw new Error(`core ${this.id}: loadGame refused`);
+    this.core.addCoreCallbacks({ keysReadCallback: () => { this.frames++; } });
+    log(`core ${this.id}: loaded`);
+  }
+
+  // A fresh view every time: WASM memory growth detaches cached typed arrays.
+  heap() { return new Uint8Array(this.core.coopHeapBuffer); }
+
+  findLive() {
+    const h = this.heap();
+    const dv = new DataView(h.buffer);
+    const hits = [];
+    for (let i = 0; i + 4 <= h.length; i += 4)
+      if (dv.getUint32(i, true) === MAGIC) hits.push(i);
+    return hits;
+  }
+
+  rd(off, len) { return this.heap().subarray(this.base + off, this.base + off + len); }
+  wr(off, bytes) { this.heap().set(bytes, this.base + off); }
+  byte(off) { return this.heap()[this.base + off]; }
+  setByte(off, v) { this.heap()[this.base + off] = v; }
+  u16(off) { const h = this.heap(); return h[this.base + off] | (h[this.base + off + 1] << 8); }
+
+  press(k) { this.core.buttonPress(k); }
+  release(k) { this.core.buttonUnpress(k); }
+}
+
+const cores = [new Core(0), new Core(1)];
+let pumping = false;
+
+// One relay step, both directions, with loopback.
+//
+// A link cable hands every console EVERY console's command for that frame,
+// including its own, and the game will not deliver a frame until every lane has
+// one. So each command goes to the peer AND back to the sender's own lane.
+function pumpOnce() {
+  for (const src of cores) {
+    const dst = cores[1 - src.id];
+    const lane = src.byte(OFF.localId);
+    let outTail = src.byte(OFF.outTail);
+    const outHead = src.byte(OFF.outHead);
+
+    const sinks = [dst, src];
+    const heads = sinks.map((k) => k.byte(OFF.inHead + lane));
+    const tails = sinks.map((k) => k.byte(OFF.inTail + lane));
+    let moved = 0;
+
+    while (outTail !== outHead) {
+      if (heads.some((h, i) => ((h + 1) & RING_MASK) === tails[i])) break;
+      const frame = src.rd(OFF.out + (outTail & RING_MASK) * FRAME_BYTES, FRAME_BYTES).slice();
+      for (let i = 0; i < sinks.length; i++) {
+        sinks[i].wr(OFF.in + (lane * RING_SLOTS + (heads[i] & RING_MASK)) * FRAME_BYTES, frame);
+        heads[i] = (heads[i] + 1) & RING_MASK;
+      }
+      outTail = (outTail + 1) & RING_MASK;
+      moved++;
+    }
+    if (moved) {
+      for (let i = 0; i < sinks.length; i++) sinks[i].setByte(OFF.inHead + lane, heads[i]);
+      src.setByte(OFF.outTail, outTail);
+    }
+  }
+}
+
+window.__pair = {
+  async boot(romUrl, romName) {
+    for (const c of cores) await c.boot(romUrl, romName);
+    return true;
+  },
+
+  // Async, because telling the live mailbox from the stale copies means
+  // watching the heartbeat actually advance -- which needs real frames to
+  // pass. An earlier version spun a loop that broke immediately, so it compared
+  // two reads taken at the same instant and concluded nothing was live.
+  async locate() {
+    const out = [];
+    const sample = () => cores.map((c) =>
+      c.findLive().map((b) => { c.base = b; return c.u16(OFF.heartbeat); }));
+
+    const candidates = cores.map((c) => c.findLive());
+    const before = sample();
+    await window.__pair.wait(10);
+    const after = sample();
+
+    for (const c of cores) {
+      const cands = candidates[c.id];
+      const live = cands.filter((_, i) => before[c.id][i] !== after[c.id][i]);
+      c.base = live.length ? live[0] : (cands.length ? cands[0] : null);
+      out.push({ id: c.id, candidates: cands.length, live: live.length, base: c.base });
+    }
+    return out;
+  },
+
+  openSession() {
+    for (const c of cores) {
+      c.setByte(OFF.localId, c.id);
+      c.setByte(OFF.playerCount, 2);
+      c.setByte(OFF.hostStatus, 2); // NET_HOST_READY
+    }
+    // From here the relay runs on its own, every animation frame, so it keeps
+    // pace with the cores instead of trailing a driver outside the page.
+    if (!pumping) {
+      pumping = true;
+      const tick = () => { try { pumpOnce(); } catch (e) { /* mid-reset */ } requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    }
+    return true;
+  },
+
+  frames() { return cores.map((c) => c.frames); },
+
+  async tap(which, key, hold = 8) {
+    const list = which === 'both' ? cores : [cores[which]];
+    for (const c of list) c.press(key);
+    const until = cores[0].frames + hold;
+    while (cores[0].frames < until) await new Promise((r) => setTimeout(r, 4));
+    for (const c of list) c.release(key);
+  },
+
+  async wait(n) {
+    const until = cores[0].frames + n;
+    const deadline = Date.now() + 120000;
+    while (cores[0].frames < until) {
+      if (Date.now() > deadline) throw new Error('cores stalled');
+      await new Promise((r) => setTimeout(r, 4));
+    }
+  },
+
+  // Read an arbitrary span of emulated memory, for checking the save block.
+  readAt(which, addr, len) {
+    return Array.from(cores[which].heap().subarray(addr, addr + len));
+  },
+
+  mailbox(which) {
+    const c = cores[which];
+    return {
+      base: c.base,
+      heartbeat: c.u16(OFF.heartbeat),
+      localId: c.byte(OFF.localId),
+      outPending: (c.byte(OFF.outHead) - c.byte(OFF.outTail)) & RING_MASK,
+    };
+  },
+};
+
+log('pair rig ready');
+</script>
+</body>
+</html>

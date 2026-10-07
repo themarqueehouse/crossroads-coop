@@ -1,0 +1,27 @@
+// Struct offsets, published for the test harness.
+//
+// The harness reads the co-op save record straight out of emulated memory, so
+// it needs the real offset of coopPlayer2 inside SaveBlock1. Computing that on
+// the harness side means duplicating the struct layout in JavaScript, and the
+// first time it drifted it cost an hour: sizeof(struct CoopPlayer2) is 632, not
+// the 636 its fields add up to, because of alignment -- so a harness deriving
+// the offset as "size of the block minus size of the record" read four bytes
+// early and saw plausible-looking garbage.
+//
+// So the compiler answers instead. This array is unreferenced and
+// --gc-sections drops it from the ROM, costing nothing; the harness reads it
+// out of the object file. Regenerate with tools/coop/emit_offsets.py.
+#include "global.h"
+
+const unsigned gCoopOffsets[] = {
+    sizeof(struct SaveBlock1),
+    sizeof(struct CoopPlayer2),
+    offsetof(struct SaveBlock1, coopPlayer2),
+    offsetof(struct CoopPlayer2, playerName),
+    offsetof(struct CoopPlayer2, playerGender),
+    offsetof(struct CoopPlayer2, partyCount),
+    offsetof(struct CoopPlayer2, claimed),
+    offsetof(struct CoopPlayer2, pos),
+    offsetof(struct CoopPlayer2, location),
+    offsetof(struct CoopPlayer2, party),
+};
