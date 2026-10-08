@@ -532,6 +532,10 @@ static void CB2_InitBattleInternal(void)
 {
     s32 i;
 
+    // First statement in the function, deliberately: it settles whether this
+    // runs at all, separately from whether anything later in it does.
+    gCoopDbgPath = 20;
+
     SetHBlankCallback(NULL);
     SetVBlankCallback(NULL);
 

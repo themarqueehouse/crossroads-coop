@@ -109,6 +109,14 @@ async function main() {
         `isDebugBattle=${await rig.u8(w, OFFSETS.dbgIsDebugAddr)} ` +
         `path=${await rig.u8(w, OFFSETS.dbgPathAddr)} ` +
         `multiuseState=${await rig.u8(w, OFFSETS.battleCommAddr)}`);
+      t.note(`p${w + 1} link`,
+        `status=0x${(await rig.u32(w, OFFSETS.dbgLinkStatusAddr)).toString(16)} ` +
+        `callbackInstalled=${await rig.u8(w, OFFSETS.dbgHasCallbackAddr)} ` +
+        `recvPlayers=${await rig.u8(w, OFFSETS.dbgRecvPlayersAddr)} ` +
+        `sendQueue=${await rig.u8(w, OFFSETS.dbgSendQueueAddr)}`);
+      const pf = await rig.readAt(w, OFFSETS.paletteFadeAddr, 16);
+      t.note(`p${w + 1} paletteFade`,
+             pf.map((b) => b.toString(16).padStart(2, '0')).join(' '));
     }
 
     // Mash. In a double battle A walks FIGHT -> move -> target, and a level 50

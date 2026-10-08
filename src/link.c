@@ -149,6 +149,10 @@ static void TrySetLinkErrorBuffer(void);
 //   2 = the link players stopped matching the ones saved at the lobby
 //   3 = gLinkStatus carried an error bit
 EWRAM_DATA u8 gCoopLinkErrorSite = 0;
+EWRAM_DATA u32 gCoopDbgLinkStatus = 0;
+EWRAM_DATA u8 gCoopDbgHasCallback = 0;
+EWRAM_DATA u8 gCoopDbgRecvPlayers = 0;
+EWRAM_DATA u8 gCoopDbgSendQueue = 0;
 EWRAM_DATA u32 gCoopLinkErrorStatus = 0;
 static void CB2_PrintErrorMessage(void);
 static bool8 IsSioMultiMaster(void);
@@ -1794,6 +1798,17 @@ bool8 HandleLinkConnection(void)
     {
         gLinkStatus = NetLinkMain1(&gShouldAdvanceLinkState, gSendCmd, gRecvCmds);
         LinkMain2(&gMain.heldKeys);
+
+        // Mirror the link's state somewhere the test rig can see it.
+        // gLinkStatus, gLinkCallback and gReceivedRemoteLinkPlayers all live in
+        // IWRAM, which the rig cannot reach -- it addresses EWRAM relative to
+        // the mailbox. Published here rather than from the co-op session's own
+        // diagnostics because the session stands down for a battle, and a
+        // battle is exactly when this needs watching.
+        gCoopDbgLinkStatus = gLinkStatus;
+        gCoopDbgHasCallback = (gLinkCallback != NULL);
+        gCoopDbgRecvPlayers = gReceivedRemoteLinkPlayers;
+        gCoopDbgSendQueue = GetLinkRecvQueueLength();
         if ((gLinkStatus & LINK_STAT_RECEIVED_NOTHING) && IsSendingKeysOverCable() == TRUE)
             return TRUE;
         return FALSE;
