@@ -1,4 +1,5 @@
 #include "global.h"
+#include "coop.h"
 #include "malloc.h"
 #include "bg.h"
 #include "data.h"
@@ -28,6 +29,7 @@
 #include "pokemon_icon.h"
 #include "pokemon_summary_screen.h"
 #include "pokemon_storage_system.h"
+#include "coop.h"
 #include "script.h"
 #include "sound.h"
 #include "string_util.h"
@@ -9567,7 +9569,14 @@ u32 GetAndCopyBoxMonDataAt(u8 boxId, u8 boxPosition, s32 request, void *dst)
 void SetBoxMonAt(u8 boxId, u8 boxPosition, struct BoxPokemon *src)
 {
     if (boxId < TOTAL_BOXES_COUNT && boxPosition < IN_BOX_COUNT)
+    {
         gPokemonStoragePtr->boxes[boxId][boxPosition] = *src;
+        // Co-op: one set of boxes between the two players. Player 2 has no save
+        // file, so without this anything they box is lost -- and their view of
+        // the boxes drifts from Player 1's, so depositing into a slot that
+        // looks empty can overwrite a Pokemon they cannot see.
+        Coop_QueueBoxWrite(boxId, boxPosition, src);
+    }
 }
 
 void CopyBoxMonAt(u8 boxId, u8 boxPosition, struct BoxPokemon *dst)
@@ -9579,7 +9588,10 @@ void CopyBoxMonAt(u8 boxId, u8 boxPosition, struct BoxPokemon *dst)
 void ZeroBoxMonAt(u8 boxId, u8 boxPosition)
 {
     if (boxId < TOTAL_BOXES_COUNT && boxPosition < IN_BOX_COUNT)
+    {
         ZeroBoxMonData(&gPokemonStoragePtr->boxes[boxId][boxPosition]);
+        Coop_QueueBoxClear(boxId, boxPosition);
+    }
 }
 
 void BoxMonAtToMon(u8 boxId, u8 boxPosition, struct Pokemon *dst)

@@ -52,6 +52,11 @@ enum CoopStream
     COOP_STREAM_PLAYER2,
     // Shared progression: flags (badges and story), and the Pokedex.
     COOP_STREAM_WORLD,
+    // One change to one storage box slot: a deposit, a withdrawal, a release,
+    // or a move within the PC. Sent one at a time rather than as a block,
+    // because the whole storage is 34 KB and this transport moves about 800
+    // bytes a second -- a full copy would be three quarters of a minute.
+    COOP_STREAM_BOXMON,
 };
 
 /** Begin sending `size` bytes from `src` as `stream`. */
@@ -77,6 +82,15 @@ bool8 CoopSync_HasReceived(enum CoopStream stream);
 
 /** The received bytes for `stream`, or NULL if it has not arrived. */
 const void *CoopSync_GetReceived(enum CoopStream stream, u16 *sizeOut);
+
+/**
+ * Forget what has ARRIVED, leaving anything being sent alone.
+ *
+ * For a caller that both sends and receives on the same stream -- box changes
+ * go both ways continuously -- where the full reset would abandon its own
+ * half-finished transfer every time one arrived.
+ */
+void CoopSync_ClearReceived(void);
 
 /** Forget any in-flight or completed transfer. Called when a session ends. */
 void CoopSync_Reset(void);

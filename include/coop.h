@@ -96,6 +96,36 @@ enum CoopDeltaKind
     COOP_DELTA_ITEM_REMOVE,
 };
 
+// ---------------------------------------------------------------------------
+// Pokemon storage.
+//
+// Player 2 has no save file, so anything they box would be lost -- and worse,
+// their view of the boxes would drift from Player 1's, so depositing into what
+// looks like an empty slot could overwrite a Pokemon they cannot see.
+//
+// So the boxes are shared the way flags and the bag are: every write to a slot
+// is broadcast as it happens, and a joining player is brought up to date. Only
+// the OCCUPIED slots are sent at join -- the storage is 34 KB and this
+// transport moves about 800 bytes a second, so copying all of it would hold a
+// joining player for three quarters of a minute, while copying what is actually
+// in it costs a second or two.
+// ---------------------------------------------------------------------------
+
+/** Record a box slot write for broadcast. Called from the storage system. */
+void Coop_QueueBoxWrite(u8 boxId, u8 position, const struct BoxPokemon *mon);
+
+/** Record a box slot being emptied. */
+void Coop_QueueBoxClear(u8 boxId, u8 position);
+
+/** Apply a partner's box change. Called when its transfer completes. */
+void Coop_ApplyBoxOp(const void *data);
+
+/** Begin sending every occupied box slot to a joining player. */
+void Coop_BeginBoxJoinSync(void);
+
+/** Feed queued box changes onto the wire. Called once per frame. */
+void Coop_UpdateBoxSync(void);
+
 /**
  * Record a change for broadcast. Called from the game's own mutators.
  *

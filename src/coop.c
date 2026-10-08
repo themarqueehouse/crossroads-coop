@@ -14,6 +14,7 @@
 #include "constants/vars.h"
 #include "event_data.h"
 #include "pokedex.h"
+#include "pokemon_storage_system.h"
 #include "item.h"
 #include "field_message_box.h"
 #include "field_control_avatar.h"
@@ -717,6 +718,187 @@ static void ResetGates(void)
     sUsedPeerGateSeq = 0;
 }
 
+
+// ---------------------------------------------------------------------------
+// Pokemon storage.
+//
+// Every write to a box slot is broadcast as it happens. See include/coop.h for
+// why the boxes have to be shared at all, and why a joining player is sent only
+// the slots that have something in them.
+// ---------------------------------------------------------------------------
+
+// What one box change looks like on the wire. Four bytes of where, then the
+// Pokemon itself -- 84 in all, which the chunked transfer moves in about a
+// seventh of a second.
+struct CoopBoxOp
+{
+    u8 boxId;
+    u8 position;
+    bool8 clear;        // TRUE: empty the slot, and ignore the mon below
+    u8 padding;
+    struct BoxPokemon mon;
+};
+
+// A short queue, because the transfer layer carries one thing at a time and a
+// player releasing several Pokemon in a row would otherwise lose all but the
+// first. Four is enough for any burst a person can produce by hand; a fuller
+// queue drops the oldest rather than the newest, since the newest is the one
+// still on screen.
+#define COOP_BOX_QUEUE_SLOTS 4
+
+static EWRAM_DATA struct CoopBoxOp sBoxQueue[COOP_BOX_QUEUE_SLOTS] = {0};
+static EWRAM_DATA u8 sBoxQueueHead = 0;
+static EWRAM_DATA u8 sBoxQueueTail = 0;
+static EWRAM_DATA struct CoopBoxOp sBoxOutgoing = {0};
+static EWRAM_DATA u16 sBoxJoinCursor = 0;
+static EWRAM_DATA bool8 sBoxJoinRunning = FALSE;
+static EWRAM_DATA bool8 sApplyingBoxOp = FALSE;
+
+#define BOX_SLOT_TOTAL (TOTAL_BOXES_COUNT * IN_BOX_COUNT)
+
+static void EnqueueBoxOp(const struct CoopBoxOp *op)
+{
+    u8 next = (sBoxQueueHead + 1) % COOP_BOX_QUEUE_SLOTS;
+
+    if (next == sBoxQueueTail)
+        sBoxQueueTail = (sBoxQueueTail + 1) % COOP_BOX_QUEUE_SLOTS;
+
+    sBoxQueue[sBoxQueueHead] = *op;
+    sBoxQueueHead = next;
+}
+
+void Coop_QueueBoxWrite(u8 boxId, u8 position, const struct BoxPokemon *mon)
+{
+    struct CoopBoxOp op;
+
+    // Not while applying the partner's own change, or the two consoles would
+    // bounce the same deposit back and forth for ever.
+    if (!IsCoopLinkActive() || sApplyingBoxOp)
+        return;
+
+    op.boxId = boxId;
+    op.position = position;
+    op.clear = FALSE;
+    op.padding = 0;
+    op.mon = *mon;
+    EnqueueBoxOp(&op);
+}
+
+void Coop_QueueBoxClear(u8 boxId, u8 position)
+{
+    struct CoopBoxOp op;
+
+    if (!IsCoopLinkActive() || sApplyingBoxOp)
+        return;
+
+    op.boxId = boxId;
+    op.position = position;
+    op.clear = TRUE;
+    op.padding = 0;
+    EnqueueBoxOp(&op);
+}
+
+void Coop_ApplyBoxOp(const void *data)
+{
+    const struct CoopBoxOp *op = data;
+
+    if (op->boxId >= TOTAL_BOXES_COUNT || op->position >= IN_BOX_COUNT)
+        return;
+
+    sApplyingBoxOp = TRUE;
+
+    if (op->clear)
+        ZeroBoxMonAt(op->boxId, op->position);
+    else
+        SetBoxMonAt(op->boxId, op->position, (struct BoxPokemon *)&op->mon);
+
+    sApplyingBoxOp = FALSE;
+}
+
+void Coop_BeginBoxJoinSync(void)
+{
+    sBoxJoinCursor = 0;
+    sBoxJoinRunning = TRUE;
+}
+
+void Coop_UpdateBoxSync(void)
+{
+    if (!IsCoopLinkActive())
+        return;
+
+    // Arrivals first, and handled HERE rather than in the join handshake.
+    //
+    // Box changes travel in both directions for the whole session, while the
+    // join handshake runs on one console and only while joining -- so a branch
+    // added there was never reached by a deposit made after the game had
+    // settled, which is every deposit.
+    //
+    // ClearReceived rather than Reset: this console is very likely sending a
+    // box change of its own, and a full reset would abandon it.
+    if (CoopSync_HasReceived(COOP_STREAM_BOXMON))
+    {
+        u16 size;
+        const void *b = CoopSync_GetReceived(COOP_STREAM_BOXMON, &size);
+
+        if (b != NULL && size == sizeof(struct CoopBoxOp))
+            Coop_ApplyBoxOp(b);
+
+        CoopSync_ClearReceived();
+    }
+
+    // Walk the boxes, enqueuing what is actually in them. Paced by queue space
+    // rather than sent as one block: the storage is 34 KB and this transport
+    // moves about 800 bytes a second, so a full copy would hold a joining
+    // player for three quarters of a minute. Occupied slots alone cost a second
+    // or two for a normal playthrough, and nothing at all for a new game.
+    while (sBoxJoinRunning
+        && ((sBoxQueueHead + 1) % COOP_BOX_QUEUE_SLOTS) != sBoxQueueTail)
+    {
+        u8 boxId, position;
+        struct BoxPokemon *mon;
+
+        if (sBoxJoinCursor >= BOX_SLOT_TOTAL)
+        {
+            sBoxJoinRunning = FALSE;
+            break;
+        }
+
+        boxId = sBoxJoinCursor / IN_BOX_COUNT;
+        position = sBoxJoinCursor % IN_BOX_COUNT;
+        sBoxJoinCursor++;
+
+        mon = GetBoxedMonPtr(boxId, position);
+        if (mon != NULL && GetBoxMonData(mon, MON_DATA_SPECIES, NULL) != SPECIES_NONE)
+        {
+            struct CoopBoxOp op;
+            op.boxId = boxId;
+            op.position = position;
+            op.clear = FALSE;
+            op.padding = 0;
+            op.mon = *mon;
+            EnqueueBoxOp(&op);
+        }
+    }
+
+    // One at a time: the transfer layer carries a single stream, and the join
+    // sync shares it with ordinary deposits.
+    if (sBoxQueueHead != sBoxQueueTail && !CoopSync_IsSending())
+    {
+        sBoxOutgoing = sBoxQueue[sBoxQueueTail];
+        sBoxQueueTail = (sBoxQueueTail + 1) % COOP_BOX_QUEUE_SLOTS;
+        CoopSync_Send(COOP_STREAM_BOXMON, &sBoxOutgoing, sizeof(sBoxOutgoing));
+    }
+}
+
+static void ResetBoxSync(void)
+{
+    sBoxQueueHead = 0;
+    sBoxQueueTail = 0;
+    sBoxJoinCursor = 0;
+    sBoxJoinRunning = FALSE;
+    sApplyingBoxOp = FALSE;
+}
+
 // The bag as a flat run of slots. Its five pockets are contiguous and all the
 // same type, so the whole thing can be walked in one loop rather than five.
 #define BAG_SLOT_COUNT (sizeof(struct Bag) / sizeof(struct ItemSlot))
@@ -1013,6 +1195,7 @@ void Coop_Reset(void)
     sDeltaTail = 0;
     ResetGates();
     ResetScenes();
+    ResetBoxSync();
     CoopSync_Reset();
 }
 
@@ -1196,6 +1379,13 @@ void Coop_Update(void)
 
                     CoopSync_Reset();
                     sJoinStep = COOP_JOIN_DONE;
+
+                    // Player 1 owns the save, so Player 1 owns the boxes: send
+                    // them over once the rest of the join is settled. Started
+                    // here rather than earlier because the transfer layer
+                    // carries one stream at a time and the join's own transfers
+                    // come first.
+                    Coop_BeginBoxJoinSync();
                 }
                 break;
             }
@@ -1266,6 +1456,7 @@ void Coop_Update(void)
     }
 
     Coop_UpdateGate();
+    Coop_UpdateBoxSync();
     UpdateGuestScene();
     Coop_UpdatePendingScene();
     PublishDiagnostics();

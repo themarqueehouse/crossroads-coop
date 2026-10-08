@@ -1,4 +1,5 @@
 #include "global.h"
+#include "coop.h"
 #include "malloc.h"
 #include "apprentice.h"
 #include "battle.h"
@@ -2967,6 +2968,11 @@ u8 CopyMonToPC(struct Pokemon *mon)
             {
                 MonRestorePP(mon);
                 CopyMon(checkingMon, &mon->box, sizeof(mon->box));
+                // Co-op: one set of boxes between the two players. This path
+                // writes the slot directly rather than through SetBoxMonAt, so
+                // hooking that one alone missed every Pokemon sent to the PC
+                // because the party was full -- which is most of them.
+                Coop_QueueBoxWrite(boxNo, boxPos, checkingMon);
                 gSpecialVar_MonBoxId = boxNo;
                 gSpecialVar_MonBoxPos = boxPos;
                 if (GetPCBoxToSendMon() != boxNo)

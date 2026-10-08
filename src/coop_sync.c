@@ -134,6 +134,13 @@ const void *CoopSync_GetReceived(enum CoopStream stream, u16 *sizeOut)
     return sRecvBuf;
 }
 
+void CoopSync_ClearReceived(void)
+{
+    sRecvSize = 0;
+    sRecvStream = COOP_STREAM_NONE;
+    sRecvComplete = FALSE;
+}
+
 void CoopSync_Reset(void)
 {
     sSendSrc = NULL;

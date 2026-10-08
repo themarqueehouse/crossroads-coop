@@ -291,7 +291,11 @@ Debug_EventScript_CoopGymWon::
 	release
 	end
 
+@ Co-op BOX test (R+Start, Scripts…, Script 8). Run Script 5 first to fill the
+@ party, then this on ONE console: the party is full, so the Pokemon goes to
+@ the PC -- and should appear in the other player's PC too.
 Debug_EventScript_Script_8::
+	givemon SPECIES_LATIAS, 50
 	release
 	end
 

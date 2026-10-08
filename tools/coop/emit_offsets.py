@@ -60,6 +60,7 @@ WANTED_SYMBOLS = {
     "gBattleTypeFlags": "battleTypeFlagsAddr",
     "gBattlersCount": "battlersCountAddr",
     "gPartiesCount": "partiesCountAddr",
+    "gPokemonStorage": "storageAddr",
     "gCoopDbgMadeParties": "dbgMadeAddr",
     "gCoopDbgFoeA": "dbgFoeAAddr",
     "gCoopDbgFoeB": "dbgFoeBAddr",
