@@ -107,6 +107,12 @@ EWRAM_DATA u8 gCoopDbgCoopActive = 0;
 EWRAM_DATA u8 gCoopDbgIsDebug = 0;
 EWRAM_DATA u8 gCoopDbgPath = 0;
 EWRAM_DATA u8 gCoopDbgPreState = 0;
+EWRAM_DATA u16 gCoopDbgSpecies = 0;
+EWRAM_DATA u8 gCoopDbgPartySize = 0;
+EWRAM_DATA u16 gCoopDbgDataSpecies = 0;
+EWRAM_DATA u8 gCoopDbgDataLevel = 0;
+EWRAM_DATA u8 gCoopDbgPoolSize = 0;
+EWRAM_DATA u16 gCoopDbgSpeciesEarly = 0;
 static void BattleMainCB1(void);
 static void CB2_EndLinkBattle(void);
 static void EndLinkBattleInSteps(void);
@@ -637,12 +643,23 @@ static void CB2_InitBattleInternal(void)
         {
             gCoopDbgMadeParties = 1;
             gCoopDbgFoeA = CreateNPCTrainerParty(&gParties[B_TRAINER_1][0], TRAINER_BATTLE_PARAM.opponentA);
+            // Straight after generation, before anything else touches it.
+            gCoopDbgSpeciesEarly = GetMonData(&gParties[B_TRAINER_1][0], MON_DATA_SPECIES, NULL);
             if ((gBattleTypeFlags & BATTLE_TYPE_TWO_OPPONENTS && !BATTLE_TWO_VS_ONE_OPPONENT)
                 || Coop_IsBattleActive())
                 gCoopDbgFoeB = CreateNPCTrainerParty(&gParties[B_TRAINER_3][0], TRAINER_BATTLE_PARAM.opponentB);
             SetWildMonHeldItem();
             CalculateEnemyPartyCount();
             gCoopDbgAfter = gPartiesCount[B_TRAINER_1];
+            // What actually landed in the party, as opposed to what the
+            // generator claimed to have made.
+            gCoopDbgSpecies = GetMonData(&gParties[B_TRAINER_1][0], MON_DATA_SPECIES, NULL);
+            gCoopDbgPartySize = GetTrainerStructFromId(TRAINER_BATTLE_PARAM.opponentA)->partySize;
+            // What the trainer's data says it should have, as opposed to what
+            // came out: tells a bad trainer table from a bad generator.
+            gCoopDbgDataSpecies = GetTrainerStructFromId(TRAINER_BATTLE_PARAM.opponentA)->party[0].species;
+            gCoopDbgDataLevel = GetTrainerStructFromId(TRAINER_BATTLE_PARAM.opponentA)->party[0].lvl;
+            gCoopDbgPoolSize = GetTrainerStructFromId(TRAINER_BATTLE_PARAM.opponentA)->poolSize;
         }
     }
 
@@ -2069,6 +2086,21 @@ static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum)
     u8 retVal;
     bool32 halfTeam = (BattleSideHasTwoTrainers(GetBattlerTrainerFromParty(party) & BIT_SIDE) && !AreMultiPartiesFullTeams());
 
+    // A co-op battle borrows the Battle Tower's configuration, and
+    // BATTLE_TYPE_FRONTIER is a MASK THAT INCLUDES BATTLE_TYPE_BATTLE_TOWER.
+    // So CreateNPCTrainerPartyFromTrainer took our ordinary gym trainers for
+    // rented frontier teams, skipped its entire body -- and returned a
+    // monsCount it had never assigned.
+    //
+    // That is why the opponents turned up at level 0 while the generator
+    // cheerfully reported making one and two of them: the numbers were
+    // whatever was on the stack. Our trainers are real trainers with real
+    // parties, so the frontier bits come off before asking.
+    u32 battleTypeFlags = gBattleTypeFlags;
+
+    if (Coop_IsBattleActive())
+        battleTypeFlags &= ~BATTLE_TYPE_FRONTIER;
+
     if (trainerNum == TRAINER_SECRET_BASE)
         return 0;
     if (GetTrainerStructFromId(trainerNum)->overrideTrainer)
@@ -2083,11 +2115,11 @@ static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum)
         if (tempTrainer.partySize == 0)
             tempTrainer.partySize = origTrainer->partySize;
 
-        retVal = CreateNPCTrainerPartyFromTrainer(party, (const struct Trainer *)(&tempTrainer), halfTeam, gBattleTypeFlags);
+        retVal = CreateNPCTrainerPartyFromTrainer(party, (const struct Trainer *)(&tempTrainer), halfTeam, battleTypeFlags);
     }
     else
     {
-        retVal = CreateNPCTrainerPartyFromTrainer(party, GetTrainerStructFromId(trainerNum), halfTeam, gBattleTypeFlags);
+        retVal = CreateNPCTrainerPartyFromTrainer(party, GetTrainerStructFromId(trainerNum), halfTeam, battleTypeFlags);
     }
     return retVal;
 }

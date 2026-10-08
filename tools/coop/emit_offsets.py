@@ -74,6 +74,12 @@ WANTED_SYMBOLS = {
     "gCoopDbgRecvPlayers": "dbgRecvPlayersAddr",
     "gCoopDbgSendQueue": "dbgSendQueueAddr",
     "gPaletteFade": "paletteFadeAddr",
+    "gCoopDbgSpecies": "dbgSpeciesAddr",
+    "gCoopDbgPartySize": "dbgPartySizeAddr",
+    "gCoopDbgDataSpecies": "dbgDataSpeciesAddr",
+    "gCoopDbgDataLevel": "dbgDataLevelAddr",
+    "gCoopDbgPoolSize": "dbgPoolSizeAddr",
+    "gCoopDbgSpeciesEarly": "dbgSpeciesEarlyAddr",
 }
 
 # Symbol -> the field names its entries carry, in order.

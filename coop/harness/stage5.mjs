@@ -78,7 +78,25 @@ async function main() {
     console.log('\n--- starting the co-op battle ---');
     await rig.clearGateLog();
     await runDebugScript(rig, 0, 4);
-    await rig.wait(400);
+
+    // Wait for the battle to actually be SET UP, not merely started.
+    //
+    // A fixed wait here is what produced an evening of fiction. The entry runs
+    // a link teardown, a rebuild, a player exchange and a party preview before
+    // CB2_InitBattleInternal -- where the opponents are generated -- and that
+    // takes around 480 frames. Measuring at 400 caught it mid-flight every
+    // time, and every reading taken then described a battle that had not been
+    // built yet: no opponents, an init function that "never ran". All true at
+    // the moment asked, all meaningless.
+    let setUp = false;
+    for (let i = 0; i < 20 && !setUp; i++) {
+      await rig.wait(60);
+      setUp = (await rig.u8(0, OFFSETS.dbgPathAddr)) === 14
+           && (await rig.u8(1, OFFSETS.dbgPathAddr)) === 14;
+    }
+    t.check('the battle finished setting up on both consoles', setUp,
+            'still in the entry sequence after 1200 frames');
+    await rig.wait(120);
 
     t.check('both consoles are in the battle',
             (await inBattle(rig, 0)) && (await inBattle(rig, 1)));
@@ -102,7 +120,13 @@ async function main() {
         `branch ran=${await rig.u8(w, OFFSETS.dbgMadeAddr)} ` +
         `foeA made=${await rig.u8(w, OFFSETS.dbgFoeAAddr)} ` +
         `foeB made=${await rig.u8(w, OFFSETS.dbgFoeBAddr)} ` +
-        `count right after=${await rig.u8(w, OFFSETS.dbgAfterAddr)}`);
+        `count right after=${await rig.u8(w, OFFSETS.dbgAfterAddr)} ` +
+        `species[0] early=${await rig.u16(w, OFFSETS.dbgSpeciesEarlyAddr)} ` +
+        `late=${await rig.u16(w, OFFSETS.dbgSpeciesAddr)} ` +
+        `trainer partySize=${await rig.u8(w, OFFSETS.dbgPartySizeAddr)} ` +
+        `data.species=${await rig.u16(w, OFFSETS.dbgDataSpeciesAddr)} ` +
+        `data.lvl=${await rig.u8(w, OFFSETS.dbgDataLevelAddr)} ` +
+        `poolSize=${await rig.u8(w, OFFSETS.dbgPoolSizeAddr)}`);
       t.note(`p${w + 1} init`,
         `reached CB2_InitBattleInternal=${await rig.u8(w, OFFSETS.dbgReachedAddr)} ` +
         `coopActive=${await rig.u8(w, OFFSETS.dbgCoopActiveAddr)} ` +
