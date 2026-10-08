@@ -211,6 +211,17 @@ async function main() {
       // screen cannot say which one -- "Link standby..." is printed either
       // way. Sampling only every 60 rounds showed it already stuck without
       // showing what it was doing when it got there.
+      if (round % 100 === 99) {
+        console.log(`      r${round} drops p1=${await rig.u16(0, OFFSETS.dbgSendDropsAddr)}` +
+          ` p2=${await rig.u16(1, OFFSETS.dbgSendDropsAddr)}` +
+          `  backlog p1=${await rig.u8(0, OFFSETS.dbgBacklogMaxAddr)}` +
+          ` p2=${await rig.u8(1, OFFSETS.dbgBacklogMaxAddr)}` +
+          `  recvQ p1=${await rig.u8(0, OFFSETS.dbgRecvQueueAddr)}` +
+          ` p2=${await rig.u8(1, OFFSETS.dbgRecvQueueAddr)}` +
+          `  stalls p1=${await rig.u16(0, OFFSETS.dbgStallsAddr)}` +
+          ` p2=${await rig.u16(1, OFFSETS.dbgStallsAddr)}`);
+      }
+
       if (round % 10 === 9) {
         const ex = [await rig.u32(0, OFFSETS.execFlagsAddr),
                     await rig.u32(1, OFFSETS.execFlagsAddr)];
@@ -232,7 +243,8 @@ async function main() {
                 `${pair(sent)}  recv[p0,p1]=${pair(recv)}`);
               console.log(`        p${w + 1} transport  drops=` +
                 `${await rig.u16(w, OFFSETS.dbgSendDropsAddr)}  backlogMax=` +
-                `${await rig.u8(w, OFFSETS.dbgBacklogMaxAddr)}`);
+                `${await rig.u8(w, OFFSETS.dbgBacklogMaxAddr)}  recvQueue=` +
+                `${await rig.u8(w, OFFSETS.dbgRecvQueueAddr)}`);
             }
             await rig.shot('/tmp/claude-0/stage5-wedged');
           }

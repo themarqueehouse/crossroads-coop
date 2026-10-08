@@ -150,6 +150,21 @@ bool8 NetLink_SendQueueWasFull(void)
     return sNetQueueFull == QUEUE_FULL_SEND;
 }
 
+// How many commands are waiting for room in the outbound ring.
+//
+// This is the signal that the two consoles have drifted apart in speed. Both
+// produce and consume exactly one frame per game frame, so a backlog that
+// GROWS means this console is running more game frames per second than the
+// other -- and nothing in the transport slows it down. Measured over a gym
+// battle, one console sat at a depth of seven all the way through while the
+// other climbed 18, 25, 47, 63 and then began losing commands outright.
+// Two phones will never run at exactly the same speed, so left alone this
+// ends every long session in a hang.
+u8 NetLink_BacklogDepth(void)
+{
+    return (u8)((sBacklogHead + NET_SEND_BACKLOG - sBacklogTail) % NET_SEND_BACKLOG);
+}
+
 u32 NetLink_GetSendQueueLength(void)
 {
     return RingCount(gNetMailbox.outHead, gNetMailbox.outTail);
@@ -199,16 +214,19 @@ u32 NetLink_GetRecvQueueLength(void)
 // Relaying zeros is safe for exactly the reason the drop rule existed to
 // prevent: ProcessRecvCmds skips any entry whose command word is 0, so an idle
 // frame costs a ring slot and advances nothing else.
-static void NetEnqueueSendCmd(u16 *sendCmd)
+// Push held-over commands into the outbound ring, oldest first.
+//
+// Order matters: these are halves of block transfers, and a block delivered
+// out of order is as broken as one delivered short. Separate from
+// NetEnqueueSendCmd so a console that is holding itself back can still pay off
+// what it already owes -- otherwise the backlog it is waiting on can never
+// drain and the stall only ends when the safety cap fires.
+void NetLink_DrainBacklog(void)
 {
     u8 head = gNetMailbox.outHead;
     u8 tail = gNetMailbox.outTail;
     u8 i;
 
-    // Drain anything held over from a frame when the ring had no room, oldest
-    // first, before offering this frame's command. Order matters: these are
-    // halves of block transfers, and a block delivered out of order is as
-    // broken as one delivered short.
     while (sBacklogHead != sBacklogTail && RingCount(head, tail) < NET_RING_MASK)
     {
         for (i = 0; i < CMD_LENGTH; i++)
@@ -218,6 +236,16 @@ static void NetEnqueueSendCmd(u16 *sendCmd)
         gNetMailbox.outHead = head;
         sBacklogTail = (u8)((sBacklogTail + 1) % NET_SEND_BACKLOG);
     }
+}
+
+static void NetEnqueueSendCmd(u16 *sendCmd)
+{
+    u8 head = gNetMailbox.outHead;
+    u8 tail = gNetMailbox.outTail;
+    u8 i;
+
+    NetLink_DrainBacklog();
+    head = gNetMailbox.outHead;
 
     // Nothing to send is not worth a backlog slot, and the transport emits a
     // frame every link frame whether or not the game had anything to say.

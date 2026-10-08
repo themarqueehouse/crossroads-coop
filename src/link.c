@@ -175,6 +175,14 @@ EWRAM_DATA u8 gCoopDbgExitStandby = 0;
 EWRAM_DATA u16 gCoopDbgSentStandby = 0;
 EWRAM_DATA u16 gCoopDbgRecvStandby = 0;
 
+// Flow-control state. Stall above a quarter of the backlog -- early enough to
+// catch the drift before it becomes a loss, late enough that an ordinary burst
+// passes straight through.
+#define NET_BACKLOG_STALL_AT  16
+#define NET_BACKLOG_STALL_MAX 120
+static EWRAM_DATA u16 sCoopStallFrames = 0;
+EWRAM_DATA u16 gCoopDbgStalls = 0;
+
 static void CB2_PrintErrorMessage(void);
 static bool8 IsSioMultiMaster(void);
 static void SetWirelessCommType0_Internal(void);
@@ -1817,6 +1825,48 @@ bool8 HandleLinkConnection(void)
     // to fall back to. LinkMain2 and everything above it is unchanged.
     if (NetLink_HostSupportsCoop())
     {
+        // Flow control: hold the whole console back while its outbound
+        // backlog is deep, so the two stay roughly in step.
+        //
+        // A cable clocks both consoles together and neither can run ahead.
+        // Nothing here does. Both sides produce and consume exactly one frame
+        // per frame, so if one runs more frames per second than the other --
+        // which two phones always will -- the faster one's backlog grows
+        // without bound until commands are lost, and in a battle one lost
+        // command hangs the fight for good. Measured over a gym battle, one
+        // console sat at a depth of seven throughout while the other climbed
+        // 18, 25, 47, 63 and then started losing them.
+        //
+        // Stalling here, before NetLinkMain1, is what makes it lossless:
+        // nothing is sent and nothing is dequeued, so inbound frames simply
+        // stay in the ring where the peer put them. An earlier version stalled
+        // after LinkMain2 instead, which stopped the game but not the link
+        // layer -- the console went on emitting a frame every frame, so the
+        // backlog never drained, the battle crawled, and it was all cost and
+        // no benefit. The drain call is the other half of that: a console
+        // holding itself back still pays off what it already owes.
+        //
+        // Scoped to battles. Out of one, a lost command is a position update
+        // the next frame corrects, and the backlog never gets deep. In the
+        // join handshake it is actively harmful: the exchange is a burst of
+        // block transfers, and holding the game back stops the very state
+        // machine meant to complete it -- both consoles sat in EXCHANGING and
+        // the session never came up.
+        //
+        // The cap is a safety valve. If the peer stops consuming entirely,
+        // this console carries on rather than freezing.
+        if (gMain.inBattle
+         && NetLink_BacklogDepth() >= NET_BACKLOG_STALL_AT
+         && sCoopStallFrames < NET_BACKLOG_STALL_MAX)
+        {
+            NetLink_DrainBacklog();
+            sCoopStallFrames++;
+            gCoopDbgStalls++;
+            return TRUE;
+        }
+
+        sCoopStallFrames = 0;
+
         // Sampled either side of NetLinkMain1: it consumes gSendCmd (and
         // zeroes it) and fills gRecvCmds, so neither is readable afterwards
         // from where the test looks.
@@ -1839,6 +1889,7 @@ bool8 HandleLinkConnection(void)
                        : (gLinkCallback == LinkCB_StandbyForAll) ? 2 : 3;
         gCoopDbgExitStandby = (gReadyToExitStandby[0] ? 1 : 0)
                             | (gReadyToExitStandby[1] ? 2 : 0);
+
 
         // Mirror the link's state somewhere the test rig can see it.
         // gLinkStatus, gLinkCallback and gReceivedRemoteLinkPlayers all live in
