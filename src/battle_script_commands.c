@@ -1,5 +1,6 @@
 #include "global.h"
 #include "battle.h"
+#include "coop_battle.h"
 #include "battle_hold_effects.h"
 #include "battle_message.h"
 #include "battle_anim.h"
@@ -4113,6 +4114,20 @@ FEATURE_FLAG_ASSERT(I_EXP_SHARE_FLAG, YouNeedToSetTheExpShareFlagToAnUnusedFlag)
 static bool32 BattleTypeAllowsExp(void)
 {
     if (RECORDED_WILD_BATTLE)
+        return TRUE;
+    // A co-op battle is a link battle wearing the Battle Tower's clothes, and
+    // both of those are on the list below -- so without this, two players beat
+    // a gym leader together and neither team gains a single point.
+    //
+    // The reasons the list exists do not apply here. Link battles award nothing
+    // because the "opponents" are another human's Pokemon, and tower battles
+    // because the teams are rented. A co-op battle is two players fighting real
+    // trainers with the Pokemon they raised, which is the ordinary case.
+    //
+    // Nothing crosses between consoles: every read and write in Cmd_getexp is
+    // against B_TRAINER_0, which GetBattlerTrainer always resolves to the local
+    // player's own party. Each console awards to its own six.
+    else if (Coop_IsBattleActive())
         return TRUE;
     else if (gBattleTypeFlags &
               ( BATTLE_TYPE_LINK
