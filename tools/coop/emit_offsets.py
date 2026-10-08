@@ -92,6 +92,23 @@ WANTED_SYMBOLS = {
     # frames and hoping. The guest's picker opens later than the host's, and
     # how much later varies with how fast the two cores happen to be running.
     "sPickerOpened": "pickerOpenedAddr",
+    # The link standby handshake. gReadyToExitStandby and gLinkCallback are
+    # both in IWRAM, which the harness cannot reach, so link.c mirrors them.
+    "gCoopDbgLinkCb": "dbgLinkCbAddr",
+    "gCoopDbgExitStandby": "dbgExitStandbyAddr",
+    "gCoopDbgSentStandby": "dbgSentStandbyAddr",
+    "gCoopDbgRecvStandby": "dbgRecvStandbyAddr",
+    # Which battler's controller has not finished its turn. A stalled link
+    # battle is always some bit in here that never clears, and the screen
+    # cannot say which one.
+    "gBattleControllerExecFlags": "execFlagsAddr",
+    "gBattleOutcome": "battleOutcomeAddr",
+    "gCoopDbgBattlerCmd": "dbgBattlerCmdAddr",
+    "gCoopDbgSendPending": "dbgSendPendingAddr",
+    "gCoopDbgDoneSent": "dbgDoneSentAddr",
+    "gCoopDbgDoneRecv": "dbgDoneRecvAddr",
+    "gCoopDbgSendDrops": "dbgSendDropsAddr",
+    "gCoopDbgBacklogMax": "dbgBacklogMaxAddr",
 }
 
 # Symbol -> the field names its entries carry, in order.

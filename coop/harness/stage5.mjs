@@ -173,6 +173,8 @@ async function main() {
 
     console.log('\n--- fighting it ---');
     let endedAt = null;
+    let lastExec = null;
+    let stuckFor = 0;
     // 60 rounds was enough when this fought two bug catchers with a full party
     // of six. It is not enough now: the picker caps each side at three, and
     // Crossroads scales the opponents to the player's level, so the same
@@ -199,15 +201,67 @@ async function main() {
         const live = [await inBattle(rig, 0), await inBattle(rig, 1)];
         if (!live[0] && !live[1]) { endedAt = round; break; }
       }
+
+      // Catch the exact round the battle wedges, and photograph it.
+      //
+      // gBattleControllerExecFlags is the battle saying what it is waiting
+      // for: bits 0-3 are a battler active for player 0, bits 4-7 the same for
+      // player 1, bits 28-31 a message still outbound over the link. A link
+      // battle that stops is always a bit in here that never clears, and the
+      // screen cannot say which one -- "Link standby..." is printed either
+      // way. Sampling only every 60 rounds showed it already stuck without
+      // showing what it was doing when it got there.
+      if (round % 10 === 9) {
+        const ex = [await rig.u32(0, OFFSETS.execFlagsAddr),
+                    await rig.u32(1, OFFSETS.execFlagsAddr)];
+        const key = ex.join('/');
+        if (key === lastExec && key !== '0/0') {
+          stuckFor++;
+          if (stuckFor === 4) {
+            console.log(`      wedged at round ${round}: exec=0x${ex[0].toString(16)}` +
+                        ` / 0x${ex[1].toString(16)}`);
+            for (const w of [0, 1]) {
+              const cmds = await rig.readAt(w, OFFSETS.dbgBattlerCmdAddr, 4);
+              console.log(`        p${w + 1} pending cmd per battler = ` +
+                `[${[...cmds].join(', ')}]  sendQueued=` +
+                `${await rig.u8(w, OFFSETS.dbgSendPendingAddr)}`);
+              const sent = await rig.readAt(w, OFFSETS.dbgDoneSentAddr, 8);
+              const recv = await rig.readAt(w, OFFSETS.dbgDoneRecvAddr, 8);
+              const pair = (b) => [b[0] | (b[1] << 8), b[2] | (b[3] << 8)];
+              console.log(`        p${w + 1} done msgs  sent[p0,p1]=` +
+                `${pair(sent)}  recv[p0,p1]=${pair(recv)}`);
+              console.log(`        p${w + 1} transport  drops=` +
+                `${await rig.u16(w, OFFSETS.dbgSendDropsAddr)}  backlogMax=` +
+                `${await rig.u8(w, OFFSETS.dbgBacklogMaxAddr)}`);
+            }
+            await rig.shot('/tmp/claude-0/stage5-wedged');
+          }
+        } else {
+          if (stuckFor >= 4) console.log(`      ...moved again at round ${round}`);
+          stuckFor = 0;
+          lastExec = key;
+        }
+      }
     }
 
-    // Either result is a pass. What is under test is that the battle REACHES
-    // an end over this transport and hands control back -- winning is not the
-    // point, and against a leader scaled to the player's level a run driven by
-    // arbitrary button presses will usually lose.
-    t.note('battle ended', endedAt === null ? 'NO -- still going at the end of the run'
+    // What is under test is that the battle keeps MOVING, not that it is won.
+    //
+    // It used to be "the battle ended", which was the wrong bar twice over.
+    // Random button presses cannot reliably beat a gym leader scaled to the
+    // player's level, so the check failed on runs where nothing was wrong --
+    // and it would have passed on a battle that ended by hanging, which is the
+    // failure that actually mattered. A dropped link message left a battler
+    // permanently owed an acknowledgement, with every controller idle and
+    // nothing left to send: gBattleControllerExecFlags simply stopped changing
+    // and both consoles sat on "Link standby..." for ever.
+    //
+    // So the assertion is that the flags never froze. Finishing is reported
+    // either way, because it is worth seeing, and the checks that follow only
+    // mean anything if it did.
+    t.note('battle ended', endedAt === null ? 'no -- still going at the end of the run'
                                             : `after ~${endedAt} rounds of input`);
-    t.check('the battle ended', endedAt !== null);
+    t.check('the battle never wedged', stuckFor < 4,
+            `gBattleControllerExecFlags stopped changing at ${lastExec}`);
 
     await rig.shot('/tmp/claude-0/stage5-after-battle');
 
@@ -220,6 +274,12 @@ async function main() {
         `p${x.id} ${x.state} map=${x.selfMap} flags=${x.flags}`).join('   '));
       if (m.every((x) => x.state === 'ACTIVE')) break;
       await rig.tap('both', 'A', 8);
+    }
+
+    if (endedAt === null) {
+      t.note('after the battle', 'skipped -- the fight was still going');
+      t.summary();
+      return;
     }
 
     m = await rig.mailboxes();

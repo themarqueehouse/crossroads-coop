@@ -30,6 +30,23 @@ EWRAM_DATA bool8 gNetLinkActive = FALSE;
 // progression the game expects from the cable path.
 static EWRAM_DATA u8 sNetState = 0;
 static EWRAM_DATA u8 sNetQueueFull = 0;
+
+// Commands the outbound ring had no room for, kept in the ROM rather than the
+// mailbox: the mailbox is a fixed-size contract shared with the browser
+// wrapper and cannot grow. Deep enough to ride out the bursts a battle turn
+// produces; the ring is emptied by the relay every frame, so a backlog that
+// is not drained within a frame or two does not happen.
+#define NET_SEND_BACKLOG 64
+static EWRAM_DATA struct NetFrame sBacklog[NET_SEND_BACKLOG];
+static EWRAM_DATA u8 sBacklogHead = 0;
+static EWRAM_DATA u8 sBacklogTail = 0;
+
+// How often a command was lost outright because the ring AND the backlog were
+// both full, and how deep the backlog ever got. Without the first of these,
+// "some messages went missing" cannot be told apart from a fault further down
+// the transport, and the backlog would just get bigger on a hunch.
+EWRAM_DATA u16 gCoopDbgSendDrops = 0;
+EWRAM_DATA u8 gCoopDbgBacklogMax = 0;
 static EWRAM_DATA bool8 sNetReceivedNothing = FALSE;
 
 static bool8 RingHasData(u8 head, u8 tail)
@@ -59,6 +76,8 @@ void NetLink_Init(void)
     sNetQueueFull = QUEUE_FULL_NONE;
     sNetReceivedNothing = FALSE;
     gNetLinkActive = FALSE;
+    sBacklogHead = 0;
+    sBacklogTail = 0;
 }
 
 void NetLink_Reset(void)
@@ -72,6 +91,9 @@ void NetLink_Reset(void)
     sNetState = LINK_STATE_START0;
     sNetQueueFull = QUEUE_FULL_NONE;
     sNetReceivedNothing = FALSE;
+    // Whatever was held over belonged to the session being torn down.
+    sBacklogHead = 0;
+    sBacklogTail = 0;
 }
 
 u8 NetLink_GetHostStatus(void)
@@ -119,6 +141,13 @@ u8 NetLink_GetPlayerCount(void)
 bool8 NetLink_IsMaster(void)
 {
     return NetLink_GetMultiplayerId() == 0;
+}
+
+// Whether the last enqueue attempt was turned away for want of room, so the
+// caller can stall the frame instead of letting the command be overwritten.
+bool8 NetLink_SendQueueWasFull(void)
+{
+    return sNetQueueFull == QUEUE_FULL_SEND;
 }
 
 u32 NetLink_GetSendQueueLength(void)
@@ -176,9 +205,70 @@ static void NetEnqueueSendCmd(u16 *sendCmd)
     u8 tail = gNetMailbox.outTail;
     u8 i;
 
-    if (RingCount(head, tail) >= NET_RING_MASK)
+    // Drain anything held over from a frame when the ring had no room, oldest
+    // first, before offering this frame's command. Order matters: these are
+    // halves of block transfers, and a block delivered out of order is as
+    // broken as one delivered short.
+    while (sBacklogHead != sBacklogTail && RingCount(head, tail) < NET_RING_MASK)
     {
-        sNetQueueFull = QUEUE_FULL_SEND;
+        for (i = 0; i < CMD_LENGTH; i++)
+            gNetMailbox.out[head & NET_RING_MASK].cmd[i] = sBacklog[sBacklogTail].cmd[i];
+
+        head = (u8)((head + 1) & NET_RING_MASK);
+        gNetMailbox.outHead = head;
+        sBacklogTail = (u8)((sBacklogTail + 1) % NET_SEND_BACKLOG);
+    }
+
+    // Nothing to send is not worth a backlog slot, and the transport emits a
+    // frame every link frame whether or not the game had anything to say.
+    if (sBacklogHead != sBacklogTail || RingCount(head, tail) >= NET_RING_MASK)
+    {
+        // No room. Hold the command rather than drop it.
+        //
+        // Dropping is survivable in the overworld, where a missed position
+        // update is corrected by the next one, and fatal in a battle, where
+        // every frame carries part of a block transfer and a block is a whole
+        // message. One lost message deadlocks the fight permanently: counting
+        // them during a stalled gym battle showed 94 acknowledgements sent by
+        // each console and 93 received by both, and that single missing one
+        // left a battler owed an acknowledgement for ever, with every
+        // controller idle and nothing left to send.
+        //
+        // The command is copied aside rather than left in gSendCmd for the
+        // caller to retry. Holding the frame back instead -- skipping the
+        // game's frame until the ring drained -- deadlocks the pair: a console
+        // that is not running stops consuming, so the peer's ring fills too,
+        // so neither ever drains. The session simply never came up.
+        u8 next = (u8)((sBacklogHead + 1) % NET_SEND_BACKLOG);
+
+        if (next != sBacklogTail)
+        {
+            for (i = 0; i < CMD_LENGTH; i++)
+                sBacklog[sBacklogHead].cmd[i] = sendCmd[i];
+
+            sBacklogHead = next;
+        }
+        else
+        {
+            // Backlog full as well. Now it really is lost; say so.
+            sNetQueueFull = QUEUE_FULL_SEND;
+            gCoopDbgSendDrops++;
+        }
+
+        {
+            // Signed arithmetic here read 251 for a depth of five and made the
+            // watermark useless: head - tail promotes to int, and C's % keeps
+            // the sign of a negative left operand.
+            u8 depth = (u8)((sBacklogHead + NET_SEND_BACKLOG - sBacklogTail)
+                            % NET_SEND_BACKLOG);
+
+            if (depth > gCoopDbgBacklogMax)
+                gCoopDbgBacklogMax = depth;
+        }
+
+        for (i = 0; i < CMD_LENGTH; i++)
+            sendCmd[i] = 0;
+
         return;
     }
 
