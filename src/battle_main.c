@@ -1184,12 +1184,30 @@ static void CB2_HandleStartMultiPartnerBattle(void)
                 gLinkPlayers[1].id = 2;
                 gLinkPlayers[2].id = 1;
                 gLinkPlayers[3].id = 3;
-                GetFrontierTrainerName(gLinkPlayers[2].name, TRAINER_BATTLE_PARAM.opponentA);
-                GetFrontierTrainerName(gLinkPlayers[3].name, TRAINER_BATTLE_PARAM.opponentB);
-                GetBattleTowerTrainerLanguage(&language, TRAINER_BATTLE_PARAM.opponentA);
-                gLinkPlayers[2].language = language;
-                GetBattleTowerTrainerLanguage(&language, TRAINER_BATTLE_PARAM.opponentB);
-                gLinkPlayers[3].language = language;
+                if (Coop_IsBattleActive())
+                {
+                    // Ordinary trainers, so their names come from the ordinary
+                    // trainer table. This path is the Battle Tower's, and the
+                    // tower looks names up among the frontier's rented
+                    // trainers -- which for a gym leader's id returns whoever
+                    // happens to sit at that index. Roxanne was being
+                    // announced as someone called TEO.
+                    StringCopy(gLinkPlayers[2].name,
+                               GetTrainerNameFromId(TRAINER_BATTLE_PARAM.opponentA));
+                    StringCopy(gLinkPlayers[3].name,
+                               GetTrainerNameFromId(TRAINER_BATTLE_PARAM.opponentB));
+                    gLinkPlayers[2].language = gLinkPlayers[0].language;
+                    gLinkPlayers[3].language = gLinkPlayers[0].language;
+                }
+                else
+                {
+                    GetFrontierTrainerName(gLinkPlayers[2].name, TRAINER_BATTLE_PARAM.opponentA);
+                    GetFrontierTrainerName(gLinkPlayers[3].name, TRAINER_BATTLE_PARAM.opponentB);
+                    GetBattleTowerTrainerLanguage(&language, TRAINER_BATTLE_PARAM.opponentA);
+                    gLinkPlayers[2].language = language;
+                    GetBattleTowerTrainerLanguage(&language, TRAINER_BATTLE_PARAM.opponentB);
+                    gLinkPlayers[3].language = language;
+                }
 
                 if (IsLinkTaskFinished())
                 {
