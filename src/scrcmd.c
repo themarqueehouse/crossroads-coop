@@ -977,6 +977,7 @@ bool8 ScrCmd_coopbattle(struct ScriptContext *ctx)
 {
     u16 opponentA = ScriptReadHalfword(ctx);
     u16 opponentB = ScriptReadHalfword(ctx);
+    bool8 splitTeam = ScriptReadByte(ctx);
 
     Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
 
@@ -990,7 +991,7 @@ bool8 ScrCmd_coopbattle(struct ScriptContext *ctx)
         return TRUE;
     }
 
-    Coop_StartBattle(opponentA, opponentB);
+    Coop_StartBattle(opponentA, opponentB, splitTeam);
     return TRUE;
 }
 

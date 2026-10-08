@@ -2027,10 +2027,26 @@
 	@
 	@ Team sizes are not set here: see AreMultiPartiesFullTeams. A trainer
 	@ marked `Multi Party: Half` brings three, otherwise six.
+	@ Two real trainers, each with their own team.
 	.macro coopbattle trainer_a:req, trainer_b:req
 	.byte SCR_OP_COOPBATTLE
 	.2byte \trainer_a
 	.2byte \trainer_b
+	.byte 0
+	waitstate
+	.endm
+
+	@ One trainer's team, dealt across two trainer slots.
+	@
+	@ For a gym leader, who has no partner and whose gym would lose a fight if
+	@ a real trainer were conscripted as one. trainer_b brings a sprite and a
+	@ name and nothing else; every Pokemon on the other side is trainer_a's,
+	@ just split between the two of them. 2v1 in substance, 2v2 in shape.
+	.macro coopbattle_split trainer_a:req, trainer_b:req
+	.byte SCR_OP_COOPBATTLE
+	.2byte \trainer_a
+	.2byte \trainer_b
+	.byte 1
 	waitstate
 	.endm
 

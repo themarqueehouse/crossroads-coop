@@ -14,7 +14,21 @@
  * gate, or one console tears its link down while the other is still walking
  * about and neither gets a battle.
  */
-void Coop_StartBattle(u16 opponentA, u16 opponentB);
+void Coop_StartBattle(u16 opponentA, u16 opponentB, bool8 splitTeam);
+
+/**
+ * True when the two opposing trainer slots share ONE trainer's team.
+ *
+ * A gym leader has no partner, and pairing them with a real gym trainer costs
+ * the gym a fight. So the second slot is a filler who brings nothing of their
+ * own and the leader's team is dealt across the two of them: the opposition is
+ * exactly the Pokemon the leader always had, in a double battle because there
+ * are two trainers standing there.
+ */
+bool8 Coop_BattleSplitsTeam(void);
+
+/** Generate opponent A's whole team and deal the back half to opponent B. */
+void Coop_BuildSplitOpponents(void);
 
 /** True from the moment a co-op battle starts until the field comes back. */
 bool8 Coop_IsBattleActive(void);

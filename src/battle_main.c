@@ -642,12 +642,21 @@ static void CB2_InitBattleInternal(void)
             || Coop_IsBattleActive())
         {
             gCoopDbgMadeParties = 1;
+            if (Coop_BattleSplitsTeam())
+            {
+                // One trainer's team across both slots. The filler named as
+                // opponentB contributes a sprite and a name and nothing else.
+                Coop_BuildSplitOpponents();
+            }
+            else
+            {
             gCoopDbgFoeA = CreateNPCTrainerParty(&gParties[B_TRAINER_1][0], TRAINER_BATTLE_PARAM.opponentA);
             // Straight after generation, before anything else touches it.
             gCoopDbgSpeciesEarly = GetMonData(&gParties[B_TRAINER_1][0], MON_DATA_SPECIES, NULL);
             if ((gBattleTypeFlags & BATTLE_TYPE_TWO_OPPONENTS && !BATTLE_TWO_VS_ONE_OPPONENT)
                 || Coop_IsBattleActive())
                 gCoopDbgFoeB = CreateNPCTrainerParty(&gParties[B_TRAINER_3][0], TRAINER_BATTLE_PARAM.opponentB);
+            }
             SetWildMonHeldItem();
             CalculateEnemyPartyCount();
             gCoopDbgAfter = gPartiesCount[B_TRAINER_1];

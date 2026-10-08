@@ -258,8 +258,15 @@ Debug_EventScript_Script_5::
 	release
 	end
 
+@ Co-op SPLIT battle test (R+Start, Scripts…, Script 6). Run on ONE console.
+@ Roxanne's whole team dealt across herself and a filler partner: the same
+@ Pokemon she always had, fought as a double battle. Her gym keeps all of its
+@ own trainers.
 Debug_EventScript_Script_6::
-	release
+	coopscene GATE_TEST_BATTLE
+	lockall
+	coopbattle_split TRAINER_ROXANNE_1, TRAINER_JOSH
+	releaseall
 	end
 
 Debug_EventScript_Script_7::

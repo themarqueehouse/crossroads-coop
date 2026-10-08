@@ -77,7 +77,7 @@ async function main() {
 
     console.log('\n--- starting the co-op battle ---');
     await rig.clearGateLog();
-    await runDebugScript(rig, 0, 4);
+    await runDebugScript(rig, 0, Number(process.env.COOP_SLOT || 4));
 
     // Wait for the battle to actually be SET UP, not merely started.
     //

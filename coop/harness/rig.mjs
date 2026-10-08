@@ -178,7 +178,12 @@ export function tally() {
   return {
     check(name, ok, detail = '') {
       results.push(ok);
-      console.log(`${ok ? 'PASS' : 'FAIL'}: ${name}${detail ? ` -- ${detail}` : ''}`);
+      // The detail is an explanation of FAILURE, so printing it beside a PASS
+      // reads as a contradiction -- "PASS: the opponents have Pokemon --
+      // generation produced empty parties" was on screen for most of an
+      // evening. Evidence that is worth seeing either way goes in note().
+      console.log(`${ok ? 'PASS' : 'FAIL'}: ${name}` +
+                  (ok || !detail ? '' : ` -- ${detail}`));
     },
     note(name, detail) {
       console.log(`      ${name}${detail ? `: ${detail}` : ''}`);

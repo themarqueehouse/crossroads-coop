@@ -56,9 +56,50 @@
 
 static EWRAM_DATA bool8 sCoopBattleActive = FALSE;
 
+// Whether the two opposing trainer slots share ONE trainer's team.
+//
+// A gym leader has no partner, and pairing them with a real gym trainer costs
+// the gym a fight. So the second slot is a filler who brings nothing of their
+// own: the leader's team is dealt across the two of them. The opposition is
+// exactly the Pokemon the leader always had, and it is a double battle because
+// there are two trainers standing there -- 2v1 in substance, 2v2 in shape.
+static EWRAM_DATA bool8 sSplitTeam = FALSE;
+
 bool8 Coop_IsBattleActive(void)
 {
     return sCoopBattleActive;
+}
+
+bool8 Coop_BattleSplitsTeam(void)
+{
+    return sCoopBattleActive && sSplitTeam;
+}
+
+void Coop_BuildSplitOpponents(void)
+{
+    u8 count, keep, i;
+
+    // The whole team into the first slot. halfTeam is FALSE deliberately: we
+    // want everything the trainer has before deciding how to share it out,
+    // and the frontier bits are off for the reason CreateNPCTrainerParty
+    // explains at length.
+    CreateNPCTrainerPartyFromTrainer(&gParties[B_TRAINER_1][0],
+                                     GetTrainerStructFromId(TRAINER_BATTLE_PARAM.opponentA),
+                                     FALSE,
+                                     BATTLE_TYPE_TRAINER | BATTLE_TYPE_DOUBLE);
+
+    count = CalculatePartyCount(B_TRAINER_1);
+    // The odd one stays with the real trainer, so a five-Pokemon leader keeps
+    // three and the filler takes two rather than the other way round.
+    keep = (count + 1) / 2;
+
+    ZeroPartyMons(gParties[B_TRAINER_3]);
+
+    for (i = keep; i < count; i++)
+    {
+        gParties[B_TRAINER_3][i - keep] = gParties[B_TRAINER_1][i];
+        ZeroMonData(&gParties[B_TRAINER_1][i]);
+    }
 }
 
 // Back to the field once the battle is over, with the script that started it
@@ -66,6 +107,7 @@ bool8 Coop_IsBattleActive(void)
 static void CB2_ReturnFromCoopBattle(void)
 {
     sCoopBattleActive = FALSE;
+    sSplitTeam = FALSE;
 
     // Rebuild the co-op session. The battle left the link closed, which is the
     // state the session machine starts from anyway.
@@ -160,12 +202,13 @@ static void Task_CoopBattleStart(u8 taskId)
 #undef tState
 #undef tTimer
 
-void Coop_StartBattle(u16 opponentA, u16 opponentB)
+void Coop_StartBattle(u16 opponentA, u16 opponentB, bool8 splitTeam)
 {
     TRAINER_BATTLE_PARAM.opponentA = opponentA;
     TRAINER_BATTLE_PARAM.opponentB = opponentB;
 
     sCoopBattleActive = TRUE;
+    sSplitTeam = splitTeam;
     // Breadcrumb triangulation: this function certainly runs, so if the rig
     // reads 0 here the problem is the reading, not the running.
     gCoopDbgReached = 7;
