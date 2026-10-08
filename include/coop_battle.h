@@ -46,6 +46,20 @@ void Coop_MarkNextBattle(u16 partnerTrainer, bool8 split);
  */
 bool8 Coop_TakeOverTrainerBattle(void);
 
+/**
+ * The party picker, for a split battle.
+ *
+ * Each player chooses which three to bring, so the pair field six against the
+ * leader's six -- the same arithmetic as facing them alone. Opened by the
+ * script command that marks the battle; the choice is applied when the battle
+ * starts.
+ */
+void Coop_SetPickerOpened(bool8 opened);
+bool8 Coop_PickerWasOpened(void);
+
+/** Abandon a marked battle -- the player backed out of choosing. */
+void Coop_CancelNextBattle(void);
+
 /** True from the moment a co-op battle starts until the field comes back. */
 bool8 Coop_IsBattleActive(void);
 

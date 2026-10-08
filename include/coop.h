@@ -159,6 +159,15 @@ void Coop_ReceiveGate(u8 playerId, const u16 *cmd);
  */
 void Coop_BeginSceneGate(u16 gateId);
 
+/**
+ * A gate that waits much longer before giving up.
+ *
+ * For waiting on the other player to finish CHOOSING something. A scene gate's
+ * ten seconds answers "did the scene reach them", which takes a frame or two;
+ * it is hopeless for a menu a person is reading and changing their mind in.
+ */
+void Coop_BeginReadyGate(u16 gateId);
+
 /** TRUE once a scene gate has waited long enough to give up on. */
 bool8 Coop_GateTimedOut(void);
 

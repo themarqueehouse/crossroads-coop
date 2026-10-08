@@ -260,6 +260,7 @@ gScriptCmdTable::
 	script_cmd_table_entry SCR_OP_COOPNEEDPARTNER               ScrCmd_coopneedpartner,             requests_effects=1  @ 0xeb
 	script_cmd_table_entry SCR_OP_COOPBATTLE                    ScrCmd_coopbattle,                  requests_effects=1  @ 0xec
 	script_cmd_table_entry SCR_OP_COOPNEXTBATTLE                ScrCmd_coopnextbattle,              requests_effects=1  @ 0xed
+	script_cmd_table_entry SCR_OP_COOPBATTLEREADY               ScrCmd_coopbattleready,             requests_effects=1  @ 0xee
 
 	.if ALLOCATE_SCRIPT_CMD_TABLE
 gScriptCmdTableEnd::

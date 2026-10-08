@@ -2052,6 +2052,10 @@
 	.byte SCR_OP_COOPNEXTBATTLE
 	.2byte \filler
 	.byte 1
+	@ Each player picks which three to bring, then both wait for the other to
+	@ have picked. Emitted here rather than left to each script because every
+	@ split battle needs it and forgetting it on one would desync that fight.
+	.byte SCR_OP_COOPBATTLEREADY
 	.endm
 
 	.macro coopnextbattle partner:req

@@ -23,6 +23,12 @@
 // 0 is reserved: it means "no gate".
 #define GATE_NONE 0
 
+// Both players have finished choosing their three and are ready to fight.
+//
+// One reserved id is enough: only one co-op battle is ever being set up at a
+// time, since setting one up locks both players out of the overworld.
+#define GATE_COOP_BATTLE_READY 99
+
 // Gates 1-99 are reserved for testing the mechanism itself.
 #define GATE_TEST        1
 #define GATE_TEST_SECOND 2

@@ -79,6 +79,33 @@ async function main() {
     await rig.clearGateLog();
     await runDebugScript(rig, 0, Number(process.env.COOP_SLOT || 4));
 
+    // A split battle now opens a party picker on BOTH consoles before it
+    // starts. Photograph it, then choose three on each.
+    if (process.env.COOP_PICK) {
+      // The guest starts the mirrored scene a little after the host, so its
+      // picker opens later. Waiting 120 frames caught only the host's and made
+      // it look as though the partner never got one.
+      await rig.wait(420);
+      await rig.shot('/tmp/claude-0/stage5-picker');
+      for (const w of [0, 1]) {
+        // A opens an ENTER/SUMMARY/CANCEL submenu on the highlighted Pokemon;
+        // a second A takes ENTER; only then does Down move on. Tighter waits
+        // than this and the Down lands while the submenu is still up.
+        for (let i = 0; i < 3; i++) {
+          await rig.tap(w, 'A', 10); await rig.wait(45);
+          await rig.tap(w, 'A', 10); await rig.wait(45);
+          await rig.tap(w, 'Down', 8); await rig.wait(30);
+        }
+        // START jumps the cursor to CONFIRM -- see PartyMenuButtonHandler's
+        // START_BUTTON case. Arrowing down does not get there, which is why
+        // picking three and pressing A repeatedly left the menu open.
+        await rig.shot(`/tmp/claude-0/stage5-picked-p${w}`);
+        await rig.tap(w, 'Start', 8); await rig.wait(25);
+        await rig.tap(w, 'A', 8); await rig.wait(40);
+      }
+      await rig.wait(120);
+    }
+
     // Wait for the battle to actually be SET UP, not merely started.
     //
     // A fixed wait here is what produced an evening of fiction. The entry runs

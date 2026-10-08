@@ -67,6 +67,8 @@ static EWRAM_DATA bool8 sCoopBattleActive = FALSE;
 // exactly the Pokemon the leader always had, and it is a double battle because
 // there are two trainers standing there -- 2v1 in substance, 2v2 in shape.
 static EWRAM_DATA bool8 sSplitTeam = FALSE;
+// Whether this battle actually took three Pokemon away, and so owes them back.
+static EWRAM_DATA bool8 sReducedParty = FALSE;
 
 // What to run once the battle is over, if anything already wanted to.
 //
@@ -95,29 +97,6 @@ bool8 Coop_IsBattleActive(void)
 bool8 Coop_BattleSplitsTeam(void)
 {
     return sCoopBattleActive && sSplitTeam;
-}
-
-// Each player brings three, for a split battle only.
-//
-// Without this the sides are badly lopsided: a leader's six dealt across two
-// slots is still six, while two players turning up with full parties field
-// twelve. Three each puts six against six, which is the same arithmetic as
-// facing that leader alone -- and the same shape the series itself uses for a
-// two-trainer side.
-//
-// The first three rather than a chosen three. A picking screen is what Emerald
-// does before the Steven tag battle and would be better; it is also a whole
-// menu flow on both consoles, so it is a follow-up rather than a blocker.
-static void ReducePartyForSplitBattle(void)
-{
-    u8 i;
-
-    SavePlayerParty();
-
-    for (i = 0; i < MAX_FRONTIER_PARTY_SIZE; i++)
-        gSelectedOrderFromParty[i] = (i < MULTI_PARTY_SIZE) ? (i + 1) : 0;
-
-    ReducePlayerPartyToSelectedMons();
 }
 
 void Coop_BuildSplitOpponents(void)
@@ -153,12 +132,14 @@ static void CB2_ReturnFromCoopBattle(void)
 {
     MainCallback next = sChainedCallback;
 
-    // The other three back, before anything else looks at the party.
-    if (sSplitTeam)
+    // The other three back, before anything else looks at the party -- but only
+    // if they were ever taken away.
+    if (sReducedParty)
         LoadPlayerParty();
 
     sCoopBattleActive = FALSE;
     sSplitTeam = FALSE;
+    sReducedParty = FALSE;
     sChainedCallback = NULL;
 
     // Rebuild the co-op session. The battle left the link closed, which is the
@@ -232,8 +213,9 @@ static void Task_CoopBattleStart(u8 taskId)
             // and giving up here is the one path out that never reaches the
             // battle -- so without this the player walks away permanently
             // three Pokemon lighter.
-            if (sSplitTeam)
+            if (sReducedParty)
                 LoadPlayerParty();
+            sReducedParty = FALSE;
             sSplitTeam = FALSE;
 
             Coop_ResumeAfterBattle();
@@ -270,10 +252,31 @@ void Coop_StartBattle(u16 opponentA, u16 opponentB, bool8 splitTeam)
 
     sCoopBattleActive = TRUE;
     sSplitTeam = splitTeam;
+    sReducedParty = FALSE;
     sChainedCallback = gMain.savedCallback;
 
-    if (splitTeam)
-        ReducePartyForSplitBattle();
+    // Down to the three each player chose.
+    //
+    // Without a cap the sides are badly lopsided: a leader's six dealt across
+    // two slots is still six, while two players turning up with full parties
+    // field twelve. Three each puts the same number against that leader as
+    // facing them alone would.
+    //
+    // The choice itself was made before this, by the picker the script command
+    // opens; this only applies it. SavePlayerParty was called there too, so the
+    // other three are waiting to come back.
+    // Only when there is a choice to apply.
+    //
+    // ReducePlayerPartyToSelectedMons copies the party down to whatever
+    // gSelectedOrderFromParty names -- and an empty selection names nothing, so
+    // calling it without a picker does not leave the party alone, it empties
+    // it. The direct coopbattle_split command opens no picker, and a battle
+    // started that way arrived with zero Pokemon on each side.
+    if (splitTeam && gSelectedOrderFromParty[0] != 0)
+    {
+        ReducePlayerPartyToSelectedMons();
+        sReducedParty = TRUE;
+    }
     // Breadcrumb triangulation: this function certainly runs, so if the rig
     // reads 0 here the problem is the reading, not the running.
     gCoopDbgReached = 7;
@@ -303,4 +306,24 @@ bool8 Coop_TakeOverTrainerBattle(void)
 
     Coop_StartBattle(TRAINER_BATTLE_PARAM.opponentA, sNextPartner, sNextSplit);
     return TRUE;
+}
+
+// Whether the party picker was opened for the battle being set up, and so
+// whether there is a choice to check and a partner to wait for.
+static EWRAM_DATA bool8 sPickerOpened = FALSE;
+
+void Coop_SetPickerOpened(bool8 opened)
+{
+    sPickerOpened = opened;
+}
+
+bool8 Coop_PickerWasOpened(void)
+{
+    return sPickerOpened;
+}
+
+void Coop_CancelNextBattle(void)
+{
+    sNextMarked = FALSE;
+    sPickerOpened = FALSE;
 }

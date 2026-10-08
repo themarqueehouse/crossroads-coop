@@ -272,8 +272,18 @@ static EWRAM_DATA u16 sUsedPeerGateSeq = 0;
 // of their own, and that is not a fault. Only the opening gate ever uses this.
 #define SCENE_GATE_TIMEOUT_FRAMES 600 // 10 seconds
 
+// A gate waiting on the other player to finish CHOOSING gets far longer.
+//
+// Ten seconds is right for "did the scene reach them" -- a question answered in
+// a frame or two when all is well. It is hopeless for "have they picked their
+// three yet", which is a menu a person reads, scrolls and changes their mind
+// in. At ten seconds the first player to confirm abandoned the battle while the
+// second was still on the party screen.
+#define READY_GATE_TIMEOUT_FRAMES 3600 // one minute
+
 // Whether this gate is allowed to give up, and whether it has.
 static EWRAM_DATA bool8 sGateCanTimeOut = FALSE;
+static EWRAM_DATA u16 sGateTimeoutFrames = 0;
 static EWRAM_DATA bool8 sGateTimedOut = FALSE;
 
 // Has the partner reported arriving at our gate, with an arrival we have not
@@ -287,6 +297,14 @@ void Coop_BeginSceneGate(u16 gateId)
 {
     Coop_BeginGate(gateId);
     sGateCanTimeOut = TRUE;
+    sGateTimeoutFrames = SCENE_GATE_TIMEOUT_FRAMES;
+}
+
+void Coop_BeginReadyGate(u16 gateId)
+{
+    Coop_BeginGate(gateId);
+    sGateCanTimeOut = TRUE;
+    sGateTimeoutFrames = READY_GATE_TIMEOUT_FRAMES;
 }
 
 bool8 Coop_GateTimedOut(void)
@@ -372,7 +390,7 @@ void Coop_UpdateGate(void)
     if (sGateWaitFrames < 0xFFFF)
         sGateWaitFrames++;
 
-    if (sGateCanTimeOut && sGateWaitFrames >= SCENE_GATE_TIMEOUT_FRAMES)
+    if (sGateCanTimeOut && sGateWaitFrames >= sGateTimeoutFrames)
         sGateTimedOut = TRUE;
 }
 

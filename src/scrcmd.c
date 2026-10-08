@@ -50,6 +50,8 @@
 #include "script.h"
 #include "coop.h"
 #include "coop_battle.h"
+#include "constants/coop_gates.h"
+#include "load_save.h"
 #include "script_menu.h"
 #include "script_movement.h"
 #include "script_pokemon_util.h"
@@ -1012,7 +1014,57 @@ bool8 ScrCmd_coopnextbattle(struct ScriptContext *ctx)
     Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
 
     Coop_MarkNextBattle(partner, split);
+    Coop_SetPickerOpened(FALSE);
+
+    // A split battle caps each player at three, so each player chooses which
+    // three. Both consoles are running this script, so both get the menu.
+    //
+    // The waitstate is done here rather than in the macro because it is
+    // conditional: with no partner there is no co-op battle, no cap and no
+    // menu, and a waitstate with nothing to wake it would hang the script.
+    if (split && Coop_PartnerIsHere())
+    {
+        SavePlayerParty();
+        ChooseHalfPartyForBattle();
+        Coop_SetPickerOpened(TRUE);
+        ScriptContext_Stop();
+        return TRUE;
+    }
+
     return FALSE;
+}
+
+// Runs once the picker has closed: checks what was chosen, and holds both
+// consoles until the other player has chosen too.
+bool8 ScrCmd_coopbattleready(struct ScriptContext *ctx)
+{
+    Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
+
+    if (!Coop_PickerWasOpened())
+        return FALSE;
+
+    Coop_SetPickerOpened(FALSE);
+
+    // Backed out of choosing. Abandon the whole challenge rather than start it
+    // with a full party -- the cap is what keeps the fight honest.
+    //
+    // The partner, who may have chosen, is left waiting at the gate below and
+    // gives up when it times out. Both end up back in the overworld with
+    // nothing changed, and the trainer can simply be spoken to again.
+    if (gSpecialVar_Result == FALSE)
+    {
+        Coop_CancelNextBattle();
+        LoadPlayerParty();
+        ScriptContext_Abort();
+        return TRUE;
+    }
+
+    // One player can sit on the menu far longer than the other. Without this,
+    // whoever chose first would start tearing the link down for the battle
+    // while the other was still scrolling their party.
+    Coop_BeginReadyGate(GATE_COOP_BATTLE_READY);
+    SetupNativeScript(ctx, RunCoopSceneGate);
+    return TRUE;
 }
 
 // Refuse to go on without the other player on this map. Nothing is mirrored --
