@@ -46,7 +46,12 @@ CinnabarIsland_Gym_OnLoadOpenDoor6::
 	return
 
 CinnabarIsland_Gym_EventScript_Blaine::
-	coop_require_partner
+	@ Co-op: the whole challenge runs on both consoles. coopscene mirrors
+	@ it so the partner sees the fight, and refuses it outright if the
+	@ leader is challenged alone. TRAINER_LEADER_BLAINE's own team is then dealt
+	@ across them and a filler partner, so the gym keeps all its trainers.
+	coopscene GATE_GYM_BLAINE
+	coopnextbattle_split TRAINER_SUPER_NERD_ERIK
 	famechecker FAMECHECKER_BLAINE, FCPICKSTATE_COLORED, UpdatePickStateFromSpecialVar8005
 	trainerbattle_single TRAINER_LEADER_BLAINE, CinnabarIsland_Gym_Text_BlaineIntro, CinnabarIsland_Gym_Text_BlaineDefeat, CinnabarIsland_Gym_EventScript_DefeatedBlaine, NO_MUSIC
 	goto_if_unset FLAG_GOT_TM38_FROM_BLAINE, CinnabarIsland_Gym_EventScript_GiveTM38

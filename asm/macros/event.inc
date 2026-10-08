@@ -2036,6 +2036,30 @@
 	waitstate
 	.endm
 
+	@ Make the NEXT trainerbattle a co-op battle.
+	@
+	@ Put this immediately before an ordinary trainerbattle command and change
+	@ nothing else. The battle keeps its intro text, its defeat text, its
+	@ trainer flag, its jump to whatever script follows a win, and its
+	@ whiteout -- all of that belongs to trainerbattle, which still runs.
+	@
+	@ split=1 deals trainer A's own team across both slots, for a gym leader
+	@ who has no partner. split=0 pairs two real trainers with their own teams.
+	@
+	@ Does nothing when the other player is not here, so the battle happens as
+	@ an ordinary one and the gym still works single-player.
+	.macro coopnextbattle_split filler:req
+	.byte SCR_OP_COOPNEXTBATTLE
+	.2byte \filler
+	.byte 1
+	.endm
+
+	.macro coopnextbattle partner:req
+	.byte SCR_OP_COOPNEXTBATTLE
+	.2byte \partner
+	.byte 0
+	.endm
+
 	@ One trainer's team, dealt across two trainer slots.
 	@
 	@ For a gym leader, who has no partner and whose gym would lose a fight if

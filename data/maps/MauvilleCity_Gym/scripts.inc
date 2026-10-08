@@ -74,7 +74,12 @@ MauvilleCity_Gym_EventScript_DeactivatePuzzle::
 	end
 
 MauvilleCity_Gym_EventScript_Wattson::
-	coop_require_partner
+	@ Co-op: the whole challenge runs on both consoles. coopscene mirrors
+	@ it so the partner sees the fight, and refuses it outright if the
+	@ leader is challenged alone. TRAINER_WATTSON_1's own team is then dealt
+	@ across them and a filler partner, so the gym keeps all its trainers.
+	coopscene GATE_GYM_WATTSON
+	coopnextbattle_split TRAINER_KIRK
 	trainerbattle_single TRAINER_WATTSON_1, MauvilleCity_Gym_Text_WattsonIntro, MauvilleCity_Gym_Text_WattsonDefeat, MauvilleCity_Gym_EventScript_WattsonDefeated, NO_MUSIC
 	specialvar VAR_RESULT, ShouldTryRematchBattle
 	goto_if_eq VAR_RESULT, TRUE, MauvilleCity_Gym_EventScript_WattsonRematch

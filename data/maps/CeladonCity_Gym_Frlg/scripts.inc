@@ -2,7 +2,12 @@ CeladonCity_Gym_Frlg_MapScripts::
 	.byte 0
 
 CeladonCity_Gym_EventScript_Erika::
-	coop_require_partner
+	@ Co-op: the whole challenge runs on both consoles. coopscene mirrors
+	@ it so the partner sees the fight, and refuses it outright if the
+	@ leader is challenged alone. TRAINER_LEADER_ERIKA's own team is then dealt
+	@ across them and a filler partner, so the gym keeps all its trainers.
+	coopscene GATE_GYM_ERIKA
+	coopnextbattle_split TRAINER_LASS_KAY
 	famechecker FAMECHECKER_ERIKA, FCPICKSTATE_COLORED, UpdatePickStateFromSpecialVar8005
 	trainerbattle_single TRAINER_LEADER_ERIKA, CeladonCity_Gym_Text_ErikaIntro, CeladonCity_Gym_Text_ErikaDefeat, CeladonCity_Gym_EventScript_DefeatedErika, NO_MUSIC
 	goto_if_unset FLAG_GOT_TM19_FROM_ERIKA, CeladonCity_Gym_EventScript_GiveTM19

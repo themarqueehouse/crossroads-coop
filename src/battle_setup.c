@@ -2,6 +2,7 @@
 #include "battle.h"
 #include "load_save.h"
 #include "battle_setup.h"
+#include "coop_battle.h"
 #include "battle_tower.h"
 #include "battle_transition.h"
 #include "main.h"
@@ -1366,10 +1367,16 @@ void BattleSetup_StartTrainerBattle(void)
     gWhichTrainerToFaceAfterBattle = 0;
     gMain.savedCallback = CB2_EndTrainerBattle;
 
-    if (CurrentBattlePyramidLocation() != PYRAMID_LOCATION_NONE || InTrainerHillChallenge())
-        DoBattlePyramidTrainerHillBattle();
-    else
-        DoTrainerBattle();
+    // Co-op takes the battle over here, after everything above has set the
+    // trainer, the flags and the after-battle callback -- so it inherits all
+    // of it rather than reimplementing any of it.
+    if (!Coop_TakeOverTrainerBattle())
+    {
+        if (CurrentBattlePyramidLocation() != PYRAMID_LOCATION_NONE || InTrainerHillChallenge())
+            DoBattlePyramidTrainerHillBattle();
+        else
+            DoTrainerBattle();
+    }
 
     ScriptContext_Stop();
 }

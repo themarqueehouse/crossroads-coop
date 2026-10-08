@@ -65,6 +65,25 @@ static EWRAM_DATA bool8 sCoopBattleActive = FALSE;
 // there are two trainers standing there -- 2v1 in substance, 2v2 in shape.
 static EWRAM_DATA bool8 sSplitTeam = FALSE;
 
+// What to run once the battle is over, if anything already wanted to.
+//
+// A gym leader's battle is started by the game's own trainerbattle machinery,
+// which sets CB2_EndTrainerBattle to mark the trainer defeated, handle losing
+// and let the script carry on to the badge. Co-op runs AFTER that is decided
+// rather than instead of it, so none of it has to be reimplemented here.
+static EWRAM_DATA MainCallback sChainedCallback = NULL;
+
+// A battle the script has asked to be fought co-op, set just before the
+// ordinary trainerbattle command that starts it.
+//
+// Marking the next battle rather than replacing the command is what keeps the
+// intro text, the defeat text, the trainer flag, the jump to the badge script
+// and the whiteout all working: they belong to trainerbattle, and trainerbattle
+// still runs.
+static EWRAM_DATA u16 sNextPartner = 0;
+static EWRAM_DATA bool8 sNextSplit = FALSE;
+static EWRAM_DATA bool8 sNextMarked = FALSE;
+
 bool8 Coop_IsBattleActive(void)
 {
     return sCoopBattleActive;
@@ -106,14 +125,17 @@ void Coop_BuildSplitOpponents(void)
 // carrying on from its waitstate.
 static void CB2_ReturnFromCoopBattle(void)
 {
+    MainCallback next = sChainedCallback;
+
     sCoopBattleActive = FALSE;
     sSplitTeam = FALSE;
+    sChainedCallback = NULL;
 
     // Rebuild the co-op session. The battle left the link closed, which is the
     // state the session machine starts from anyway.
     Coop_ResumeAfterBattle();
 
-    SetMainCallback2(CB2_ReturnToFieldContinueScriptPlayMapMusic);
+    SetMainCallback2(next != NULL ? next : CB2_ReturnToFieldContinueScriptPlayMapMusic);
 }
 
 static void Task_CoopBattleStart(u8 taskId)
@@ -209,8 +231,34 @@ void Coop_StartBattle(u16 opponentA, u16 opponentB, bool8 splitTeam)
 
     sCoopBattleActive = TRUE;
     sSplitTeam = splitTeam;
+    sChainedCallback = gMain.savedCallback;
     // Breadcrumb triangulation: this function certainly runs, so if the rig
     // reads 0 here the problem is the reading, not the running.
     gCoopDbgReached = 7;
     CreateTask(Task_CoopBattleStart, 0);
+}
+
+void Coop_MarkNextBattle(u16 partnerTrainer, bool8 split)
+{
+    sNextPartner = partnerTrainer;
+    sNextSplit = split;
+    sNextMarked = TRUE;
+}
+
+bool8 Coop_TakeOverTrainerBattle(void)
+{
+    if (!sNextMarked)
+        return FALSE;
+
+    // One battle per mark, whatever happens next. Leaving it set would make
+    // the following unrelated trainer a co-op battle too.
+    sNextMarked = FALSE;
+
+    // No partner, no co-op battle -- the caller goes on to start the ordinary
+    // one it was always going to, so the gym still works single-player.
+    if (!Coop_PartnerIsHere())
+        return FALSE;
+
+    Coop_StartBattle(TRAINER_BATTLE_PARAM.opponentA, sNextPartner, sNextSplit);
+    return TRUE;
 }

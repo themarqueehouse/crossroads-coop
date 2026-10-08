@@ -2,7 +2,13 @@ RustboroCity_Gym_MapScripts::
 	.byte 0
 
 RustboroCity_Gym_EventScript_Roxanne::
-	coop_require_partner
+	@ Co-op: the whole challenge runs on both consoles. coopscene mirrors it,
+	@ so the player who did not talk to her still sees the fight; it also
+	@ refuses outright if she is challenged alone.
+	coopscene GATE_GYM_ROXANNE
+	@ Her own team, dealt across herself and a filler partner, so the gym
+	@ keeps all of its own trainers. See the macro.
+	coopnextbattle_split TRAINER_JOSH
 	trainerbattle_single TRAINER_ROXANNE_1, RustboroCity_Gym_Text_RoxanneIntro, RustboroCity_Gym_Text_RoxanneDefeat, RustboroCity_Gym_EventScript_RoxanneDefeated, NO_MUSIC
 	specialvar VAR_RESULT, ShouldTryRematchBattle
 	goto_if_eq VAR_RESULT, TRUE, RustboroCity_Gym_EventScript_RoxanneRematch

@@ -995,6 +995,19 @@ bool8 ScrCmd_coopbattle(struct ScriptContext *ctx)
     return TRUE;
 }
 
+// Mark the next trainerbattle as a co-op battle. See the macro for why this
+// marks rather than replaces.
+bool8 ScrCmd_coopnextbattle(struct ScriptContext *ctx)
+{
+    u16 partner = ScriptReadHalfword(ctx);
+    bool8 split = ScriptReadByte(ctx);
+
+    Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
+
+    Coop_MarkNextBattle(partner, split);
+    return FALSE;
+}
+
 // Refuse to go on without the other player on this map. Nothing is mirrored --
 // see the macro in asm/macros/event.inc for why a gym leader must not be.
 bool8 ScrCmd_coopneedpartner(struct ScriptContext *ctx)

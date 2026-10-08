@@ -54,7 +54,12 @@ MossdeepCity_Gym_EventScript_SetSwitch4Metatiles::
 	end
 
 MossdeepCity_Gym_EventScript_TateAndLiza::
-	coop_require_partner
+	@ Co-op: the whole challenge runs on both consoles. coopscene mirrors
+	@ it so the partner sees the fight, and refuses it outright if the
+	@ leader is challenged alone. TRAINER_TATE_AND_LIZA_1's own team is then dealt
+	@ across them and a filler partner, so the gym keeps all its trainers.
+	coopscene GATE_GYM_TATE_LIZA
+	coopnextbattle_split TRAINER_PRESTON
 	trainerbattle_double TRAINER_TATE_AND_LIZA_1, MossdeepCity_Gym_Text_TateAndLizaIntro, MossdeepCity_Gym_Text_TateAndLizaDefeat, MossdeepCity_Gym_Text_TateAndLizaNeedTwoMons, MossdeepCity_Gym_EventScript_TateAndLizaDefeated, NO_MUSIC
 	specialvar VAR_RESULT, ShouldTryRematchBattle
 	goto_if_eq VAR_RESULT, TRUE, MossdeepCity_Gym_EventScript_TateAndLizaRematch

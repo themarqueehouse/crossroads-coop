@@ -30,6 +30,22 @@ bool8 Coop_BattleSplitsTeam(void);
 /** Generate opponent A's whole team and deal the back half to opponent B. */
 void Coop_BuildSplitOpponents(void);
 
+/**
+ * Ask for the NEXT trainerbattle to be fought by both players.
+ *
+ * Set just before an ordinary trainerbattle command. Marking the battle rather
+ * than replacing the command is what keeps the intro text, the defeat text, the
+ * trainer flag, the jump to the badge script and the whiteout all working --
+ * they belong to trainerbattle, and trainerbattle still runs.
+ */
+void Coop_MarkNextBattle(u16 partnerTrainer, bool8 split);
+
+/**
+ * Called by BattleSetup_StartTrainerBattle. TRUE means co-op has taken the
+ * battle over and the caller should not start one of its own.
+ */
+bool8 Coop_TakeOverTrainerBattle(void);
+
 /** True from the moment a co-op battle starts until the field comes back. */
 bool8 Coop_IsBattleActive(void);
 

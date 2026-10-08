@@ -2,7 +2,12 @@ PewterCity_Gym_Frlg_MapScripts::
 	.byte 0
 
 PewterCity_Gym_EventScript_Brock::
-	coop_require_partner
+	@ Co-op: the whole challenge runs on both consoles. coopscene mirrors
+	@ it so the partner sees the fight, and refuses it outright if the
+	@ leader is challenged alone. TRAINER_LEADER_BROCK's own team is then dealt
+	@ across them and a filler partner, so the gym keeps all its trainers.
+	coopscene GATE_GYM_BROCK
+	coopnextbattle_split TRAINER_CAMPER_LIAM
 	famechecker FAMECHECKER_BROCK, FCPICKSTATE_COLORED, UpdatePickStateFromSpecialVar8005
 	trainerbattle_single TRAINER_LEADER_BROCK, PewterCity_Gym_Text_BrockIntro, PewterCity_Gym_Text_BrockDefeat, PewterCity_Gym_EventScript_DefeatedBrock, NO_MUSIC
 	goto_if_unset FLAG_GOT_TM39_FROM_BROCK, PewterCity_Gym_EventScript_GiveTM39

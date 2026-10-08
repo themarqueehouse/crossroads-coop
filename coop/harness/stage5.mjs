@@ -146,6 +146,16 @@ async function main() {
     // Mash. In a double battle A walks FIGHT -> move -> target, and a level 50
     // starter against two bug catchers does not need the moves chosen well.
     // B as well as A, so a mistaken menu does not park us in a submenu for ever.
+    // The fight and everything after it is the slow half of this run. When
+    // only the SETUP is under test -- which trainers, which teams -- skip it.
+    if (process.env.COOP_SETUP_ONLY) {
+      // Screenshot BEFORE returning. Skipping it left the previous run's
+      // image on disk, and I read it as if it were this one -- twice now.
+      await rig.shot('/tmp/claude-0/stage5-setup-only');
+      t.summary();
+      return;
+    }
+
     console.log('\n--- fighting it ---');
     let endedAt = null;
     for (let round = 0; round < 60; round++) {

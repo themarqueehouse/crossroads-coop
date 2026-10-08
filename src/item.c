@@ -357,6 +357,17 @@ bool32 AddBagItem(enum Item itemId, u16 count)
     if (CurrentBattlePyramidLocation() != PYRAMID_LOCATION_NONE || FlagGet(FLAG_STORING_ITEMS_IN_PYRAMID_BAG) == TRUE)
         return AddPyramidBagItem(itemId, count);
 
+    // A mirrored scene runs on both consoles, so a hand-over inside one would
+    // happen twice -- and the bag is shared, so twice is wrong. The console
+    // that triggered the scene adds it and broadcasts the change; this one
+    // reports success and waits for that to arrive.
+    //
+    // Done here rather than with a goto_if_coop_guest in each script: it is
+    // one rule covering every scene in the game, including sixteen gyms' TMs,
+    // instead of sixteen edits that each have to be got right.
+    if (Coop_IsSceneGuest())
+        return TRUE;
+
     added = BagPocket_AddItem(&gBagPockets[GetItemPocket(itemId)], itemId, count);
 
     // Co-op: one bag between the two players. Synced at join, but only at

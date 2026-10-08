@@ -269,7 +269,20 @@ Debug_EventScript_Script_6::
 	releaseall
 	end
 
+@ Co-op GYM PATTERN test (R+Start, Scripts…, Script 7). Run on ONE console.
+@ Exactly the shape the real gyms use: mirror the script, mark the next
+@ battle, then an ordinary trainerbattle that keeps all its own machinery.
 Debug_EventScript_Script_7::
+	coopscene GATE_TEST_BATTLE
+	coopnextbattle_split TRAINER_JOSH
+	@ no_intro rather than single: the full form wants a trainer object event
+	@ on the map to walk up to the player, and the debug menu has none.
+	trainerbattle_no_intro TRAINER_ROXANNE_1, RustboroCity_Gym_Text_RoxanneDefeat
+	goto Debug_EventScript_CoopGymWon
+	end
+
+Debug_EventScript_CoopGymWon::
+	msgbox CoopText_TestStillTogether, MSGBOX_DEFAULT
 	release
 	end
 
