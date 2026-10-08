@@ -485,6 +485,9 @@ static EWRAM_DATA u16 sPendingSceneLocalId = 0;
 // rather than reset by whatever is presumed to be the last one.
 static EWRAM_DATA bool8 sInGuestScene = FALSE;
 
+// Set while a co-op battle owns the link. See Coop_SuspendForBattle.
+static EWRAM_DATA bool8 sSuspendedForBattle = FALSE;
+
 // How long a received scene waits for a safe frame before being dropped. Paired
 // with the sender's gate timeout: the sender gives up at the same point, so
 // neither side is left holding half an agreement.
@@ -897,6 +900,66 @@ u8 GetCoopState(void)
     return sCoopState;
 }
 
+static void CoopSendPositionCB(void);
+static void DespawnPeer(void);
+
+// ---------------------------------------------------------------------------
+// Handing the link to a battle.
+//
+// A co-op battle is a real link battle, and the battle machinery expects to own
+// the link completely: it closes it, reopens it, runs its own player exchange,
+// and then ships every controller command over the block layer for the whole
+// fight. The session layer cannot keep broadcasting positions underneath that.
+//
+// So it stands down. Not Coop_Reset -- that is for a session that ended, and it
+// would have the state machine immediately start rebuilding the link the battle
+// is trying to negotiate. This parks it instead, and the resume afterwards is
+// what rebuilds.
+//
+// Both consoles must do this at the same moment, which is what the sync gate in
+// front of the battle is for.
+// ---------------------------------------------------------------------------
+
+void Coop_SuspendForBattle(void)
+{
+    if (sSuspendedForBattle)
+        return;
+
+    sSuspendedForBattle = TRUE;
+
+    // The partner's sprite belongs to the overworld and the battle is about to
+    // tear that down around it.
+    DespawnPeer();
+    gCoopPeer.valid = FALSE;
+
+    // Off rather than parked in a co-op state: IsCoopLinkActive gates the delta
+    // queue, and a battle sets plenty of flags that both consoles will set for
+    // themselves. Queueing them would fill a ring nothing is draining.
+    sCoopState = COOP_STATE_OFF;
+
+    // Only our own callback. The battle installs its own, and clearing one it
+    // has already put there would strand it.
+    if (gLinkCallback == CoopSendPositionCB)
+        gLinkCallback = NULL;
+}
+
+void Coop_ResumeAfterBattle(void)
+{
+    if (!sSuspendedForBattle)
+        return;
+
+    sSuspendedForBattle = FALSE;
+
+    // From scratch. The battle left the link closed and gReceivedRemoteLinkPlayers
+    // clear, which is exactly the state the session machine starts from.
+    Coop_Reset();
+}
+
+bool8 Coop_IsSuspendedForBattle(void)
+{
+    return sSuspendedForBattle;
+}
+
 void Coop_Reset(void)
 {
     sCoopState = COOP_STATE_OFF;
@@ -920,7 +983,6 @@ void Coop_Reset(void)
     CoopSync_Reset();
 }
 
-static void CoopSendPositionCB(void);
 static bool8 PeerIsOnOurMap(void);
 static void PublishDiagnostics(void);
 
@@ -961,6 +1023,13 @@ static void PublishDiagnostics(void)
 
 void Coop_Update(void)
 {
+    // A battle owns the link while it runs, so the session layer stands down
+    // rather than competing for it. Checked before everything, including the
+    // dormancy check below -- that one calls Coop_Reset, which would tear down
+    // the very link the battle is in the middle of negotiating.
+    if (sSuspendedForBattle)
+        return;
+
     // Nothing to do unless the wrapper is present. A plain emulator leaves the
     // mailbox untouched and we stay dormant, which is what makes the same ROM
     // still playable single-player.

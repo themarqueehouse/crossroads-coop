@@ -240,8 +240,14 @@ Debug_EventScript_Script_3::
 	releaseall
 	end
 
+@ Co-op battle test (R+Start, Scripts…, Script 4). Run it from ONE console;
+@ the scene mirrors it to the other and both of you end up in the same battle
+@ against the two Rustboro gym trainers.
 Debug_EventScript_Script_4::
-	release
+	coopscene GATE_TEST_BATTLE
+	lockall
+	coopbattle TRAINER_JOSH, TRAINER_TOMMY
+	releaseall
 	end
 
 Debug_EventScript_Script_5::

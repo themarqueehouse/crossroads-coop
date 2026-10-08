@@ -264,6 +264,22 @@ bool8 IsCoopSessionPaired(void);
  */
 bool8 IsCoopSessionEngaged(void);
 
+/**
+ * Hand the link over to a battle, and take it back afterwards.
+ *
+ * A co-op battle is a real link battle, and the battle machinery owns the link
+ * completely while it runs -- it closes it, reopens it, runs its own player
+ * exchange and then ships every controller command over the block layer. The
+ * session layer cannot keep broadcasting positions underneath that, so it parks
+ * itself until the battle is over.
+ *
+ * Both consoles must suspend at the same moment, which is what the sync gate in
+ * front of a co-op battle is for.
+ */
+void Coop_SuspendForBattle(void);
+void Coop_ResumeAfterBattle(void);
+bool8 Coop_IsSuspendedForBattle(void);
+
 u8 GetCoopState(void);
 
 /** Called once per frame from the overworld. Drives the state machine. */

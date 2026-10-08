@@ -1224,6 +1224,8 @@ void Task_WaitForLinkPlayerConnection(u8 taskId)
     task->tTimer++;
     if (task->tTimer > 300)
     {
+        gCoopLinkErrorSite = 4;
+        gCoopLinkErrorStatus = gLinkStatus;
         CloseLink();
         SetMainCallback2(CB2_LinkError);
         DestroyTask(taskId);
@@ -1236,6 +1238,8 @@ void Task_WaitForLinkPlayerConnection(u8 taskId)
         {
             if (!DoesLinkPlayerCountMatchSaved())
             {
+                gCoopLinkErrorSite = 5;
+                gCoopLinkErrorStatus = gLinkStatus;
                 CloseLink();
                 SetMainCallback2(CB2_LinkError);
             }

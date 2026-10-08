@@ -2018,6 +2018,22 @@
 	.byte SCR_OP_COOPNEEDPARTNER
 	.endm
 
+	@ Both players against two trainers, at once -- a real link battle with each
+	@ of you controlling your own Pokemon.
+	@
+	@ MUST sit inside a coopscene. Only the console that talked to the trainer
+	@ runs this script, so without the scene mirroring it the other console
+	@ never reaches the battle and this one tears its link down for nothing.
+	@
+	@ Team sizes are not set here: see AreMultiPartiesFullTeams. A trainer
+	@ marked `Multi Party: Half` brings three, otherwise six.
+	.macro coopbattle trainer_a:req, trainer_b:req
+	.byte SCR_OP_COOPBATTLE
+	.2byte \trainer_a
+	.2byte \trainer_b
+	waitstate
+	.endm
+
 	.macro dynmultistack left:req, top:req, ignoreBPress:req, maxBeforeScroll:req, shouldSort:req, initialSelected:req, callbacks:req
 	_dynmultichoice \left, \top, \ignoreBPress, \maxBeforeScroll, \shouldSort, \initialSelected, \callbacks, NULL
 	.endm

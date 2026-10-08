@@ -49,6 +49,7 @@
 #include "rtc.h"
 #include "script.h"
 #include "coop.h"
+#include "coop_battle.h"
 #include "script_menu.h"
 #include "script_movement.h"
 #include "script_pokemon_util.h"
@@ -967,6 +968,29 @@ bool8 ScrCmd_coopscenewait(struct ScriptContext *ctx)
 
     Coop_BeginSceneGate(gateId);
     SetupNativeScript(ctx, RunCoopSceneGate);
+    return TRUE;
+}
+
+// Both players against two trainers at once. The macro puts a waitstate after
+// this, and the battle's return path resumes the script.
+bool8 ScrCmd_coopbattle(struct ScriptContext *ctx)
+{
+    u16 opponentA = ScriptReadHalfword(ctx);
+    u16 opponentB = ScriptReadHalfword(ctx);
+
+    Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
+
+    // No partner, no co-op battle. Falling back to an ordinary single battle
+    // against opponentA keeps the ROM playable on its own, and keeps a script
+    // that uses this from being a dead end the moment it is played solo.
+    if (!Coop_PartnerIsHere())
+    {
+        TRAINER_BATTLE_PARAM.opponentA = opponentA;
+        BattleSetup_StartTrainerBattle();
+        return TRUE;
+    }
+
+    Coop_StartBattle(opponentA, opponentB);
     return TRUE;
 }
 

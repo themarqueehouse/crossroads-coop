@@ -139,6 +139,17 @@ static void LinkCB_Standby(void);
 static void LinkCB_StandbyForAll(void);
 
 static void TrySetLinkErrorBuffer(void);
+
+// Which "Communication error" fired, and what the link looked like when it did.
+//
+// Not a mailbox field: the mailbox is a fixed-size contract shared with the
+// browser wrapper, and this is a debugging breadcrumb the test rig reads by
+// symbol address. 0 means no error has been raised this boot.
+//   1 = the player exchange received a block whose magic strings were wrong
+//   2 = the link players stopped matching the ones saved at the lobby
+//   3 = gLinkStatus carried an error bit
+EWRAM_DATA u8 gCoopLinkErrorSite = 0;
+EWRAM_DATA u32 gCoopLinkErrorStatus = 0;
 static void CB2_PrintErrorMessage(void);
 static bool8 IsSioMultiMaster(void);
 static void SetWirelessCommType0_Internal(void);
@@ -595,6 +606,8 @@ static void ProcessRecvCmds(u8 unused)
                         if (strcmp(block->magic1, sASCIIGameFreakInc) != 0
                             || strcmp(block->magic2, sASCIIGameFreakInc) != 0)
                         {
+                            gCoopLinkErrorSite = 1;
+                            gCoopLinkErrorStatus = gLinkStatus;
                             SetMainCallback2(CB2_LinkError);
                         }
                         else
@@ -1346,6 +1359,8 @@ void CheckLinkPlayersMatchSaved(void)
         if (sSavedLinkPlayers[i].trainerId != gLinkPlayers[i].trainerId
          || StringCompare(sSavedLinkPlayers[i].name, gLinkPlayers[i].name) != 0)
         {
+            gCoopLinkErrorSite = 2;
+            gCoopLinkErrorStatus = gLinkStatus;
             gLinkErrorOccurred = TRUE;
             CloseLink();
             SetMainCallback2(CB2_LinkError);
@@ -1550,6 +1565,8 @@ static void TrySetLinkErrorBuffer(void)
     {
         // Link error has occurred, handle message details if
         // necessary, then stop the link.
+        gCoopLinkErrorSite = 3;
+        gCoopLinkErrorStatus = gLinkStatus;
         if (!gSuppressLinkErrorMessage)
         {
             sLinkErrorBuffer.status = gLinkStatus;
