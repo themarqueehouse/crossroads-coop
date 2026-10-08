@@ -182,13 +182,18 @@ async function main() {
     for (let round = 0; round < 700; round++) {
       await rig.tap('both', 'A', 8);
       await rig.wait(24);
-      // B now and then so a mistaken menu does not park the run in a submenu
-      // for ever, and a direction every so often so the move chosen is not
-      // always the first one. Mashing A alone picks slot 1 every turn, which
-      // against a level-scaled leader can be a move that does nothing -- the
-      // fight then runs forever without either side getting anywhere.
-      if (round % 7 === 6) { await rig.tap('both', 'B', 8); await rig.wait(24); }
-      if (round % 5 === 2) { await rig.tap('both', round % 10 === 2 ? 'Right' : 'Down', 8); await rig.wait(16); }
+      // A only. Directions were added here to vary which move gets picked, and
+      // they did the opposite: in a battle the cursor starts on FIGHT, so a
+      // Down or Right moves it onto POKEMON or BAG and the turn is spent
+      // opening a menu instead of attacking. A run doing that sat through
+      // hundreds of rounds with all four Pokemon still at full health, which
+      // looked like a battle that would not end and was really a battle in
+      // which nobody was fighting. Straight A walks FIGHT -> first move ->
+      // target, every turn.
+      //
+      // B stays, occasionally, so a mistaken menu does not park the run in a
+      // submenu for ever -- but not often enough to cancel the move choice.
+      if (round % 11 === 10) { await rig.tap('both', 'B', 8); await rig.wait(24); }
 
       if (round % 5 === 4) {
         const live = [await inBattle(rig, 0), await inBattle(rig, 1)];

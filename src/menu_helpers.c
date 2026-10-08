@@ -343,7 +343,14 @@ bool8 MenuHelpers_ShouldWaitForLinkRecv(void)
     // Nothing is lost by returning FALSE. Co-op does not rely on menus being
     // in lockstep: every point where the two players genuinely must agree is
     // an explicit gate, and the gates do their own waiting.
-    if (gNetLinkActive)
+    //
+    // Scoped to outside a battle. In a battle the two consoles really are in
+    // lockstep -- the battle runs its own exchange every turn, and "Link
+    // standby" is it waiting -- so a menu opened mid-fight, like choosing a
+    // replacement for a fainted Pokemon, is one of the places that lockstep
+    // matters. The deadlock this fixes is in the overworld, where the picker
+    // lives, so there is no reason to reach into the battle as well.
+    if (gNetLinkActive && !gMain.inBattle)
         return FALSE;
 
     if (IsActiveOverworldLinkBusy() == TRUE || IsLinkRecvQueueAtOverworldMax() == TRUE )
