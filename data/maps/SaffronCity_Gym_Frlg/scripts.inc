@@ -42,14 +42,15 @@ SaffronCity_Gym_EventScript_NoRoomForTM04::
 
 SaffronCity_Gym_EventScript_Johan::
 	coopscene GATE_SAFFRONCITY_GYM_EVENTSCRIPT_JOHAN
-	coopnextbattle_split TRAINER_LEADER_SABRINA
+	@ The gym's one full-team fight: two real trainers, six each.
+	coopnextbattle TRAINER_PSYCHIC_TYRON
 	trainerbattle_single TRAINER_PSYCHIC_JOHAN, SaffronCity_Gym_Text_JohanIntro, SaffronCity_Gym_Text_JohanDefeat
 	msgbox SaffronCity_Gym_Text_JohanPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 SaffronCity_Gym_EventScript_Tyron::
 	coopscene GATE_SAFFRONCITY_GYM_EVENTSCRIPT_TYRON
-	coopnextbattle_split TRAINER_LEADER_SABRINA
+	coopnextbattle_split TRAINER_PSYCHIC_JOHAN
 	trainerbattle_single TRAINER_PSYCHIC_TYRON, SaffronCity_Gym_Text_TyronIntro, SaffronCity_Gym_Text_TyronDefeat
 	famechecker FAMECHECKER_SABRINA, 5
 	msgbox SaffronCity_Gym_Text_TyronPostBattle, MSGBOX_AUTOCLOSE
@@ -57,35 +58,35 @@ SaffronCity_Gym_EventScript_Tyron::
 
 SaffronCity_Gym_EventScript_Cameron::
 	coopscene GATE_SAFFRONCITY_GYM_EVENTSCRIPT_CAMERON
-	coopnextbattle_split TRAINER_LEADER_SABRINA
+	coopnextbattle_split TRAINER_PSYCHIC_JOHAN
 	trainerbattle_single TRAINER_PSYCHIC_CAMERON, SaffronCity_Gym_Text_CameronIntro, SaffronCity_Gym_Text_CameronDefeat
 	msgbox SaffronCity_Gym_Text_CameronPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 SaffronCity_Gym_EventScript_Preston::
 	coopscene GATE_SAFFRONCITY_GYM_EVENTSCRIPT_PRESTON
-	coopnextbattle_split TRAINER_LEADER_SABRINA
+	coopnextbattle_split TRAINER_PSYCHIC_JOHAN
 	trainerbattle_single TRAINER_PSYCHIC_PRESTON, SaffronCity_Gym_Text_PrestonIntro, SaffronCity_Gym_Text_PrestonDefeat
 	msgbox SaffronCity_Gym_Text_PrestonPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 SaffronCity_Gym_EventScript_Amanda::
 	coopscene GATE_SAFFRONCITY_GYM_EVENTSCRIPT_AMANDA
-	coopnextbattle_split TRAINER_LEADER_SABRINA
+	coopnextbattle_split TRAINER_PSYCHIC_JOHAN
 	trainerbattle_single TRAINER_CHANNELER_AMANDA, SaffronCity_Gym_Text_AmandaIntro, SaffronCity_Gym_Text_AmandaDefeat
 	msgbox SaffronCity_Gym_Text_AmandaPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 SaffronCity_Gym_EventScript_Stacy::
 	coopscene GATE_SAFFRONCITY_GYM_EVENTSCRIPT_STACY
-	coopnextbattle_split TRAINER_LEADER_SABRINA
+	coopnextbattle_split TRAINER_PSYCHIC_JOHAN
 	trainerbattle_single TRAINER_CHANNELER_STACY, SaffronCity_Gym_Text_StacyIntro, SaffronCity_Gym_Text_StacyDefeat
 	msgbox SaffronCity_Gym_Text_StacyPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 SaffronCity_Gym_EventScript_Tasha::
 	coopscene GATE_SAFFRONCITY_GYM_EVENTSCRIPT_TASHA
-	coopnextbattle_split TRAINER_LEADER_SABRINA
+	coopnextbattle_split TRAINER_PSYCHIC_JOHAN
 	trainerbattle_single TRAINER_CHANNELER_TASHA, SaffronCity_Gym_Text_TashaIntro, SaffronCity_Gym_Text_TashaDefeat
 	msgbox SaffronCity_Gym_Text_TashaPostBattle, MSGBOX_AUTOCLOSE
 	end

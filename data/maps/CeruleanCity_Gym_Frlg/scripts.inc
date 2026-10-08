@@ -41,14 +41,15 @@ CeruleanCity_Gym_EventScript_NoRoomForTM03::
 
 CeruleanCity_Gym_EventScript_Diana::
 	coopscene GATE_CERULEANCITY_GYM_EVENTSCRIPT_DIANA
-	coopnextbattle_split TRAINER_LEADER_MISTY
+	@ The gym's one full-team fight: two real trainers, six each.
+	coopnextbattle TRAINER_SWIMMER_MALE_LUIS
 	trainerbattle_single TRAINER_PICNICKER_DIANA, CeruleanCity_Gym_Text_DianaIntro, CeruleanCity_Gym_Text_DianaDefeat
 	msgbox CeruleanCity_Gym_Text_DianaPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 CeruleanCity_Gym_EventScript_Luis::
 	coopscene GATE_CERULEANCITY_GYM_EVENTSCRIPT_LUIS
-	coopnextbattle_split TRAINER_LEADER_MISTY
+	coopnextbattle_split TRAINER_PICNICKER_DIANA
 	trainerbattle_single TRAINER_SWIMMER_MALE_LUIS, CeruleanCity_Gym_Text_LuisIntro, CeruleanCity_Gym_Text_LuisDefeat
 	famechecker FAMECHECKER_MISTY, 2
 	msgbox CeruleanCity_Gym_Text_LuisPostBattle, MSGBOX_AUTOCLOSE

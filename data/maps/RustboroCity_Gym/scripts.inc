@@ -49,21 +49,22 @@ RustboroCity_Gym_EventScript_RoxanneRematch::
 
 RustboroCity_Gym_EventScript_Josh::
 	coopscene GATE_RUSTBOROCITY_GYM_EVENTSCRIPT_JOSH
-	coopnextbattle_split TRAINER_ROXANNE_1
+	@ The gym's one full-team fight: two real trainers, six each.
+	coopnextbattle TRAINER_TOMMY
 	trainerbattle_single TRAINER_JOSH, RustboroCity_Gym_Text_JoshIntro, RustboroCity_Gym_Text_JoshDefeat
 	msgbox RustboroCity_Gym_Text_JoshPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 RustboroCity_Gym_EventScript_Tommy::
 	coopscene GATE_RUSTBOROCITY_GYM_EVENTSCRIPT_TOMMY
-	coopnextbattle_split TRAINER_ROXANNE_1
+	coopnextbattle_split TRAINER_JOSH
 	trainerbattle_single TRAINER_TOMMY, RustboroCity_Gym_Text_TommyIntro, RustboroCity_Gym_Text_TommyDefeat
 	msgbox RustboroCity_Gym_Text_TommyPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 RustboroCity_Gym_EventScript_Marc::
 	coopscene GATE_RUSTBOROCITY_GYM_EVENTSCRIPT_MARC
-	coopnextbattle_split TRAINER_ROXANNE_1
+	coopnextbattle_split TRAINER_JOSH
 	trainerbattle_single TRAINER_MARC, RustboroCity_Gym_Text_MarcIntro, RustboroCity_Gym_Text_MarcDefeat
 	msgbox RustboroCity_Gym_Text_MarcPostBattle, MSGBOX_AUTOCLOSE
 	end

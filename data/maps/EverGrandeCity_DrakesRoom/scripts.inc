@@ -39,7 +39,7 @@ EverGrandeCity_DrakesRoom_EventScript_CloseDoor::
 
 EverGrandeCity_DrakesRoom_EventScript_Drake::
 	coopscene GATE_EVERGRANDECITY_DRAKESROOM_EVENTSCRIPT_DRAKE
-	coopnextbattle_split TRAINER_DRAKE
+	coopnextbattle_split TRAINER_SIDNEY
 	lock
 	faceplayer
 	goto_if_set FLAG_DEFEATED_ELITE_4_DRAKE, EverGrandeCity_DrakesRoom_EventScript_PostBattleSpeech

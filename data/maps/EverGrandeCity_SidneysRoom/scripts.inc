@@ -44,7 +44,7 @@ EverGrandeCity_SidneysRoom_EventScript_WalkInCloseDoor::
 
 EverGrandeCity_SidneysRoom_EventScript_Sidney::
 	coopscene GATE_EVERGRANDECITY_SIDNEYSROOM_EVENTSCRIPT_SIDNEY
-	coopnextbattle_split TRAINER_SIDNEY
+	coopnextbattle_split TRAINER_PHOEBE
 	lock
 	faceplayer
 	goto_if_set FLAG_DEFEATED_ELITE_4_SIDNEY, EverGrandeCity_SidneysRoom_EventScript_PostBattleSpeech

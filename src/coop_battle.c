@@ -19,6 +19,9 @@
 #include "data.h"
 #include "pokemon.h"
 #include "battle_util.h"
+#include "load_save.h"
+#include "party_menu.h"
+#include "script_pokemon_util.h"
 
 // ---------------------------------------------------------------------------
 // Co-op battles: both players against the same trainers, at once.
@@ -94,6 +97,29 @@ bool8 Coop_BattleSplitsTeam(void)
     return sCoopBattleActive && sSplitTeam;
 }
 
+// Each player brings three, for a split battle only.
+//
+// Without this the sides are badly lopsided: a leader's six dealt across two
+// slots is still six, while two players turning up with full parties field
+// twelve. Three each puts six against six, which is the same arithmetic as
+// facing that leader alone -- and the same shape the series itself uses for a
+// two-trainer side.
+//
+// The first three rather than a chosen three. A picking screen is what Emerald
+// does before the Steven tag battle and would be better; it is also a whole
+// menu flow on both consoles, so it is a follow-up rather than a blocker.
+static void ReducePartyForSplitBattle(void)
+{
+    u8 i;
+
+    SavePlayerParty();
+
+    for (i = 0; i < MAX_FRONTIER_PARTY_SIZE; i++)
+        gSelectedOrderFromParty[i] = (i < MULTI_PARTY_SIZE) ? (i + 1) : 0;
+
+    ReducePlayerPartyToSelectedMons();
+}
+
 void Coop_BuildSplitOpponents(void)
 {
     u8 count, keep, i;
@@ -126,6 +152,10 @@ void Coop_BuildSplitOpponents(void)
 static void CB2_ReturnFromCoopBattle(void)
 {
     MainCallback next = sChainedCallback;
+
+    // The other three back, before anything else looks at the party.
+    if (sSplitTeam)
+        LoadPlayerParty();
 
     sCoopBattleActive = FALSE;
     sSplitTeam = FALSE;
@@ -197,6 +227,15 @@ static void Task_CoopBattleStart(u8 taskId)
             // The link would not close. Put the player back rather than leaving
             // them staring at black: the battle cannot start without both
             // consoles, and the session layer can rebuild from here.
+            //
+            // The party first. It was cut to three before this task ever ran,
+            // and giving up here is the one path out that never reaches the
+            // battle -- so without this the player walks away permanently
+            // three Pokemon lighter.
+            if (sSplitTeam)
+                LoadPlayerParty();
+            sSplitTeam = FALSE;
+
             Coop_ResumeAfterBattle();
             sCoopBattleActive = FALSE;
             SetMainCallback2(CB2_ReturnToFieldContinueScriptPlayMapMusic);
@@ -232,6 +271,9 @@ void Coop_StartBattle(u16 opponentA, u16 opponentB, bool8 splitTeam)
     sCoopBattleActive = TRUE;
     sSplitTeam = splitTeam;
     sChainedCallback = gMain.savedCallback;
+
+    if (splitTeam)
+        ReducePartyForSplitBattle();
     // Breadcrumb triangulation: this function certainly runs, so if the rig
     // reads 0 here the problem is the reading, not the running.
     gCoopDbgReached = 7;

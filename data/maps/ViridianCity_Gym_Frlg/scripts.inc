@@ -46,56 +46,57 @@ ViridianCity_Gym_EventScript_NoRoomForTM26::
 
 ViridianCity_Gym_EventScript_Jason::
 	coopscene GATE_VIRIDIANCITY_GYM_EVENTSCRIPT_JASON
-	coopnextbattle_split TRAINER_LEADER_GIOVANNI
+	@ The gym's one full-team fight: two real trainers, six each.
+	coopnextbattle TRAINER_TAMER_COLE
 	trainerbattle_single TRAINER_TAMER_JASON, ViridianCity_Gym_Text_JasonIntro, ViridianCity_Gym_Text_JasonDefeat
 	msgbox ViridianCity_Gym_Text_JasonPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 ViridianCity_Gym_EventScript_Cole::
 	coopscene GATE_VIRIDIANCITY_GYM_EVENTSCRIPT_COLE
-	coopnextbattle_split TRAINER_LEADER_GIOVANNI
+	coopnextbattle_split TRAINER_TAMER_JASON
 	trainerbattle_single TRAINER_TAMER_COLE, ViridianCity_Gym_Text_ColeIntro, ViridianCity_Gym_Text_ColeDefeat
 	msgbox ViridianCity_Gym_Text_ColePostBattle, MSGBOX_AUTOCLOSE
 	end
 
 ViridianCity_Gym_EventScript_Atsushi::
 	coopscene GATE_VIRIDIANCITY_GYM_EVENTSCRIPT_ATSUSHI
-	coopnextbattle_split TRAINER_LEADER_GIOVANNI
+	coopnextbattle_split TRAINER_TAMER_JASON
 	trainerbattle_single TRAINER_BLACK_BELT_ATSUSHI, ViridianCity_Gym_Text_AtsushiIntro, ViridianCity_Gym_Text_AtsushiDefeat
 	msgbox ViridianCity_Gym_Text_AtsushiPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 ViridianCity_Gym_EventScript_Kiyo::
 	coopscene GATE_VIRIDIANCITY_GYM_EVENTSCRIPT_KIYO
-	coopnextbattle_split TRAINER_LEADER_GIOVANNI
+	coopnextbattle_split TRAINER_TAMER_JASON
 	trainerbattle_single TRAINER_BLACK_BELT_KIYO, ViridianCity_Gym_Text_KiyoIntro, ViridianCity_Gym_Text_KiyoDefeat
 	msgbox ViridianCity_Gym_Text_KiyoPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 ViridianCity_Gym_EventScript_Takashi::
 	coopscene GATE_VIRIDIANCITY_GYM_EVENTSCRIPT_TAKASHI
-	coopnextbattle_split TRAINER_LEADER_GIOVANNI
+	coopnextbattle_split TRAINER_TAMER_JASON
 	trainerbattle_single TRAINER_BLACK_BELT_TAKASHI, ViridianCity_Gym_Text_TakashiIntro, ViridianCity_Gym_Text_TakashiDefeat
 	msgbox ViridianCity_Gym_Text_TakashiPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 ViridianCity_Gym_EventScript_Samuel::
 	coopscene GATE_VIRIDIANCITY_GYM_EVENTSCRIPT_SAMUEL
-	coopnextbattle_split TRAINER_LEADER_GIOVANNI
+	coopnextbattle_split TRAINER_TAMER_JASON
 	trainerbattle_single TRAINER_COOLTRAINER_SAMUEL, ViridianCity_Gym_Text_SamuelIntro, ViridianCity_Gym_Text_SamuelDefeat
 	msgbox ViridianCity_Gym_Text_SamuelPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 ViridianCity_Gym_EventScript_Yuji::
 	coopscene GATE_VIRIDIANCITY_GYM_EVENTSCRIPT_YUJI
-	coopnextbattle_split TRAINER_LEADER_GIOVANNI
+	coopnextbattle_split TRAINER_TAMER_JASON
 	trainerbattle_single TRAINER_COOLTRAINER_YUJI, ViridianCity_Gym_Text_YujiIntro, ViridianCity_Gym_Text_YujiDefeat
 	msgbox ViridianCity_Gym_Text_YujiPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 ViridianCity_Gym_EventScript_Warren::
 	coopscene GATE_VIRIDIANCITY_GYM_EVENTSCRIPT_WARREN
-	coopnextbattle_split TRAINER_LEADER_GIOVANNI
+	coopnextbattle_split TRAINER_TAMER_JASON
 	trainerbattle_single TRAINER_COOLTRAINER_WARREN, ViridianCity_Gym_Text_WarrenIntro, ViridianCity_Gym_Text_WarrenDefeat
 	msgbox ViridianCity_Gym_Text_WarrenPostBattle, MSGBOX_AUTOCLOSE
 	end

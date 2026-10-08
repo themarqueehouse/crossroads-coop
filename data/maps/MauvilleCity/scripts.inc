@@ -198,7 +198,7 @@ MauvilleCity_EventScript_ScottExitEast::
 
 MauvilleCity_EventScript_BattleWally::
 	coopscene GATE_MAUVILLECITY_EVENTSCRIPT_BATTLEWALLY
-	coopnextbattle_split TRAINER_WALLY_MAUVILLE
+	coopnextbattle_split TRAINER_KIRK
 	msgbox MauvilleCity_Text_WallyHereICome, MSGBOX_DEFAULT
 	trainerbattle_no_intro TRAINER_WALLY_MAUVILLE, MauvilleCity_Text_WallyDefeat
 	applymovement LOCALID_MAUVILLE_WALLY, Common_Movement_WalkInPlaceFasterRight

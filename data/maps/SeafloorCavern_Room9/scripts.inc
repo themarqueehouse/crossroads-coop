@@ -3,7 +3,7 @@ SeafloorCavern_Room9_MapScripts::
 
 SeafloorCavern_Room9_EventScript_ArchieAwakenKyogre::
 	coopscene GATE_SEAFLOORCAVERN_ROOM9_EVENTSCRIPT_ARCHIEAWAKENKYOGRE
-	coopnextbattle_split TRAINER_ARCHIE
+	coopnextbattle_split TRAINER_GRUNT_AQUA_HIDEOUT_1
 	lockall
 	setvar VAR_0x8004, LOCALID_SEAFLOOR_CAVERN_ARCHIE
 	setvar VAR_0x8005, LOCALID_SEAFLOOR_CAVERN_MAXIE

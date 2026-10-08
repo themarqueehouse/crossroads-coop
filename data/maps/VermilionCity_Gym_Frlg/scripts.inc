@@ -246,7 +246,8 @@ VermilionCity_Gym_EventScript_NoRoomForTM34::
 
 VermilionCity_Gym_EventScript_Dwayne::
 	coopscene GATE_VERMILIONCITY_GYM_EVENTSCRIPT_DWAYNE
-	coopnextbattle_split TRAINER_LEADER_LT_SURGE
+	@ The gym's one full-team fight: two real trainers, six each.
+	coopnextbattle TRAINER_ENGINEER_BAILY
 	trainerbattle_single TRAINER_SAILOR_DWAYNE, VermilionCity_Gym_Text_DwayneIntro, VermilionCity_Gym_Text_DwayneDefeat
 	famechecker FAMECHECKER_LTSURGE, 4
 	msgbox VermilionCity_Gym_Text_DwaynePostBattle, MSGBOX_AUTOCLOSE
@@ -254,14 +255,14 @@ VermilionCity_Gym_EventScript_Dwayne::
 
 VermilionCity_Gym_EventScript_Baily::
 	coopscene GATE_VERMILIONCITY_GYM_EVENTSCRIPT_BAILY
-	coopnextbattle_split TRAINER_LEADER_LT_SURGE
+	coopnextbattle_split TRAINER_SAILOR_DWAYNE
 	trainerbattle_single TRAINER_ENGINEER_BAILY, VermilionCity_Gym_Text_BailyIntro, VermilionCity_Gym_Text_BailyDefeat
 	msgbox VermilionCity_Gym_Text_BailyPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 VermilionCity_Gym_EventScript_Tucker::
 	coopscene GATE_VERMILIONCITY_GYM_EVENTSCRIPT_TUCKER
-	coopnextbattle_split TRAINER_LEADER_LT_SURGE
+	coopnextbattle_split TRAINER_SAILOR_DWAYNE
 	trainerbattle_single TRAINER_GENTLEMAN_TUCKER, VermilionCity_Gym_Text_TuckerIntro, VermilionCity_Gym_Text_TuckerDefeat, VermilionCity_Gym_EventScript_DefeatedTucker
 	famechecker FAMECHECKER_LTSURGE, 3
 	msgbox VermilionCity_Gym_Text_TuckerPostBattle, MSGBOX_AUTOCLOSE

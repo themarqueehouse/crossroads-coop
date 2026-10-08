@@ -255,6 +255,11 @@ Debug_EventScript_Script_4::
 @ Something strong enough to win a test battle without careful play.
 Debug_EventScript_Script_5::
 	givemon SPECIES_SWAMPERT, 50
+	givemon SPECIES_SCEPTILE, 50
+	givemon SPECIES_BLAZIKEN, 50
+	givemon SPECIES_GARDEVOIR, 50
+	givemon SPECIES_AGGRON, 50
+	givemon SPECIES_FLYGON, 50
 	release
 	end
 

@@ -3,7 +3,8 @@ SootopolisCity_Gym_B1F_MapScripts::
 
 SootopolisCity_Gym_B1F_EventScript_Andrea::
 	coopscene GATE_SOOTOPOLISCITY_GYM_B1F_EVENTSCRIPT_ANDREA
-	coopnextbattle_split TRAINER_CRISSY
+	@ The gym's one full-team fight: two real trainers, six each.
+	coopnextbattle TRAINER_CRISSY
 	trainerbattle_single TRAINER_ANDREA, SootopolisCity_Gym_B1F_Text_AndreaIntro, SootopolisCity_Gym_B1F_Text_AndreaDefeat
 	msgbox SootopolisCity_Gym_B1F_Text_AndreaPostBattle, MSGBOX_AUTOCLOSE
 	end

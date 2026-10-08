@@ -79,42 +79,43 @@ FortreeCity_Gym_EventScript_WinonaRematch::
 
 FortreeCity_Gym_EventScript_Jared::
 	coopscene GATE_FORTREECITY_GYM_EVENTSCRIPT_JARED
-	coopnextbattle_split TRAINER_WINONA_1
+	@ The gym's one full-team fight: two real trainers, six each.
+	coopnextbattle TRAINER_EDWARDO
 	trainerbattle_single TRAINER_JARED, FortreeCity_Gym_Text_JaredIntro, FortreeCity_Gym_Text_JaredDefeat
 	msgbox FortreeCity_Gym_Text_JaredPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 FortreeCity_Gym_EventScript_Edwardo::
 	coopscene GATE_FORTREECITY_GYM_EVENTSCRIPT_EDWARDO
-	coopnextbattle_split TRAINER_WINONA_1
+	coopnextbattle_split TRAINER_JARED
 	trainerbattle_single TRAINER_EDWARDO, FortreeCity_Gym_Text_EdwardoIntro, FortreeCity_Gym_Text_EdwardoDefeat
 	msgbox FortreeCity_Gym_Text_EdwardoPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 FortreeCity_Gym_EventScript_Flint::
 	coopscene GATE_FORTREECITY_GYM_EVENTSCRIPT_FLINT
-	coopnextbattle_split TRAINER_WINONA_1
+	coopnextbattle_split TRAINER_JARED
 	trainerbattle_single TRAINER_FLINT, FortreeCity_Gym_Text_FlintIntro, FortreeCity_Gym_Text_FlintDefeat
 	msgbox FortreeCity_Gym_Text_FlintPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 FortreeCity_Gym_EventScript_Ashley::
 	coopscene GATE_FORTREECITY_GYM_EVENTSCRIPT_ASHLEY
-	coopnextbattle_split TRAINER_WINONA_1
+	coopnextbattle_split TRAINER_JARED
 	trainerbattle_single TRAINER_ASHLEY, FortreeCity_Gym_Text_AshleyIntro, FortreeCity_Gym_Text_AshleyDefeat
 	msgbox FortreeCity_Gym_Text_AshleyPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 FortreeCity_Gym_EventScript_Humberto::
 	coopscene GATE_FORTREECITY_GYM_EVENTSCRIPT_HUMBERTO
-	coopnextbattle_split TRAINER_WINONA_1
+	coopnextbattle_split TRAINER_JARED
 	trainerbattle_single TRAINER_HUMBERTO, FortreeCity_Gym_Text_HumbertoIntro, FortreeCity_Gym_Text_HumbertoDefeat
 	msgbox FortreeCity_Gym_Text_HumbertoPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 FortreeCity_Gym_EventScript_Darius::
 	coopscene GATE_FORTREECITY_GYM_EVENTSCRIPT_DARIUS
-	coopnextbattle_split TRAINER_WINONA_1
+	coopnextbattle_split TRAINER_JARED
 	trainerbattle_single TRAINER_DARIUS, FortreeCity_Gym_Text_DariusIntro, FortreeCity_Gym_Text_DariusDefeat
 	msgbox FortreeCity_Gym_Text_DariusPostBattle, MSGBOX_AUTOCLOSE
 	end
