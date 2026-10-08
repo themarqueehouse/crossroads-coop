@@ -13,6 +13,7 @@
 #include "battle_pyramid.h"
 #include "battle_scripts.h"
 #include "battle_setup.h"
+#include "coop_battle.h"
 #include "battle_tower.h"
 #include "battle_z_move.h"
 #include "battle_gimmick.h"
@@ -92,6 +93,20 @@ static void CB2_HandleStartBattle(void);
 static void TryCorrectShedinjaLanguage(struct Pokemon *mon);
 static enum BattleTrainer GetBattlerTrainerFromParty(struct Pokemon *party);
 static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum);
+
+// Breadcrumbs for the co-op battle's opponent generation, read by the test rig
+// by symbol address. Both trainers turning up at level 0 is indistinguishable
+// from the outside whether the branch never ran, ran and made nothing, or ran
+// and had its work overwritten afterwards.
+EWRAM_DATA u8 gCoopDbgMadeParties = 0;
+EWRAM_DATA u8 gCoopDbgFoeA = 0;
+EWRAM_DATA u8 gCoopDbgFoeB = 0;
+EWRAM_DATA u8 gCoopDbgAfter = 0;
+EWRAM_DATA u8 gCoopDbgReached = 0;
+EWRAM_DATA u8 gCoopDbgCoopActive = 0;
+EWRAM_DATA u8 gCoopDbgIsDebug = 0;
+EWRAM_DATA u8 gCoopDbgPath = 0;
+EWRAM_DATA u8 gCoopDbgPreState = 0;
 static void BattleMainCB1(void);
 static void CB2_EndLinkBattle(void);
 static void EndLinkBattleInSteps(void);
@@ -476,8 +491,10 @@ const u8 *const gStatusConditionStringsTable[][2] =
 
 void CB2_InitBattle(void)
 {
+    gCoopDbgPath = 10;
     if (!gTestRunnerEnabled)
         MoveSaveBlocks_ResetHeap();
+    gCoopDbgPath = 11;
     AllocateBattleResources();
     AllocateBattleSpritesData();
     AllocateMonSpritesGfx();
@@ -495,6 +512,7 @@ void CB2_InitBattle(void)
         }
         else if (!(gBattleTypeFlags & BATTLE_TYPE_INGAME_PARTNER))
         {
+            gCoopDbgPath = 12;
             HandleLinkBattleSetup();
             SetMainCallback2(CB2_PreInitMultiBattle);
         }
@@ -592,15 +610,35 @@ static void CB2_InitBattleInternal(void)
     else
         SetMainCallback2(CB2_HandleStartBattle);
 
+    gCoopDbgReached = 1;
+    gCoopDbgPath = 14;
+    gCoopDbgCoopActive = Coop_IsBattleActive();
+    gCoopDbgIsDebug = gIsDebugBattle;
+
     if (!DEBUG_OVERWORLD_MENU || (DEBUG_OVERWORLD_MENU && !gIsDebugBattle))
     {
-        if (!(gBattleTypeFlags & (BATTLE_TYPE_LINK | BATTLE_TYPE_RECORDED)))
+        // A link battle normally skips this because its "opponents" are the
+        // other humans, whose parties arrive over the wire. A co-op battle is a
+        // link battle whose opponents are real trainers, so it needs its
+        // opponents generated like any other trainer battle -- and here, not
+        // earlier: building them before CB2_InitBattle looks like it works and
+        // does not survive the battle's own setup, which is how both trainers
+        // turned up at level 0.
+        //
+        // Both consoles generate, and the two will differ because generation
+        // draws on the RNG. The multi handshake settles it: the master
+        // broadcasts both parties and the other console overwrites its copies.
+        if (!(gBattleTypeFlags & (BATTLE_TYPE_LINK | BATTLE_TYPE_RECORDED))
+            || Coop_IsBattleActive())
         {
-            CreateNPCTrainerParty(&gParties[B_TRAINER_1][0], TRAINER_BATTLE_PARAM.opponentA);
-            if (gBattleTypeFlags & BATTLE_TYPE_TWO_OPPONENTS && !BATTLE_TWO_VS_ONE_OPPONENT)
-                CreateNPCTrainerParty(&gParties[B_TRAINER_3][0], TRAINER_BATTLE_PARAM.opponentB);
+            gCoopDbgMadeParties = 1;
+            gCoopDbgFoeA = CreateNPCTrainerParty(&gParties[B_TRAINER_1][0], TRAINER_BATTLE_PARAM.opponentA);
+            if ((gBattleTypeFlags & BATTLE_TYPE_TWO_OPPONENTS && !BATTLE_TWO_VS_ONE_OPPONENT)
+                || Coop_IsBattleActive())
+                gCoopDbgFoeB = CreateNPCTrainerParty(&gParties[B_TRAINER_3][0], TRAINER_BATTLE_PARAM.opponentB);
             SetWildMonHeldItem();
             CalculateEnemyPartyCount();
+            gCoopDbgAfter = gPartiesCount[B_TRAINER_1];
         }
     }
 
@@ -1468,6 +1506,7 @@ static void CB2_PreInitMultiBattle(void)
         }
         else if (!gReceivedRemoteLinkPlayers)
         {
+            gCoopDbgPath = 13;
             gBattleTypeFlags = *savedBattleTypeFlags;
             gMain.savedCallback = *savedCallback;
             SetMainCallback2(CB2_InitBattleInternal);

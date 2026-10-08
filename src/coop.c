@@ -1028,7 +1028,16 @@ void Coop_Update(void)
     // dormancy check below -- that one calls Coop_Reset, which would tear down
     // the very link the battle is in the middle of negotiating.
     if (sSuspendedForBattle)
+    {
+        // Say so before standing down. Everything below stops publishing while
+        // suspended, which left the handover invisible: the diagnostics froze
+        // at whatever they said the frame before the battle, so the wrapper and
+        // the tests both went on reporting a healthy session right through a
+        // battle that had taken the link away.
+        gNetMailbox.linkFlags = COOP_DIAG_BATTLE;
+        gNetMailbox.coopState = COOP_STATE_OFF;
         return;
+    }
 
     // Nothing to do unless the wrapper is present. A plain emulator leaves the
     // mailbox untouched and we stay dormant, which is what makes the same ROM

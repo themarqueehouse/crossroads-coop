@@ -274,6 +274,7 @@ void CloseLink(void);
 u16 LinkMain2(const u16 *heldKeys);
 void ClearLinkCallback(void);
 extern u8 gCoopLinkErrorSite;
+extern u8 gCoopDbgReached;
 extern u32 gCoopLinkErrorStatus;
 
 void ClearLinkCallback_2(void);

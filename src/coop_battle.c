@@ -149,39 +149,6 @@ static void Task_CoopBattleStart(u8 taskId)
                          | BATTLE_TYPE_TRAINER
                          | BATTLE_TYPE_MULTI;
 
-        // Build the opponents' parties ourselves.
-        //
-        // CB2_InitBattleInternal skips its own CreateNPCTrainerParty whenever
-        // BATTLE_TYPE_LINK is set (src/battle_main.c:597), because in a cable
-        // link battle the "opponents" are the other humans and there is nothing
-        // to generate. Ours are real trainers, so if we do not fill these the
-        // battle starts against two empty parties.
-        //
-        // Both consoles build them, and they will not match -- party generation
-        // draws personality and IVs from the RNG. That is expected and
-        // harmless: the handshake has the master broadcast both parties and the
-        // other console overwrite its copies, so the master's are the ones
-        // fought. Building on both anyway means neither console depends on
-        // being the one that won the master coin toss.
-        //
-        // halfTeam is where "3 each" and "6 each" are actually decided; see
-        // AreMultiPartiesFullTeams.
-        {
-            bool32 halfTeam = !AreMultiPartiesFullTeams();
-
-            CreateNPCTrainerPartyFromTrainer(
-                &gParties[B_TRAINER_1][0],
-                GetTrainerStructFromId(TRAINER_BATTLE_PARAM.opponentA),
-                halfTeam, gBattleTypeFlags);
-            CreateNPCTrainerPartyFromTrainer(
-                &gParties[B_TRAINER_3][0],
-                GetTrainerStructFromId(TRAINER_BATTLE_PARAM.opponentB),
-                halfTeam, gBattleTypeFlags);
-
-            SetWildMonHeldItem();
-            CalculateEnemyPartyCount();
-        }
-
         CleanupOverworldWindowsAndTilemaps();
         gMain.savedCallback = CB2_ReturnFromCoopBattle;
         SetMainCallback2(CB2_InitBattle);
@@ -199,5 +166,8 @@ void Coop_StartBattle(u16 opponentA, u16 opponentB)
     TRAINER_BATTLE_PARAM.opponentB = opponentB;
 
     sCoopBattleActive = TRUE;
+    // Breadcrumb triangulation: this function certainly runs, so if the rig
+    // reads 0 here the problem is the reading, not the running.
+    gCoopDbgReached = 7;
     CreateTask(Task_CoopBattleStart, 0);
 }

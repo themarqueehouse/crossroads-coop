@@ -263,7 +263,7 @@ window.__pair = {
     const c = cores[which];
     const flags = [[1, 'LINK_OPEN'], [2, 'PLAYERS_RECEIVED'], [4, 'CALLBACK_ARMED'],
                    [8, 'PEER_VALID'], [16, 'PEER_SAME_MAP'], [32, 'AT_GATE'],
-                   [64, 'SCRIPT_BUSY']]
+                   [64, 'SCRIPT_BUSY'], [128, 'BATTLE']]
       .filter(([b]) => c.byte(OFF.linkFlags) & b).map(([, n]) => n);
     return {
       id: which,

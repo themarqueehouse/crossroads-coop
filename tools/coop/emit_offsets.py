@@ -59,6 +59,16 @@ WANTED_SYMBOLS = {
     "gCoopLinkErrorStatus": "linkErrorStatusAddr",
     "gBattleTypeFlags": "battleTypeFlagsAddr",
     "gBattlersCount": "battlersCountAddr",
+    "gPartiesCount": "partiesCountAddr",
+    "gCoopDbgMadeParties": "dbgMadeAddr",
+    "gCoopDbgFoeA": "dbgFoeAAddr",
+    "gCoopDbgFoeB": "dbgFoeBAddr",
+    "gCoopDbgAfter": "dbgAfterAddr",
+    "gCoopDbgReached": "dbgReachedAddr",
+    "gCoopDbgCoopActive": "dbgCoopActiveAddr",
+    "gCoopDbgIsDebug": "dbgIsDebugAddr",
+    "gCoopDbgPath": "dbgPathAddr",
+    "gBattleCommunication": "battleCommAddr",
 }
 
 # Symbol -> the field names its entries carry, in order.

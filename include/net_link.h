@@ -119,6 +119,8 @@ struct NetMailbox
 // box" while a box sits on screen waiting to be dismissed. This is also the
 // exact condition a mirrored scene defers on, so it says why one is waiting.
 #define COOP_DIAG_SCRIPT_BUSY      (1 << 6)
+// The session has handed the link to a co-op battle and stood down.
+#define COOP_DIAG_BATTLE           (1 << 7)
 
 extern struct NetMailbox gNetMailbox;
 

@@ -250,7 +250,11 @@ Debug_EventScript_Script_4::
 	releaseall
 	end
 
+@ Co-op battle test, part one (R+Start, Scripts…, Script 5). Run it on EACH
+@ console separately -- it is not a co-op scene -- then run Script 4 to fight.
+@ Something strong enough to win a test battle without careful play.
 Debug_EventScript_Script_5::
+	givemon SPECIES_SWAMPERT, 50
 	release
 	end
 
