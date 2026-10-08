@@ -69,10 +69,14 @@ PokemonLeague_AgathasRoom_EventScript_RematchIntro::
 	return
 
 PokemonLeague_AgathasRoom_EventScript_Battle::
+	coopscene GATE_POKEMONLEAGUE_AGATHASROOM_EVENTSCRIPT_BATTLE
+	coopnextbattle_split TRAINER_ELITE_FOUR_AGATHA_2
 	trainerbattle_no_intro TRAINER_ELITE_FOUR_AGATHA, PokemonLeague_AgathasRoom_Text_Defeat
 	return
 
 PokemonLeague_AgathasRoom_EventScript_Rematch::
+	coopscene GATE_POKEMONLEAGUE_AGATHASROOM_EVENTSCRIPT_REMATCH
+	coopnextbattle_split TRAINER_ELITE_FOUR_AGATHA
 	trainerbattle_no_intro TRAINER_ELITE_FOUR_AGATHA_2, PokemonLeague_AgathasRoom_Text_Defeat
 	return
 

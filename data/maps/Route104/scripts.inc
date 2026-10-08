@@ -159,18 +159,24 @@ Route104_EventScript_RestoreMusic::
 	return
 
 Route104_EventScript_BattleMayTreecko::
+	coopscene GATE_ROUTE104_EVENTSCRIPT_BATTLEMAYTREECKO
+	coopnextbattle_split TRAINER_MAY_RUSTBORO_TORCHIC
 	trainerbattle_no_intro TRAINER_MAY_RUSTBORO_TREECKO, Route104_Text_MayDefeat
 	setflag FLAG_DEFEATED_RIVAL_ROUTE_104
 	goto Route104_EventScript_MayDefeated
 	end
 
 Route104_EventScript_BattleMayTorchic::
+	coopscene GATE_ROUTE104_EVENTSCRIPT_BATTLEMAYTORCHIC
+	coopnextbattle_split TRAINER_MAY_RUSTBORO_TREECKO
 	trainerbattle_no_intro TRAINER_MAY_RUSTBORO_TORCHIC, Route104_Text_MayDefeat
 	setflag FLAG_DEFEATED_RIVAL_ROUTE_104
 	goto Route104_EventScript_MayDefeated
 	end
 
 Route104_EventScript_BattleMayMudkip::
+	coopscene GATE_ROUTE104_EVENTSCRIPT_BATTLEMAYMUDKIP
+	coopnextbattle_split TRAINER_MAY_RUSTBORO_TREECKO
 	trainerbattle_no_intro TRAINER_MAY_RUSTBORO_MUDKIP, Route104_Text_MayDefeat
 	setflag FLAG_DEFEATED_RIVAL_ROUTE_104
 	goto Route104_EventScript_MayDefeated
@@ -226,18 +232,24 @@ Route104_EventScript_BrendanDefeated::
 	end
 
 Route104_EventScript_BattleBrendanTreecko::
+	coopscene GATE_ROUTE104_EVENTSCRIPT_BATTLEBRENDANTREECKO
+	coopnextbattle_split TRAINER_MAY_RUSTBORO_TREECKO
 	trainerbattle_no_intro TRAINER_BRENDAN_RUSTBORO_TREECKO, Route104_Text_BrendanDefeat
 	setflag FLAG_DEFEATED_RIVAL_ROUTE_104
 	goto Route104_EventScript_BrendanDefeated
 	end
 
 Route104_EventScript_BattleBrendanTorchic::
+	coopscene GATE_ROUTE104_EVENTSCRIPT_BATTLEBRENDANTORCHIC
+	coopnextbattle_split TRAINER_MAY_RUSTBORO_TREECKO
 	trainerbattle_no_intro TRAINER_BRENDAN_RUSTBORO_TORCHIC, Route104_Text_BrendanDefeat
 	setflag FLAG_DEFEATED_RIVAL_ROUTE_104
 	goto Route104_EventScript_BrendanDefeated
 	end
 
 Route104_EventScript_BattleBrendanMudkip::
+	coopscene GATE_ROUTE104_EVENTSCRIPT_BATTLEBRENDANMUDKIP
+	coopnextbattle_split TRAINER_MAY_RUSTBORO_TREECKO
 	trainerbattle_no_intro TRAINER_BRENDAN_RUSTBORO_MUDKIP, Route104_Text_BrendanDefeat
 	setflag FLAG_DEFEATED_RIVAL_ROUTE_104
 	goto Route104_EventScript_BrendanDefeated

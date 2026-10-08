@@ -122,10 +122,14 @@ PokemonLeague_LancesRoom_EventScript_RematchIntro::
 	return
 
 PokemonLeague_LancesRoom_EventScript_Battle::
+	coopscene GATE_POKEMONLEAGUE_LANCESROOM_EVENTSCRIPT_BATTLE
+	coopnextbattle_split TRAINER_ELITE_FOUR_LANCE_2
 	trainerbattle_no_intro TRAINER_ELITE_FOUR_LANCE, PokemonLeague_LancesRoom_Text_Defeat
 	return
 
 PokemonLeague_LancesRoom_EventScript_Rematch::
+	coopscene GATE_POKEMONLEAGUE_LANCESROOM_EVENTSCRIPT_REMATCH
+	coopnextbattle_split TRAINER_ELITE_FOUR_LANCE
 	trainerbattle_no_intro TRAINER_ELITE_FOUR_LANCE_2, PokemonLeague_LancesRoom_Text_Defeat
 	return
 

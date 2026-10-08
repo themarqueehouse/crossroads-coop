@@ -40,32 +40,44 @@ FuchsiaCity_Gym_EventScript_NoRoomForTM06::
 	end
 
 FuchsiaCity_Gym_EventScript_Phil::
+	coopscene GATE_FUCHSIACITY_GYM_EVENTSCRIPT_PHIL
+	coopnextbattle_split TRAINER_LEADER_KOGA
 	trainerbattle_single TRAINER_TAMER_PHIL, FuchsiaCity_Gym_Text_PhilIntro, FuchsiaCity_Gym_Text_PhilDefeat
 	msgbox FuchsiaCity_Gym_Text_PhilPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 FuchsiaCity_Gym_EventScript_Edgar::
+	coopscene GATE_FUCHSIACITY_GYM_EVENTSCRIPT_EDGAR
+	coopnextbattle_split TRAINER_LEADER_KOGA
 	trainerbattle_single TRAINER_TAMER_EDGAR, FuchsiaCity_Gym_Text_EdgarIntro, FuchsiaCity_Gym_Text_EdgarDefeat
 	msgbox FuchsiaCity_Gym_Text_EdgarPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 FuchsiaCity_Gym_EventScript_Kirk::
+	coopscene GATE_FUCHSIACITY_GYM_EVENTSCRIPT_KIRK
+	coopnextbattle_split TRAINER_LEADER_KOGA
 	trainerbattle_single TRAINER_JUGGLER_KIRK, FuchsiaCity_Gym_Text_KirkIntro, FuchsiaCity_Gym_Text_KirkDefeat
 	famechecker FAMECHECKER_KOGA, 2
 	msgbox FuchsiaCity_Gym_Text_KirkPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 FuchsiaCity_Gym_EventScript_Shawn::
+	coopscene GATE_FUCHSIACITY_GYM_EVENTSCRIPT_SHAWN
+	coopnextbattle_split TRAINER_LEADER_KOGA
 	trainerbattle_single TRAINER_JUGGLER_SHAWN, FuchsiaCity_Gym_Text_ShawnIntro, FuchsiaCity_Gym_Text_ShawnDefeat
 	msgbox FuchsiaCity_Gym_Text_ShawnPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 FuchsiaCity_Gym_EventScript_Kayden::
+	coopscene GATE_FUCHSIACITY_GYM_EVENTSCRIPT_KAYDEN
+	coopnextbattle_split TRAINER_LEADER_KOGA
 	trainerbattle_single TRAINER_JUGGLER_KAYDEN, FuchsiaCity_Gym_Text_KaydenIntro, FuchsiaCity_Gym_Text_KaydenDefeat
 	msgbox FuchsiaCity_Gym_Text_KaydenPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 FuchsiaCity_Gym_EventScript_Nate::
+	coopscene GATE_FUCHSIACITY_GYM_EVENTSCRIPT_NATE
+	coopnextbattle_split TRAINER_LEADER_KOGA
 	trainerbattle_single TRAINER_JUGGLER_NATE, FuchsiaCity_Gym_Text_NateIntro, FuchsiaCity_Gym_Text_NateDefeat
 	msgbox FuchsiaCity_Gym_Text_NatePostBattle, MSGBOX_AUTOCLOSE
 	end

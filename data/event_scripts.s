@@ -20,6 +20,8 @@
 #include "constants/cable_club.h"
 #include "constants/coins.h"
 #include "constants/coop_gates.h"
+#include "constants/coop_gates_gym.h"
+#include "constants/coop_gates_story.h"
 #include "constants/contest.h"
 #include "constants/daycare.h"
 #include "constants/decorations.h"

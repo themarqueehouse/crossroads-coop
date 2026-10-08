@@ -2,6 +2,8 @@ SeafloorCavern_Room3_MapScripts::
 	.byte 0
 
 SeafloorCavern_Room3_EventScript_Shelly::
+	coopscene GATE_SEAFLOORCAVERN_ROOM3_EVENTSCRIPT_SHELLY
+	coopnextbattle_split TRAINER_GRUNT_SEAFLOOR_CAVERN_5
 	trainerbattle_single TRAINER_SHELLY_SEAFLOOR_CAVERN, SeafloorCavern_Room3_Text_ShellyIntro, SeafloorCavern_Room3_Text_ShellyDefeat
 	msgbox SeafloorCavern_Room3_Text_ShellyPostBattle, MSGBOX_AUTOCLOSE
 	end

@@ -485,6 +485,11 @@ static EWRAM_DATA u16 sPendingSceneLocalId = 0;
 // rather than reset by whatever is presumed to be the last one.
 static EWRAM_DATA bool8 sInGuestScene = FALSE;
 
+// Set on the console that STARTED a mirrored scene, for as long as it runs.
+// Paired with sInGuestScene it answers "are both consoles already inside the
+// same script", which is what makes a nested coopscene safe.
+static EWRAM_DATA bool8 sInHostScene = FALSE;
+
 // Set while a co-op battle owns the link. See Coop_SuspendForBattle.
 static EWRAM_DATA bool8 sSuspendedForBattle = FALSE;
 
@@ -530,6 +535,7 @@ bool8 Coop_BroadcastScene(const u8 *resume, u16 gateId)
     sSceneSendPtr = resume;
     sSceneSendGate = gateId;
     sSceneSendLocalId = gSpecialVar_LastTalked;
+    sInHostScene = TRUE;
     return TRUE;
 }
 
@@ -638,11 +644,19 @@ bool8 Coop_IsSceneGuest(void)
     return sInGuestScene;
 }
 
+bool8 Coop_IsInMirroredScene(void)
+{
+    return sInGuestScene || sInHostScene;
+}
+
 // Notice the guest scene ending. Called every frame, before scripts run.
 static void UpdateGuestScene(void)
 {
-    if (sInGuestScene && !ScriptContext_IsEnabled())
+    if (!ScriptContext_IsEnabled())
+    {
         sInGuestScene = FALSE;
+        sInHostScene = FALSE;
+    }
 }
 
 static void ResetScenes(void)
@@ -654,6 +668,7 @@ static void ResetScenes(void)
     sPendingSceneLocalId = 0;
     sSceneSendLocalId = 0;
     sInGuestScene = FALSE;
+    sInHostScene = FALSE;
 }
 
 static void ResetGates(void)

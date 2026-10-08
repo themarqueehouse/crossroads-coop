@@ -58,14 +58,20 @@ Route22_EventScript_EarlyRivalApproachBottom::
 	return
 
 Route22_EventScript_EarlyRivalSquirtle::
+	coopscene GATE_ROUTE22_EVENTSCRIPT_EARLYRIVALSQUIRTLE
+	coopnextbattle_split TRAINER_RIVAL_ROUTE22_EARLY_BULBASAUR
 	trainerbattle_earlyrival TRAINER_RIVAL_ROUTE22_EARLY_SQUIRTLE, 0, Route22_Text_EarlyRivalDefeat, Text_RivalVictory
 	return
 
 Route22_EventScript_EarlyRivalBulbasaur::
+	coopscene GATE_ROUTE22_EVENTSCRIPT_EARLYRIVALBULBASAUR
+	coopnextbattle_split TRAINER_RIVAL_ROUTE22_EARLY_SQUIRTLE
 	trainerbattle_earlyrival TRAINER_RIVAL_ROUTE22_EARLY_BULBASAUR, 0, Route22_Text_EarlyRivalDefeat, Text_RivalVictory
 	return
 
 Route22_EventScript_EarlyRivalCharmander::
+	coopscene GATE_ROUTE22_EVENTSCRIPT_EARLYRIVALCHARMANDER
+	coopnextbattle_split TRAINER_RIVAL_ROUTE22_EARLY_SQUIRTLE
 	trainerbattle_earlyrival TRAINER_RIVAL_ROUTE22_EARLY_CHARMANDER, 0, Route22_Text_EarlyRivalDefeat, Text_RivalVictory
 	return
 
@@ -208,14 +214,20 @@ Route22_EventScript_LateRivalApproachBottom::
 	return
 
 Route22_EventScript_LateRivalSquirtle::
+	coopscene GATE_ROUTE22_EVENTSCRIPT_LATERIVALSQUIRTLE
+	coopnextbattle_split TRAINER_RIVAL_ROUTE22_EARLY_SQUIRTLE
 	trainerbattle_no_intro TRAINER_RIVAL_ROUTE22_LATE_SQUIRTLE, Route22_Text_LateRivalDefeat
 	return
 
 Route22_EventScript_LateRivalBulbasaur::
+	coopscene GATE_ROUTE22_EVENTSCRIPT_LATERIVALBULBASAUR
+	coopnextbattle_split TRAINER_RIVAL_ROUTE22_EARLY_SQUIRTLE
 	trainerbattle_no_intro TRAINER_RIVAL_ROUTE22_LATE_BULBASAUR, Route22_Text_LateRivalDefeat
 	return
 
 Route22_EventScript_LateRivalCharmander::
+	coopscene GATE_ROUTE22_EVENTSCRIPT_LATERIVALCHARMANDER
+	coopnextbattle_split TRAINER_RIVAL_ROUTE22_EARLY_SQUIRTLE
 	trainerbattle_no_intro TRAINER_RIVAL_ROUTE22_LATE_CHARMANDER, Route22_Text_LateRivalDefeat
 	return
 

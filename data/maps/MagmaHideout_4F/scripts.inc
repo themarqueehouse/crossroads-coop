@@ -2,6 +2,8 @@ MagmaHideout_4F_MapScripts::
 	.byte 0
 
 MagmaHideout_4F_EventScript_Maxie::
+	coopscene GATE_MAGMAHIDEOUT_4F_EVENTSCRIPT_MAXIE
+	coopnextbattle_split TRAINER_GRUNT_MAGMA_HIDEOUT_11
 	lockall
 	playbgm MUS_ENCOUNTER_MAGMA, FALSE
 	msgbox MagmaHideout_4F_Text_MaxieAwakenGroudon, MSGBOX_DEFAULT
@@ -121,6 +123,8 @@ MagmaHideout_4F_EventScript_Grunt13::
 	end
 
 MagmaHideout_4F_EventScript_Tabitha::
+	coopscene GATE_MAGMAHIDEOUT_4F_EVENTSCRIPT_TABITHA
+	coopnextbattle_split TRAINER_MAXIE_MAGMA_HIDEOUT
 	trainerbattle_single TRAINER_TABITHA_MAGMA_HIDEOUT, MagmaHideout_4F_Text_TabithaIntro, MagmaHideout_4F_Text_TabithaDefeat
 	msgbox MagmaHideout_4F_Text_TabithaPostBattle, MSGBOX_AUTOCLOSE
 	end

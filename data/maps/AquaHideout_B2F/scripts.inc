@@ -23,6 +23,8 @@ AquaHideout_B2F_EventScript_MattNoticePlayer::
 	end
 
 AquaHideout_B2F_EventScript_Matt::
+	coopscene GATE_AQUAHIDEOUT_B2F_EVENTSCRIPT_MATT
+	coopnextbattle_split TRAINER_GRUNT_AQUA_HIDEOUT_4
 	trainerbattle_single TRAINER_MATT, AquaHideout_B2F_Text_MattIntro, AquaHideout_B2F_Text_MattDefeat, AquaHideout_B2F_EventScript_SubmarineEscape
 	msgbox AquaHideout_B2F_Text_MattPostBattle, MSGBOX_DEFAULT
 	release

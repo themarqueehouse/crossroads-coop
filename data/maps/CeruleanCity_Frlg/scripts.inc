@@ -66,14 +66,20 @@ CeruleanCity_EventScript_Rival::
 	end
 
 CeruleanCity_EventScript_RivalSquirtle::
+	coopscene GATE_CERULEANCITY_EVENTSCRIPT_RIVALSQUIRTLE
+	coopnextbattle_split TRAINER_RIVAL_CERULEAN_BULBASAUR
 	trainerbattle_no_intro TRAINER_RIVAL_CERULEAN_SQUIRTLE, CeruleanCity_Text_RivalDefeat
 	return
 
 CeruleanCity_EventScript_RivalBulbasaur::
+	coopscene GATE_CERULEANCITY_EVENTSCRIPT_RIVALBULBASAUR
+	coopnextbattle_split TRAINER_RIVAL_CERULEAN_SQUIRTLE
 	trainerbattle_no_intro TRAINER_RIVAL_CERULEAN_BULBASAUR, CeruleanCity_Text_RivalDefeat
 	return
 
 CeruleanCity_EventScript_RivalCharmander::
+	coopscene GATE_CERULEANCITY_EVENTSCRIPT_RIVALCHARMANDER
+	coopnextbattle_split TRAINER_RIVAL_CERULEAN_SQUIRTLE
 	trainerbattle_no_intro TRAINER_RIVAL_CERULEAN_CHARMANDER, CeruleanCity_Text_RivalDefeat
 	return
 

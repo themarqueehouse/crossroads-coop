@@ -226,6 +226,17 @@ void Coop_UpdatePendingScene(void);
 bool8 Coop_IsSceneGuest(void);
 
 /**
+ * True while BOTH consoles are already inside the same mirrored script.
+ *
+ * Scripts goto each other freely, so a scene that has been mirrored can run
+ * straight into another script that also begins with coopscene. Mirroring that
+ * one too would have the guest broadcast the scene back at the host. When this
+ * is true the inner coopscene skips its broadcast and behaves as a plain gate,
+ * which is all it needs to be: both consoles are already running the script.
+ */
+bool8 Coop_IsInMirroredScene(void);
+
+/**
  * True if this object event is the co-op partner.
  *
  * Used to exempt them from collision in both directions. See the call site in

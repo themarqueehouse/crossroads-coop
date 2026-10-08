@@ -2,6 +2,8 @@ MeteorFalls_StevensCave_MapScripts::
 	.byte 0
 
 MeteorFalls_StevensCave_EventScript_Steven::
+	coopscene GATE_METEORFALLS_STEVENSCAVE_EVENTSCRIPT_STEVEN
+	coopnextbattle_split TRAINER_STEVEN
 	lock
 	goto_if_set FLAG_DEFEATED_METEOR_FALLS_STEVEN, MeteorFalls_StevensCave_EventScript_Defeated
 	waitse

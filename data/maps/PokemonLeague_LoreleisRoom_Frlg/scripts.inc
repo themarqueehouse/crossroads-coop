@@ -73,10 +73,14 @@ PokemonLeague_LoreleisRoom_EventScript_RematchIntro::
 	return
 
 PokemonLeague_LoreleisRoom_EventScript_Battle::
+	coopscene GATE_POKEMONLEAGUE_LORELEISROOM_EVENTSCRIPT_BATTLE
+	coopnextbattle_split TRAINER_ELITE_FOUR_LORELEI_2
 	trainerbattle_no_intro TRAINER_ELITE_FOUR_LORELEI, PokemonLeague_LoreleisRoom_Text_Defeat
 	return
 
 PokemonLeague_LoreleisRoom_EventScript_Rematch::
+	coopscene GATE_POKEMONLEAGUE_LORELEISROOM_EVENTSCRIPT_REMATCH
+	coopnextbattle_split TRAINER_ELITE_FOUR_LORELEI
 	trainerbattle_no_intro TRAINER_ELITE_FOUR_LORELEI_2, PokemonLeague_LoreleisRoom_Text_Defeat
 	return
 

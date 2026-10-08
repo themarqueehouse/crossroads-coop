@@ -42,6 +42,8 @@ PewterCity_Gym_EventScript_NoRoomForTM39::
 	end
 
 PewterCity_Gym_EventScript_Liam::
+	coopscene GATE_PEWTERCITY_GYM_EVENTSCRIPT_LIAM
+	coopnextbattle_split TRAINER_LEADER_BROCK
 	trainerbattle_single TRAINER_CAMPER_LIAM, PewterCity_Gym_Text_LiamIntro, PewterCity_Gym_Text_LiamDefeat
 	msgbox PewterCity_Gym_Text_LiamPostBattle, MSGBOX_AUTOCLOSE
 	end

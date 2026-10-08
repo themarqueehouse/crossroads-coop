@@ -37,6 +37,8 @@ EverGrandeCity_GlaciasRoom_EventScript_CloseDoor::
 	return
 
 EverGrandeCity_GlaciasRoom_EventScript_Glacia::
+	coopscene GATE_EVERGRANDECITY_GLACIASROOM_EVENTSCRIPT_GLACIA
+	coopnextbattle_split TRAINER_GLACIA
 	lock
 	faceplayer
 	goto_if_set FLAG_DEFEATED_ELITE_4_GLACIA, EverGrandeCity_GlaciasRoom_EventScript_PostBattleSpeech

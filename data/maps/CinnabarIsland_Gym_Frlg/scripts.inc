@@ -86,11 +86,15 @@ CinnabarIsland_Gym_EventScript_NoRoomForTM38::
 	end
 
 CinnabarIsland_Gym_EventScript_Erik::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_ERIK
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	trainerbattle_single TRAINER_SUPER_NERD_ERIK, CinnabarIsland_Gym_Text_ErikIntro, CinnabarIsland_Gym_Text_ErikDefeat
 	msgbox CinnabarIsland_Gym_Text_ErikPostBattle, MSGBOX_AUTOCLOSE
 	end
 
 CinnabarIsland_Gym_EventScript_Avery::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_AVERY
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	trainerbattle_single TRAINER_SUPER_NERD_AVERY, CinnabarIsland_Gym_Text_AveryIntro, CinnabarIsland_Gym_Text_AveryDefeat, CinnabarIsland_Gym_EventScript_DefeatedAvery
 	msgbox CinnabarIsland_Gym_Text_AveryPostBattle, MSGBOX_AUTOCLOSE
 	end
@@ -105,6 +109,8 @@ CinnabarIsland_Gym_EventScript_Quiz2CompleteTrainer::
 	return
 
 CinnabarIsland_Gym_EventScript_Derek::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_DEREK
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	trainerbattle_single TRAINER_SUPER_NERD_DEREK, CinnabarIsland_Gym_Text_DerekIntro, CinnabarIsland_Gym_Text_DerekDefeat, CinnabarIsland_Gym_EventScript_DefeatedDerek
 	famechecker FAMECHECKER_BLAINE, 2
 	msgbox CinnabarIsland_Gym_Text_DerekPostBattle, MSGBOX_AUTOCLOSE
@@ -120,6 +126,8 @@ CinnabarIsland_Gym_EventScript_Quiz4CompleteTrainer::
 	return
 
 CinnabarIsland_Gym_EventScript_Zac::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_ZAC
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	trainerbattle_single TRAINER_SUPER_NERD_ZAC, CinnabarIsland_Gym_Text_ZacIntro, CinnabarIsland_Gym_Text_ZacDefeat, CinnabarIsland_Gym_EventScript_DefeatedZac
 	msgbox CinnabarIsland_Gym_Text_ZacPostBattle, MSGBOX_AUTOCLOSE
 	end
@@ -134,6 +142,8 @@ CinnabarIsland_Gym_EventScript_Quiz6CompleteTrainer::
 	return
 
 CinnabarIsland_Gym_EventScript_Quinn::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_QUINN
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	trainerbattle_single TRAINER_BURGLAR_QUINN, CinnabarIsland_Gym_Text_QuinnIntro, CinnabarIsland_Gym_Text_QuinnDefeat, CinnabarIsland_Gym_EventScript_DefeatedQuinn
 	msgbox CinnabarIsland_Gym_Text_QuinnPostBattle, MSGBOX_AUTOCLOSE
 	end
@@ -148,6 +158,8 @@ CinnabarIsland_Gym_EventScript_Quiz1CompleteTrainer::
 	return
 
 CinnabarIsland_Gym_EventScript_Ramon::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_RAMON
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	trainerbattle_single TRAINER_BURGLAR_RAMON, CinnabarIsland_Gym_Text_RamonIntro, CinnabarIsland_Gym_Text_RamonDefeat, CinnabarIsland_Gym_EventScript_DefeatedRamon
 	msgbox CinnabarIsland_Gym_Text_RamonPostBattle, MSGBOX_AUTOCLOSE
 	end
@@ -162,6 +174,8 @@ CinnabarIsland_Gym_EventScript_Quiz3CompleteTrainer::
 	return
 
 CinnabarIsland_Gym_EventScript_Dusty::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_DUSTY
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	trainerbattle_single TRAINER_BURGLAR_DUSTY, CinnabarIsland_Gym_Text_DustyIntro, CinnabarIsland_Gym_Text_DustyDefeat, CinnabarIsland_Gym_EventScript_DefeatedDusty
 	msgbox CinnabarIsland_Gym_Text_DustyPostBattle, MSGBOX_AUTOCLOSE
 	end
@@ -259,6 +273,8 @@ CinnabarIsland_Gym_EventScript_Quiz1Incorrect::
 	end
 
 CinnabarIsland_Gym_EventScript_BattleQuinn::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_BATTLEQUINN
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	call_if_eq VAR_TEMP_1, 0, CinnabarIsland_Gym_EventScript_QuinnApproachLeft
 	call_if_eq VAR_TEMP_1, 1, CinnabarIsland_Gym_EventScript_QuinnApproachRight
 	textcolor NPC_TEXT_COLOR_MALE
@@ -331,6 +347,8 @@ CinnabarIsland_Gym_EventScript_Quiz2Incorrect::
 	end
 
 CinnabarIsland_Gym_EventScript_BattleAvery::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_BATTLEAVERY
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	call_if_eq VAR_TEMP_1, 0, CinnabarIsland_Gym_EventScript_AveryApproachLeft
 	call_if_eq VAR_TEMP_1, 1, CinnabarIsland_Gym_EventScript_AveryApproachRight
 	textcolor NPC_TEXT_COLOR_MALE
@@ -412,6 +430,8 @@ CinnabarIsland_Gym_EventScript_Quiz3Incorrect::
 	end
 
 CinnabarIsland_Gym_EventScript_BattleRamon::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_BATTLERAMON
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	call_if_eq VAR_TEMP_1, 0, CinnabarIsland_Gym_EventScript_RamonApproachLeft
 	call_if_eq VAR_TEMP_1, 1, CinnabarIsland_Gym_EventScript_RamonApproachRight
 	textcolor NPC_TEXT_COLOR_MALE
@@ -484,6 +504,8 @@ CinnabarIsland_Gym_EventScript_Quiz4Incorrect::
 	end
 
 CinnabarIsland_Gym_EventScript_BattleDerek::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_BATTLEDEREK
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	call_if_eq VAR_TEMP_1, 0, CinnabarIsland_Gym_EventScript_DerekApproachLeft
 	call_if_eq VAR_TEMP_1, 1, CinnabarIsland_Gym_EventScript_DerekApproachRight
 	textcolor NPC_TEXT_COLOR_MALE
@@ -556,6 +578,8 @@ CinnabarIsland_Gym_EventScript_Quiz5Incorrect::
 	end
 
 CinnabarIsland_Gym_EventScript_BattleDusty::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_BATTLEDUSTY
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	call_if_eq VAR_TEMP_1, 0, CinnabarIsland_Gym_EventScript_DustyApproachLeft
 	call_if_eq VAR_TEMP_1, 1, CinnabarIsland_Gym_EventScript_DustyApproachRight
 	textcolor NPC_TEXT_COLOR_MALE
@@ -628,6 +652,8 @@ CinnabarIsland_Gym_EventScript_Quiz6Incorrect::
 	end
 
 CinnabarIsland_Gym_EventScript_BattleZac::
+	coopscene GATE_CINNABARISLAND_GYM_EVENTSCRIPT_BATTLEZAC
+	coopnextbattle_split TRAINER_LEADER_BLAINE
 	call_if_eq VAR_TEMP_1, 0, CinnabarIsland_Gym_EventScript_ZacApproachLeft
 	call_if_eq VAR_TEMP_1, 1, CinnabarIsland_Gym_EventScript_ZacApproachRight
 	textcolor NPC_TEXT_COLOR_MALE

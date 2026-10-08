@@ -7,6 +7,8 @@ Route108_EventScript_Jerome::
 	end
 
 Route108_EventScript_Matthew::
+	coopscene GATE_ROUTE108_EVENTSCRIPT_MATTHEW
+	coopnextbattle_split TRAINER_JEROME
 	trainerbattle_single TRAINER_MATTHEW, Route108_Text_MatthewIntro, Route108_Text_MatthewDefeated
 	msgbox Route108_Text_MatthewPostBattle, MSGBOX_AUTOCLOSE
 	end

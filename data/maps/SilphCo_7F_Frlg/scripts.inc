@@ -68,14 +68,20 @@ SilphCo_7F_EventScript_RivalApproachBottom::
 	return
 
 SilphCo_7F_EventScript_RivalSquirtle::
+	coopscene GATE_SILPHCO_7F_EVENTSCRIPT_RIVALSQUIRTLE
+	coopnextbattle_split TRAINER_RIVAL_SILPH_BULBASAUR
 	trainerbattle_no_intro TRAINER_RIVAL_SILPH_SQUIRTLE, SilphCo_7F_Text_RivalDefeat
 	return
 
 SilphCo_7F_EventScript_RivalBulbasaur::
+	coopscene GATE_SILPHCO_7F_EVENTSCRIPT_RIVALBULBASAUR
+	coopnextbattle_split TRAINER_RIVAL_SILPH_SQUIRTLE
 	trainerbattle_no_intro TRAINER_RIVAL_SILPH_BULBASAUR, SilphCo_7F_Text_RivalDefeat
 	return
 
 SilphCo_7F_EventScript_RivalCharmander::
+	coopscene GATE_SILPHCO_7F_EVENTSCRIPT_RIVALCHARMANDER
+	coopnextbattle_split TRAINER_RIVAL_SILPH_SQUIRTLE
 	trainerbattle_no_intro TRAINER_RIVAL_SILPH_CHARMANDER, SilphCo_7F_Text_RivalDefeat
 	return
 

@@ -32,6 +32,8 @@ MtChimney_EventScript_ArchieBusyFighting::
 	return
 
 MtChimney_EventScript_Maxie::
+	coopscene GATE_MTCHIMNEY_EVENTSCRIPT_MAXIE
+	coopnextbattle_split TRAINER_TABITHA_MT_CHIMNEY
 	lockall
 	playbgm MUS_ENCOUNTER_MAGMA, FALSE
 	msgbox MtChimney_Text_MeteoriteWillActivateVolcano, MSGBOX_DEFAULT
@@ -406,6 +408,8 @@ MtChimney_EventScript_BusyAquaGrunt3::
 	end
 
 MtChimney_EventScript_Tabitha::
+	coopscene GATE_MTCHIMNEY_EVENTSCRIPT_TABITHA
+	coopnextbattle_split TRAINER_MAXIE_MT_CHIMNEY
 	trainerbattle_single TRAINER_TABITHA_MT_CHIMNEY, MtChimney_Text_TabithaIntro, MtChimney_Text_TabithaDefeat
 	msgbox MtChimney_Text_TabithaPostBattle, MSGBOX_AUTOCLOSE
 	end

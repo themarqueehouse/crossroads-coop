@@ -926,6 +926,13 @@ bool8 ScrCmd_coopscene(struct ScriptContext *ctx)
 
     Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
 
+    // Already mirrored: both consoles are inside this script, so there is
+    // nothing to send and the gate below is enough. Without this, a mirrored
+    // scene that gotos into another coopscene has the guest broadcast the
+    // scene back at the host.
+    if (Coop_IsInMirroredScene())
+        return FALSE;
+
     if (!Coop_BroadcastScene(resume, gateId))
     {
         // Through the game's own message machinery rather than from here: this

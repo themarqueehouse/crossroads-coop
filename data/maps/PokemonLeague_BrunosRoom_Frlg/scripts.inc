@@ -68,10 +68,14 @@ PokemonLeague_BrunosRoom_EventScript_RematchIntro::
 	return
 
 PokemonLeague_BrunosRoom_EventScript_Battle::
+	coopscene GATE_POKEMONLEAGUE_BRUNOSROOM_EVENTSCRIPT_BATTLE
+	coopnextbattle_split TRAINER_ELITE_FOUR_BRUNO_2
 	trainerbattle_no_intro TRAINER_ELITE_FOUR_BRUNO, PokemonLeague_BrunosRoom_Text_Defeat
 	return
 
 PokemonLeague_BrunosRoom_EventScript_Rematch::
+	coopscene GATE_POKEMONLEAGUE_BRUNOSROOM_EVENTSCRIPT_REMATCH
+	coopnextbattle_split TRAINER_ELITE_FOUR_BRUNO
 	trainerbattle_no_intro TRAINER_ELITE_FOUR_BRUNO_2, PokemonLeague_BrunosRoom_Text_Defeat
 	return
 

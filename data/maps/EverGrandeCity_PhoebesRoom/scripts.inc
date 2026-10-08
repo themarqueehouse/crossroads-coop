@@ -37,6 +37,8 @@ EverGrandeCity_PhoebesRoom_EventScript_CloseDoor::
 	return
 
 EverGrandeCity_PhoebesRoom_EventScript_Phoebe::
+	coopscene GATE_EVERGRANDECITY_PHOEBESROOM_EVENTSCRIPT_PHOEBE
+	coopnextbattle_split TRAINER_PHOEBE
 	lock
 	faceplayer
 	goto_if_set FLAG_DEFEATED_ELITE_4_PHOEBE, EverGrandeCity_PhoebesRoom_EventScript_PostBattleSpeech

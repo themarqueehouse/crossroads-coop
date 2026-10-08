@@ -76,16 +76,22 @@ Route119_EventScript_BattleMay::
 	end
 
 Route119_EventScript_BattleMayTreecko::
+	coopscene GATE_ROUTE119_EVENTSCRIPT_BATTLEMAYTREECKO
+	coopnextbattle_split TRAINER_MAY_ROUTE_119_TORCHIC
 	trainerbattle_no_intro TRAINER_MAY_ROUTE_119_TREECKO, Route119_Text_MayDefeat
 	goto Route119_EventScript_DefeatedMay
 	end
 
 Route119_EventScript_BattleMayTorchic::
+	coopscene GATE_ROUTE119_EVENTSCRIPT_BATTLEMAYTORCHIC
+	coopnextbattle_split TRAINER_MAY_ROUTE_119_TREECKO
 	trainerbattle_no_intro TRAINER_MAY_ROUTE_119_TORCHIC, Route119_Text_MayDefeat
 	goto Route119_EventScript_DefeatedMay
 	end
 
 Route119_EventScript_BattleMayMudkip::
+	coopscene GATE_ROUTE119_EVENTSCRIPT_BATTLEMAYMUDKIP
+	coopnextbattle_split TRAINER_MAY_ROUTE_119_TREECKO
 	trainerbattle_no_intro TRAINER_MAY_ROUTE_119_MUDKIP, Route119_Text_MayDefeat
 	goto Route119_EventScript_DefeatedMay
 	end
@@ -106,16 +112,22 @@ Route119_EventScript_BattleBrendan::
 	end
 
 Route119_EventScript_BattleBrendanTreecko::
+	coopscene GATE_ROUTE119_EVENTSCRIPT_BATTLEBRENDANTREECKO
+	coopnextbattle_split TRAINER_MAY_ROUTE_119_TREECKO
 	trainerbattle_no_intro TRAINER_BRENDAN_ROUTE_119_TREECKO, Route119_Text_BrendanDefeat
 	goto Route119_EventScript_DefeatedBrendan
 	end
 
 Route119_EventScript_BattleBrendanTorchic::
+	coopscene GATE_ROUTE119_EVENTSCRIPT_BATTLEBRENDANTORCHIC
+	coopnextbattle_split TRAINER_MAY_ROUTE_119_TREECKO
 	trainerbattle_no_intro TRAINER_BRENDAN_ROUTE_119_TORCHIC, Route119_Text_BrendanDefeat
 	goto Route119_EventScript_DefeatedBrendan
 	end
 
 Route119_EventScript_BattleBrendanMudkip::
+	coopscene GATE_ROUTE119_EVENTSCRIPT_BATTLEBRENDANMUDKIP
+	coopnextbattle_split TRAINER_MAY_ROUTE_119_TREECKO
 	trainerbattle_no_intro TRAINER_BRENDAN_ROUTE_119_MUDKIP, Route119_Text_BrendanDefeat
 	goto Route119_EventScript_DefeatedBrendan
 	end
