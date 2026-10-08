@@ -195,3 +195,97 @@ export function tally() {
     },
   };
 }
+
+// Choose three on both consoles and confirm.
+//
+// The selection is written straight into gSelectedOrderFromParty rather than
+// typed into the menu. That is deliberate. Driving the menu by button means
+// guessing, every single press, which of several states the console is in:
+// the picker may not have opened yet (the guest's opens later than the host's,
+// by an amount that moves with how fast the two cores happen to run), the
+// ENTER/SUMMARY/CANCEL submenu may be animating and swallowing input, or the
+// cursor may be sitting on a Pokemon already chosen, where the same two
+// presses deselect it instead. Three separate attempts at a press-and-check
+// loop each produced a different wrong answer on a different run -- 0 and 0,
+// 2 and 1, 3 and 0 -- and every one of them reported a battle that started
+// with the wrong number of Pokemon, which reads exactly like a bug in the
+// co-op code. It was not. It was this function.
+//
+// What is under test here is the co-op flow -- that both consoles are asked,
+// that the ready gate holds the faster player, that the battle starts capped
+// at three a side. The party menu's own input handling is vanilla code and is
+// not what we are checking, so there is nothing lost by skipping it and a lot
+// of flakiness avoided.
+//
+// Writing the array is enough because that is the same array every later step
+// reads: CheckBattleEntriesAndGetMessage validates it (and returns early for
+// FACILITY_MULTI_OR_EREADER, which ChooseHalfPartyForBattle sets, so the
+// duplicate-species rule does not apply), CB2_ReturnFromChooseHalfParty sets
+// gSpecialVar_Result from its first entry, and ReducePlayerPartyToSelectedMons
+// builds the party from it. START then jumps the cursor to CONFIRM -- arrowing
+// down never reaches it, see PartyMenuButtonHandler's START_BUTTON case -- and
+// A takes it.
+export async function pickThreeOnBoth(rig, orderAddr, pickerOpenedAddr, want = 3,
+                                      settleFrames = 420) {
+  const chosen = async (w) =>
+    (await rig.readAt(w, orderAddr, 6)).filter((x) => x !== 0).length;
+
+  // Wait for the menu to exist on both. sPickerOpened is set in the same
+  // breath as ChooseHalfPartyForBattle, so this is the console telling us
+  // rather than us assuming after N frames.
+  let open = [false, false];
+  for (let i = 0; i < 25 && !open.every(Boolean); i++) {
+    await rig.wait(30);
+    open = [await rig.u8(0, pickerOpenedAddr), await rig.u8(1, pickerOpenedAddr)]
+      .map((v) => v === 1);
+  }
+  if (!open.every(Boolean))
+    console.log(`      picker never opened: p1=${open[0]} p2=${open[1]}`);
+
+  // sPickerOpened says the script asked for the menu, not that the menu is
+  // ready: it is set immediately before ScriptContext_Stop, while the party
+  // screen is still fading in, and Task_HandleChooseMonInput ignores every
+  // button while gPaletteFade.active. Confirming at that moment does nothing,
+  // and the screenshot taken to explain it catches the fade and comes back
+  // black, which sent me looking for a hang that was not there.
+  //
+  // Hence the settle. It is longer than the fade needs on purpose: there is no
+  // race in the too-late direction, because nothing in the game is counting.
+  // The picker sits open indefinitely waiting for a human, and the only clock
+  // in this flow -- the ready gate that holds whoever chose first -- does not
+  // start until a console confirms.
+  await rig.wait(settleFrames);
+
+  // Slots are 1-based here: 1,2,3 is "the first three in the party".
+  const order = [1, 2, 3, 4, 5, 6].map((n, i) => (i < want ? n : 0));
+  for (const w of [0, 1]) await rig.writeAt(w, orderAddr, order);
+  await rig.wait(20);
+
+  const final = [await chosen(0), await chosen(1)];
+
+  // Both consoles are pressed in lockstep -- both STARTs, then both As --
+  // rather than one console all the way through and then the other. Staggering
+  // them means the first console confirms and begins the ready gate while the
+  // second is still being driven, and the second's presses then land in a
+  // different context than the first's did. The lockstep version is the one
+  // that works; the staggered one failed in a way that looked like the battle
+  // refusing to start.
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const done = await Promise.all([0, 1].map(async (w) => {
+      const f = (await rig.mailbox(w)).flags;
+      return f.includes('AT_GATE') || f.includes('BATTLE');
+    }));
+    if (done.every(Boolean)) break;
+    console.log(`      confirm attempt ${attempt}: ` +
+      `order=${(await rig.readAt(0, orderAddr, 6)).join('')}/` +
+      `${(await rig.readAt(1, orderAddr, 6)).join('')} ` +
+      `picker=${await rig.u8(0, pickerOpenedAddr)}/${await rig.u8(1, pickerOpenedAddr)} ` +
+      (await rig.mailboxes()).map((x) => `p${x.id} ${x.flags}`).join('  '));
+    for (const w of [0, 1]) await rig.tap(w, 'Start', 8);
+    await rig.wait(45);
+    for (const w of [0, 1]) await rig.tap(w, 'A', 8);
+    await rig.wait(90);
+  }
+
+  return final;
+}

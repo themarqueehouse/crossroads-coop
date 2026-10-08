@@ -4,6 +4,7 @@
 #include "menu.h"
 #include "menu_helpers.h"
 #include "coop.h"
+#include "net_link.h"
 #include "gpu_regs.h"
 #include "bg.h"
 #include "main.h"
@@ -318,6 +319,33 @@ static bool8 IsActiveOverworldLinkBusy(void)
 
 bool8 MenuHelpers_ShouldWaitForLinkRecv(void)
 {
+    // The network transport never blocks menu input on the receive queue.
+    //
+    // Both tests here are the same idea: the queue has backed up, so stop
+    // taking input until the other console catches up. On a cable that is
+    // sound, because a backed-up queue means the two consoles have drifted out
+    // of lockstep and will converge again within a frame or two.
+    //
+    // Over a network it is neither. The depth measures latency, which is
+    // routine and recovers on its own, and nothing drains it while a menu is
+    // up: Coop_Update runs from OverworldBasic, so the moment a menu replaces
+    // the overworld callback the session stops consuming anything the partner
+    // sends. The queue then climbs past OVERWORLD_RECV_QUEUE_MAX (3) and stays
+    // there, and every menu built on this helper goes permanently deaf.
+    //
+    // The party picker is where that bites. Both players are sent to it at
+    // once, both stand still in it, and after a second or so of ordinary
+    // latency neither console accepts a button again -- a deadlock with no
+    // timeout behind it, reached by doing nothing but reading your own party.
+    // It cost most of a day to find, because from the outside it looks exactly
+    // like a battle that will not start.
+    //
+    // Nothing is lost by returning FALSE. Co-op does not rely on menus being
+    // in lockstep: every point where the two players genuinely must agree is
+    // an explicit gate, and the gates do their own waiting.
+    if (gNetLinkActive)
+        return FALSE;
+
     if (IsActiveOverworldLinkBusy() == TRUE || IsLinkRecvQueueAtOverworldMax() == TRUE )
         return TRUE;
     else

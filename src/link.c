@@ -152,7 +152,7 @@ EWRAM_DATA u8 gCoopLinkErrorSite = 0;
 EWRAM_DATA u32 gCoopDbgLinkStatus = 0;
 EWRAM_DATA u8 gCoopDbgHasCallback = 0;
 EWRAM_DATA u8 gCoopDbgRecvPlayers = 0;
-EWRAM_DATA u8 gCoopDbgSendQueue = 0;
+EWRAM_DATA u8 gCoopDbgRecvQueue = 0;
 EWRAM_DATA u32 gCoopLinkErrorStatus = 0;
 static void CB2_PrintErrorMessage(void);
 static bool8 IsSioMultiMaster(void);
@@ -1808,7 +1808,7 @@ bool8 HandleLinkConnection(void)
         gCoopDbgLinkStatus = gLinkStatus;
         gCoopDbgHasCallback = (gLinkCallback != NULL);
         gCoopDbgRecvPlayers = gReceivedRemoteLinkPlayers;
-        gCoopDbgSendQueue = GetLinkRecvQueueLength();
+        gCoopDbgRecvQueue = GetLinkRecvQueueLength();
         if ((gLinkStatus & LINK_STAT_RECEIVED_NOTHING) && IsSendingKeysOverCable() == TRUE)
             return TRUE;
         return FALSE;

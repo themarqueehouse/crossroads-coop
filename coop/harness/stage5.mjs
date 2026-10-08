@@ -16,7 +16,7 @@
 //      same world unable to see each other
 //
 //   node coop/harness/stage5.mjs path/to/rom.gba
-import { startRig, tally, OFFSETS } from './rig.mjs';
+import { startRig, tally, OFFSETS, pickThreeOnBoth } from './rig.mjs';
 
 const PORT = 8793;
 const ROM = process.argv[2] || '/home/claude/crossroads/pokeemerald.gba';
@@ -85,24 +85,12 @@ async function main() {
       // The guest starts the mirrored scene a little after the host, so its
       // picker opens later. Waiting 120 frames caught only the host's and made
       // it look as though the partner never got one.
-      await rig.wait(420);
+      await rig.wait(180);
       await rig.shot('/tmp/claude-0/stage5-picker');
-      for (const w of [0, 1]) {
-        // A opens an ENTER/SUMMARY/CANCEL submenu on the highlighted Pokemon;
-        // a second A takes ENTER; only then does Down move on. Tighter waits
-        // than this and the Down lands while the submenu is still up.
-        for (let i = 0; i < 3; i++) {
-          await rig.tap(w, 'A', 10); await rig.wait(45);
-          await rig.tap(w, 'A', 10); await rig.wait(45);
-          await rig.tap(w, 'Down', 8); await rig.wait(30);
-        }
-        // START jumps the cursor to CONFIRM -- see PartyMenuButtonHandler's
-        // START_BUTTON case. Arrowing down does not get there, which is why
-        // picking three and pressing A repeatedly left the menu open.
-        await rig.shot(`/tmp/claude-0/stage5-picked-p${w}`);
-        await rig.tap(w, 'Start', 8); await rig.wait(25);
-        await rig.tap(w, 'A', 8); await rig.wait(40);
-      }
+      const picked = await pickThreeOnBoth(rig, OFFSETS.selectedOrderAddr, OFFSETS.pickerOpenedAddr);
+      t.check('both players chose three', picked[0] === 3 && picked[1] === 3,
+              `p1 chose ${picked[0]}, p2 chose ${picked[1]}`);
+      await rig.shot('/tmp/claude-0/stage5-picked');
       await rig.wait(120);
     }
 
@@ -164,7 +152,7 @@ async function main() {
         `status=0x${(await rig.u32(w, OFFSETS.dbgLinkStatusAddr)).toString(16)} ` +
         `callbackInstalled=${await rig.u8(w, OFFSETS.dbgHasCallbackAddr)} ` +
         `recvPlayers=${await rig.u8(w, OFFSETS.dbgRecvPlayersAddr)} ` +
-        `sendQueue=${await rig.u8(w, OFFSETS.dbgSendQueueAddr)}`);
+        `recvQueue=${await rig.u8(w, OFFSETS.dbgRecvQueueAddr)}`);
       const pf = await rig.readAt(w, OFFSETS.paletteFadeAddr, 16);
       t.note(`p${w + 1} paletteFade`,
              pf.map((b) => b.toString(16).padStart(2, '0')).join(' '));
@@ -185,10 +173,22 @@ async function main() {
 
     console.log('\n--- fighting it ---');
     let endedAt = null;
-    for (let round = 0; round < 60; round++) {
+    // 60 rounds was enough when this fought two bug catchers with a full party
+    // of six. It is not enough now: the picker caps each side at three, and
+    // Crossroads scales the opponents to the player's level, so the same
+    // script now has three Pokemon beating a level-50 gym leader with
+    // whichever move happens to be first. A run that stopped at 60 reported a
+    // battle that would not end -- it was simply still going.
+    for (let round = 0; round < 700; round++) {
       await rig.tap('both', 'A', 8);
       await rig.wait(24);
+      // B now and then so a mistaken menu does not park the run in a submenu
+      // for ever, and a direction every so often so the move chosen is not
+      // always the first one. Mashing A alone picks slot 1 every turn, which
+      // against a level-scaled leader can be a move that does nothing -- the
+      // fight then runs forever without either side getting anywhere.
       if (round % 7 === 6) { await rig.tap('both', 'B', 8); await rig.wait(24); }
+      if (round % 5 === 2) { await rig.tap('both', round % 10 === 2 ? 'Right' : 'Down', 8); await rig.wait(16); }
 
       if (round % 5 === 4) {
         const live = [await inBattle(rig, 0), await inBattle(rig, 1)];
@@ -196,7 +196,11 @@ async function main() {
       }
     }
 
-    t.note('battle ended', endedAt === null ? 'NO -- still going after 60 rounds'
+    // Either result is a pass. What is under test is that the battle REACHES
+    // an end over this transport and hands control back -- winning is not the
+    // point, and against a leader scaled to the player's level a run driven by
+    // arbitrary button presses will usually lose.
+    t.note('battle ended', endedAt === null ? 'NO -- still going at the end of the run'
                                             : `after ~${endedAt} rounds of input`);
     t.check('the battle ended', endedAt !== null);
 

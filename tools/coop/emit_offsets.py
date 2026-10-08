@@ -73,7 +73,7 @@ WANTED_SYMBOLS = {
     "gCoopDbgLinkStatus": "dbgLinkStatusAddr",
     "gCoopDbgHasCallback": "dbgHasCallbackAddr",
     "gCoopDbgRecvPlayers": "dbgRecvPlayersAddr",
-    "gCoopDbgSendQueue": "dbgSendQueueAddr",
+    "gCoopDbgRecvQueue": "dbgRecvQueueAddr",
     "gPaletteFade": "paletteFadeAddr",
     "gCoopDbgSpecies": "dbgSpeciesAddr",
     "gCoopDbgPartySize": "dbgPartySizeAddr",
@@ -81,6 +81,17 @@ WANTED_SYMBOLS = {
     "gCoopDbgDataLevel": "dbgDataLevelAddr",
     "gCoopDbgPoolSize": "dbgPoolSizeAddr",
     "gCoopDbgSpeciesEarly": "dbgSpeciesEarlyAddr",
+    # The party picker's running choice, so the harness can see a selection
+    # land rather than assume a button press took. Blind choreography against
+    # this menu desynced the moment one console's picker opened later than the
+    # other's, and the resulting half-picked party read as a battle that never
+    # started.
+    "gSelectedOrderFromParty": "selectedOrderAddr",
+    # Set the moment ChooseHalfPartyForBattle is called, so the harness can
+    # wait for the menu to actually exist instead of waiting a fixed number of
+    # frames and hoping. The guest's picker opens later than the host's, and
+    # how much later varies with how fast the two cores happen to be running.
+    "sPickerOpened": "pickerOpenedAddr",
 }
 
 # Symbol -> the field names its entries carry, in order.

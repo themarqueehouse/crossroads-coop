@@ -299,6 +299,35 @@ Debug_EventScript_Script_8::
 	release
 	end
 
+@ Co-op REAL GYM test (R+Start, Scripts…, Script 9). Run it on EACH console --
+@ it is not a co-op scene, each player warps itself.
+@
+@ Everything up to now has been tested against debug scripts that imitate the
+@ gym pattern. This drops both players into Rustboro Gym itself, one tile below
+@ Roxanne, so the next Up+A runs the real RustboroCity_Gym_EventScript_Roxanne
+@ off the real object event: the gate, the mirrored scene, the filler partner
+@ and trainerbattle_single's own bookkeeping, none of which a debug script
+@ exercises.
+@
+@ (5,3) is the tile south of her at (5,2). Walking Up into her is blocked, so
+@ the input turns the player to face her instead of moving.
+Debug_EventScript_Script_9::
+	setvar VAR_RUSTBORO_CITY_STATE, 1
+	warp MAP_RUSTBORO_CITY_GYM, 5, 3
+	waitstate
+	release
+	end
+
+@ Co-op REAL GYM test, the 6v6 (R+Start, Scripts…, Script 10). Run on EACH
+@ console. Lands below Josh at (5,13) -- the one fight in the gym that is two
+@ real trainers with full teams rather than one team dealt across two slots.
+Debug_EventScript_Script_10::
+	setvar VAR_RUSTBORO_CITY_STATE, 1
+	warp MAP_RUSTBORO_CITY_GYM, 5, 14
+	waitstate
+	release
+	end
+
 Debug_CheckSaveBlock::
 	callnative CheckSaveBlock1Size
 	msgbox Debug_SaveBlock1Size, MSGBOX_DEFAULT

@@ -271,6 +271,12 @@ window.__pair = {
       flags: flags.join('|') || '(none)',
       selfMap: '0x' + c.u16(OFF.selfMap).toString(16),
       peerMap: '0x' + c.u16(OFF.peerMap).toString(16),
+      // Where the PARTNER is standing, as this console last heard it. Read
+      // from the other console's mailbox it is the only way a test can watch a
+      // player actually move: a test that asks instead whether a script is
+      // running cannot tell "stuck in a refusal" from "a refusal happens to be
+      // on screen this instant", and reported a soft-lock that was not one.
+      peerPos: `${c.u16(OFF.peerX)},${c.u16(OFF.peerY)}`,
       join: JOIN_STEP[c.byte(OFF.joinStep)] ?? c.byte(OFF.joinStep),
       posSent: c.u16(OFF.posSent),
       posRecv: c.u16(OFF.posRecv),

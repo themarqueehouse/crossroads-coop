@@ -15,6 +15,8 @@
 #include "trainer_hill.h"
 #include "util.h"
 #include "battle_pyramid.h"
+#include "coop.h"
+#include "constants/script_commands.h"
 #include "constants/battle_frontier.h"
 #include "constants/battle_setup.h"
 #include "constants/event_objects.h"
@@ -565,6 +567,35 @@ static u8 CheckTrainer(u8 objectEventId)
     else
     {
         trainerBattlePtr = GetObjectEventScriptPointerByObjectEventId(objectEventId);
+
+        // A trainer whose fight needs both players does not notice one player.
+        //
+        // Without this, walking into such a trainer's line of sight alone is a
+        // soft-lock, not a refusal. The approach fires, the script runs,
+        // coopscene turns it down and prints "This won't happen without your
+        // partner here", control is released -- and the player is still
+        // standing in the same line of sight, so it all happens again, and
+        // again, with no step ever taken in between. The player cannot walk
+        // out of it and has no other way to leave.
+        //
+        // It is not a corner case either: of the object events whose scripts
+        // the generator rewrote, 95 are trainers with a line of sight against
+        // 34 that wait to be spoken to. Nearly every gym trainer in the game
+        // is a tile a lone player could not walk past.
+        //
+        // Talk-triggered scripts need none of this -- there the refusal is a
+        // message the player dismisses and walks away from, which is the right
+        // behaviour and stays as it is.
+        //
+        // The test is the script's own first opcode rather than a flag kept
+        // alongside it: coopscene is what makes a fight need two players, so
+        // asking the script directly cannot fall out of step with the scripts
+        // the generator writes.
+        if (trainerBattlePtr != NULL
+         && *trainerBattlePtr == SCR_OP_COOPSCENE
+         && !Coop_PartnerIsHere())
+            return 0;
+
         struct ScriptContext ctx;
         if (RunScriptImmediatelyUntilEffect(SCREFF_V1 | SCREFF_SAVE | SCREFF_HARDWARE | SCREFF_TRAINERBATTLE, trainerBattlePtr, &ctx))
         {
