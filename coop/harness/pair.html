@@ -228,13 +228,13 @@ window.__pair = {
   // The save chip's contents, for building a starting save to hand over.
   // FSSync flushes the emulator's filesystem first; without it the bytes can
   // be a save or two behind what the game thinks it wrote.
-  async sync() {
-    await cores[0].core.FSSync();
+  async sync(which = 0) {
+    await cores[which].core.FSSync();
     return true;
   },
 
-  save() {
-    return cores[0].core.getSave();
+  save(which = 0) {
+    return cores[which].core.getSave();
   },
 
   // Which gates each core passed through, in order.

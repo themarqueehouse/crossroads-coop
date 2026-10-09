@@ -71,6 +71,9 @@ async function main() {
     if (!done) throw new Error('the setup script never finished');
 
     console.log('\n--- saving ---');
+    // Script 15 empties the Player 2 slot and writes in the same breath, so
+    // the partner console the rig runs cannot leave its character in the file
+    // somebody else is going to start from.
     await runDebugScript(rig, 0, 15);
     // The save itself takes a moment and must not be interrupted.
     await rig.wait(600);

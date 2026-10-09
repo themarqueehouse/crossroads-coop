@@ -364,25 +364,23 @@ Debug_EventScript_Script_13::
 	end
 
 @ MID-GAME TEST SAVE (R+Start, Scripts…, Script 14). Run on PLAYER 1 only,
-@ then let it save itself.
+@ then Script 15 to save.
 @
 @ The point is to start a playtest somewhere worth testing rather than in a
-@ bedroom: all eight badges so every HM is usable, every HM in the bag, a team
-@ that can carry them, and enough supplies to get into trouble with.
+@ bedroom: every HM usable, a team that can carry them, and supplies.
 @
-@ The HMs are handed over as items rather than taught here. Which moves a
-@ Pokemon knows depends on how it was generated, and quietly ending up without
-@ Surf would waste a playtest; with reusable TMs and HMs, teaching them takes
-@ a few seconds and is visible.
+@ It ends by jumping into Debug_CheatStart, which is the maintained way to
+@ put a save past the intro -- badges, Pokedex, running shoes, every town
+@ marked visited so Fly works, and the story flags.
+@
+@ Those flags are the whole reason this is a goto rather than a handful of
+@ setflags. The first version of this stamped badges onto a brand-new game
+@ and nothing else, which produced a save with eight badges and a story that
+@ had never started: walk into the grass on Route 101 and Birch still runs up
+@ to hand you a starter, on both consoles, at different speeds.
+@
+@ The extras go FIRST because Debug_CheatStart ends the script.
 Debug_EventScript_Script_14::
-	setflag FLAG_BADGE01_GET
-	setflag FLAG_BADGE02_GET
-	setflag FLAG_BADGE03_GET
-	setflag FLAG_BADGE04_GET
-	setflag FLAG_BADGE05_GET
-	setflag FLAG_BADGE06_GET
-	setflag FLAG_BADGE07_GET
-	setflag FLAG_BADGE08_GET
 	giveitem ITEM_HM_CUT
 	giveitem ITEM_HM_FLY
 	giveitem ITEM_HM_SURF
@@ -402,12 +400,19 @@ Debug_EventScript_Script_14::
 	givemon SPECIES_AGGRON, 50
 	givemon SPECIES_FLYGON, 50
 	givemon SPECIES_MANECTRIC, 50
-	release
+	goto Debug_CheatStart
 	end
 
-@ Saves the game where it stands (R+Start, Scripts…, Script 15). Run it after
-@ Script 14, on Player 1.
+@ Clears the Player 2 slot and saves (R+Start, Scripts…, Script 15). Run it
+@ after Script 14, on Player 1.
+@
+@ Clearing matters. A save generated with a partner console attached comes out
+@ with that partner's character already in the Player 2 slot, and the next
+@ person to join is handed it -- their name and the boy/girl they just chose
+@ are overwritten by somebody else's. The first save shipped from here did
+@ exactly that.
 Debug_EventScript_Script_15::
+	callnative Debug_ClearCoopPlayer2
 	callnative Debug_SaveNow
 	release
 	end

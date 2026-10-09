@@ -64,6 +64,32 @@ async function main() {
     t.note('party', `${partyCount} Pokemon`);
     t.check('the team is there', partyCount === 6, `only ${partyCount}`);
 
+    // Who does the save think Player 2 is?
+    //
+    // This is the field that decides whether a joining player makes a
+    // character or gets one back. A save shipped with it already set hands
+    // the next person somebody else's character and overwrites the name and
+    // gender they just chose.
+    const rec = OFFSETS.saveBlock1Addr + OFFSETS.coopPlayer2;
+    const claimed = await rig.u8(0, rec + OFFSETS.claimed);
+    const p2Party = await rig.u8(0, rec + OFFSETS.partyCount);
+    const nameBytes = await rig.readAt(0, rec + OFFSETS.playerName, 8);
+    t.note('player 2 record', `claimed=${claimed} party=${p2Party} ` +
+           `nameBytes=[${[...nameBytes].join(',')}]`);
+    t.check('player 2 is unclaimed, so a joiner keeps their own character',
+            claimed === 0,
+            'the save already has a player 2 -- joining overwrites their name and gender');
+
+    // The story flags, which are what stop Route 101 running Birch at two
+    // players at two different speeds.
+    const flagSet = async (id) =>
+      (((await rig.u8(0, flagsAddr + (id >> 3))) >> (id & 7)) & 1) === 1;
+    const started = await flagSet(OFFSETS.flagAdventureStarted);
+    const dex = await flagSet(OFFSETS.flagPokedexGet);
+    t.note('story flags', `adventure started=${started} pokedex=${dex}`);
+    t.check('the story has actually begun', started && dex,
+            'badges on a brand-new story -- Birch still runs at you on Route 101');
+
     t.summary();
   } finally {
     await rig.close();
