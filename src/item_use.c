@@ -1,4 +1,5 @@
 #include "global.h"
+#include "coop.h"
 #include "item_use.h"
 #include "battle.h"
 #include "battle_anim.h"
@@ -1116,6 +1117,10 @@ void ItemUseOutOfBattle_BlackWhiteFlute(u8 taskId)
 
 void Task_UseDigEscapeRopeOnField(u8 taskId)
 {
+    // Take the partner along. An Escape Rope empties a cave in one step, and a
+    // pair split between inside and outside cannot run anything that needs
+    // both of them.
+    Coop_FollowMe();
     ResetInitialPlayerAvatarState();
     StartEscapeRopeFieldEffect();
     DestroyTask(taskId);

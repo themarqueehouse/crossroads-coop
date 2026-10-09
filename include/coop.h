@@ -290,6 +290,17 @@ bool8 Coop_IsInMirroredScene(void);
  */
 bool8 Coop_IsPartnerObject(const struct ObjectEvent *obj);
 
+/**
+ * "I am travelling -- come with me."
+ *
+ * Called by the four moves that cross the map: Fly, Teleport, Dig and an
+ * Escape Rope. The partner follows once the traveller has arrived somewhere;
+ * no destination is passed, because at the moment these are called the game
+ * does not always know it yet.
+ */
+void Coop_FollowMe(void);
+void Coop_ReceiveFollow(u8 playerId, const u16 *cmd);
+
 /** Player 2's stored character, inside Player 1's save. */
 struct CoopPlayer2 *GetCoopPlayer2(void);
 

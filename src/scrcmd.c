@@ -1036,6 +1036,19 @@ bool8 ScrCmd_coopnextbattle(struct ScriptContext *ctx)
 
 // Runs once the picker has closed: checks what was chosen, and holds both
 // consoles until the other player has chosen too.
+// Bring the partner along to wherever this script is about to send us.
+//
+// The same announcement Fly, Teleport, Dig and an Escape Rope make. Useful on
+// its own for a script that moves the player a long way -- and it is how the
+// mechanism is tested, since a test rig cannot work the fly map.
+bool8 ScrCmd_coopfollowme(struct ScriptContext *ctx)
+{
+    Script_RequestEffects(SCREFF_V1);
+
+    Coop_FollowMe();
+    return FALSE;
+}
+
 bool8 ScrCmd_coopbattleready(struct ScriptContext *ctx)
 {
     Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);

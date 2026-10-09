@@ -1,4 +1,5 @@
 #include "global.h"
+#include "coop.h"
 #include "data.h"
 #include "decompress.h"
 #include "event_data.h"
@@ -3514,6 +3515,11 @@ static void SpriteCB_NPCFlyOut(struct Sprite *sprite)
 
 u8 FldEff_UseFly(void)
 {
+    // Take the partner along. Fly crosses the map, and a co-op pair split
+    // across two towns cannot open a gym door or run a story scene until they
+    // are back together.
+    Coop_FollowMe();
+
     u8 taskId = CreateTask(Task_FlyOut, 254);
     gTasks[taskId].tMonId = gFieldEffectArguments[0];
     return 0;

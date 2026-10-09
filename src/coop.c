@@ -1,6 +1,7 @@
 #include "global.h"
 #include "coop.h"
 #include "fieldmap.h"
+#include "palette.h"
 #include "money.h"
 #include "coop_sync.h"
 #include "link.h"
@@ -477,6 +478,117 @@ void Coop_EndWaitMessage(void)
 
     HideFieldMessageBox();
     sShowingWaitMessage = FALSE;
+}
+
+// ---------------------------------------------------------------------------
+// Travelling together
+//
+// Fly, Teleport, Dig and an Escape Rope move one player across the map in a
+// way walking never does. Left alone, one player ends up in Lilycove and the
+// other in Petalburg, and from then on every gym door and every story scene
+// refuses, because they all need both players present. Getting back together
+// means a long walk that nobody enjoys twice.
+//
+// So the traveller takes their partner along. What crosses the link is not a
+// destination -- the four moves work out where they are going at four
+// different points, and some of them not until the screen has already faded
+// -- but a far simpler thing: "I am travelling, come with me." The partner
+// remembers that, waits until it can see the traveller standing on a map that
+// is not its own, and warps to them.
+//
+// Deciding on arrival rather than departure is what makes one mechanism cover
+// all four moves, and it is also what makes it safe: the partner moves when
+// the traveller has finished moving, not into a map that is still loading.
+// It also means a cancelled trip costs nothing -- back out of the fly map and
+// the request simply expires, because the traveller never turns up anywhere
+// their partner is not.
+#define FOLLOW_SENDS        6     // repeats, so one dropped frame is not the end of it
+#define FOLLOW_WAIT_FRAMES  900   // give up if they never arrive anywhere
+
+static EWRAM_DATA u8 sFollowSendsLeft = 0;
+static EWRAM_DATA u8 sFollowSeq = 0;
+static EWRAM_DATA u8 sUsedPeerFollowSeq = 0;
+static EWRAM_DATA bool8 sFollowPending = FALSE;
+static EWRAM_DATA u16 sFollowWaited = 0;
+
+void Coop_FollowMe(void)
+{
+    if (!IsCoopLinkActive())
+        return;
+
+    // A sequence number, so the repeats are recognised as one request rather
+    // than four separate trips.
+    sFollowSeq++;
+    if (sFollowSeq == 0)
+        sFollowSeq = 1;
+    sFollowSendsLeft = FOLLOW_SENDS;
+}
+
+static bool8 CoopSendFollow(u16 *sendCmd)
+{
+    if (sFollowSendsLeft == 0)
+        return FALSE;
+
+    sendCmd[0] = LINKCMD_COOP_FOLLOW;
+    sendCmd[1] = sFollowSeq;
+    sFollowSendsLeft--;
+
+    return TRUE;
+}
+
+void Coop_ReceiveFollow(u8 playerId, const u16 *cmd)
+{
+    u8 seq = cmd[1] & 0xFF;
+
+    if (playerId == GetMultiplayerId())
+        return;
+
+    // Same trip, repeated. Taking it twice would re-arm the wait after we had
+    // already arrived and send us chasing them again.
+    if (seq == sUsedPeerFollowSeq)
+        return;
+
+    sUsedPeerFollowSeq = seq;
+    sFollowPending = TRUE;
+    sFollowWaited = 0;
+}
+
+// Go to them, once they are somewhere to go to.
+static void Coop_UpdateFollow(void)
+{
+    if (!sFollowPending)
+        return;
+
+    if (++sFollowWaited > FOLLOW_WAIT_FRAMES)
+    {
+        sFollowPending = FALSE;
+        return;
+    }
+
+    // Not until this console is its own master. Warping out from under a
+    // script, a battle or a menu is how a save gets corrupted, and the
+    // traveller is not going anywhere.
+    if (ArePlayerFieldControlsLocked() || ScriptContext_IsEnabled()
+        || Coop_IsSuspendedForBattle() || gPaletteFade.active)
+        return;
+
+    if (!gCoopPeer.valid)
+        return;
+
+    // Still on the way. Their position keeps arriving throughout the trip, so
+    // "same map as us" means they have not left yet rather than that they have
+    // arrived next to us.
+    if (gCoopPeer.mapGroup == gSaveBlock1Ptr->location.mapGroup
+        && gCoopPeer.mapNum == gSaveBlock1Ptr->location.mapNum)
+        return;
+
+    sFollowPending = FALSE;
+
+    // Out of camera space, the same conversion the saved record needs.
+    SetWarpDestination(gCoopPeer.mapGroup, gCoopPeer.mapNum, WARP_ID_NONE,
+                       gCoopPeer.x - MAP_OFFSET, gCoopPeer.y - MAP_OFFSET);
+    DoWarp();
+    ResetInitialPlayerAvatarState();
 }
 
 // Announce our arrival, if it still needs announcing. Returns TRUE if it wrote
@@ -1550,6 +1662,7 @@ void Coop_Update(void)
     }
 
     Coop_UpdateGate();
+    Coop_UpdateFollow();
     Coop_UpdateBoxSync();
     UpdateGuestScene();
     Coop_UpdatePendingScene();
@@ -1618,6 +1731,11 @@ static void CoopSendPositionCB(void)
         return;
 
     if (CoopSendGate(gSendCmd))
+        return;
+
+    // "Come with me" is small, rare and time-critical -- the partner cannot
+    // act on it until the traveller has arrived, so a late one strands them.
+    if (CoopSendFollow(gSendCmd))
         return;
 
     // Changes before positions. A missed position costs one frame of smoothness

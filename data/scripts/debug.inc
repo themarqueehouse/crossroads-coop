@@ -344,6 +344,25 @@ Debug_EventScript_Script_11::
 	release
 	end
 
+@ Co-op FOLLOW test (R+Start, Scripts…, Script 12). Run on ONE console.
+@ The same pair of things Fly does: announce the trip, then take it. The
+@ partner should arrive in the gym under their own steam.
+Debug_EventScript_Script_12::
+	coopfollowme
+	warp MAP_RUSTBORO_CITY_GYM, 8, 15
+	waitstate
+	release
+	end
+
+@ Co-op ORDINARY WARP test (R+Start, Scripts…, Script 13). Run on ONE console.
+@ No coopfollowme: the partner must NOT be dragged along. Every door in the
+@ game is a warp like this one.
+Debug_EventScript_Script_13::
+	warp MAP_RUSTBORO_CITY, 16, 40
+	waitstate
+	release
+	end
+
 Debug_CheckSaveBlock::
 	callnative CheckSaveBlock1Size
 	msgbox Debug_SaveBlock1Size, MSGBOX_DEFAULT

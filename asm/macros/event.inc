@@ -2028,6 +2028,12 @@
 	@ Team sizes are not set here: see AreMultiPartiesFullTeams. A trainer
 	@ marked `Multi Party: Half` brings three, otherwise six.
 	@ Two real trainers, each with their own team.
+	@ "Come with me" -- the partner warps to wherever this player ends up.
+	@ Put it immediately before the warp that moves them.
+	.macro coopfollowme
+	.byte SCR_OP_COOPFOLLOWME
+	.endm
+
 	.macro coopbattle trainer_a:req, trainer_b:req
 	.byte SCR_OP_COOPBATTLE
 	.2byte \trainer_a

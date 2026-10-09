@@ -1,4 +1,5 @@
 #include "global.h"
+#include "coop.h"
 #include "field_effect.h"
 #include "field_player_avatar.h"
 #include "fldeff.h"
@@ -34,6 +35,11 @@ static void FieldCallback_Teleport(void)
 
 bool8 FldEff_UseTeleport(void)
 {
+    // Take the partner along. Teleport crosses the map, and a co-op pair split
+    // across two towns cannot open a gym door or run a story scene until they
+    // are back together.
+    Coop_FollowMe();
+
     u8 taskId = CreateFieldMoveTask();
     gTasks[taskId].data[8] = (u32)StartTeleportFieldEffect >> 16;
     gTasks[taskId].data[9] = (u32)StartTeleportFieldEffect;

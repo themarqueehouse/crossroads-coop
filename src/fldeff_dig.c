@@ -1,4 +1,5 @@
 #include "global.h"
+#include "coop.h"
 #include "braille_puzzles.h"
 #include "event_scripts.h"
 #include "field_effect.h"
@@ -39,6 +40,11 @@ static void FieldCallback_Dig(void)
 
 bool8 FldEff_UseDig(void)
 {
+    // Take the partner along. Dig crosses the map, and a co-op pair split
+    // across two towns cannot open a gym door or run a story scene until they
+    // are back together.
+    Coop_FollowMe();
+
     u8 taskId = CreateFieldMoveTask();
 
     gTasks[taskId].data[8] = (u32)StartDigFieldEffect >> 16;

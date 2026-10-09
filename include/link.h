@@ -85,6 +85,9 @@
 // "Run this scene" -- a ROM address, which names the same script on both
 // consoles because both are running the same ROM.
 #define LINKCMD_COOP_SCENE              0x3337
+// Co-op: "I am travelling -- come with me." Carries no destination; see
+// Coop_FollowMe.
+#define LINKCMD_COOP_FOLLOW             0x3338
 #define LINKCMD_SEND_HELD_KEYS          0xCAFE
 #define LINKCMD_SEND_BLOCK_REQ          0xCCCC
 #define LINKCMD_START_TRADE             0xCCDD
