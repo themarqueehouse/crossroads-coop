@@ -88,19 +88,26 @@ async function main() {
     // moment the nudges are for Birch's speech, which is a long way from the
     // menu and not what is under test.
     // What is holding player 2 at the menu, if anything is.
-    for (let i = 0; i < 6; i++) {
-      await rig.wait(90);
+    for (let i = 0; i < 20; i++) {
+      await rig.wait(180);
       const pf = await rig.readAt(1, OFFSETS.paletteFadeAddr, 8);
       const mb = await rig.mailbox(1);
-      console.log(`      p2 t+${(i + 1) * 90}: state=${mb.state} map=${mb.selfMap}` +
+      console.log(`      p2 t+${(i + 1) * 180}: state=${mb.state} map=${mb.selfMap}` +
         `  entry=${await rig.u8(1, OFFSETS.dbgJoinEntryAddr)}` +
+        `  err p1=${await rig.u8(0, OFFSETS.linkErrorSiteAddr)}` +
+        `/${(await rig.u32(0, OFFSETS.linkErrorStatusAddr)).toString(16)}` +
+        `  err p2=${await rig.u8(1, OFFSETS.linkErrorSiteAddr)}` +
+        `/${(await rig.u32(1, OFFSETS.linkErrorStatusAddr)).toString(16)}` +
+        `  p1state=${(await rig.mailbox(0)).state}` +
+        `  p1entry=${await rig.u8(0, OFFSETS.dbgJoinEntryAddr)}` +
+        `  p1menu=${(await rig.u8(0, OFFSETS.dbgMenuActionAddr)).toString(16)}` +
         `  paletteFade=[${[...pf].map((b) => b.toString(16)).join(' ')}]`);
     }
 
-    await nudge(rig, 320);
-    await rig.wait(240);
-    for (let i = 0; i < 8; i++) { await rig.tap('both', 'B', 6); await rig.wait(20); }
-    await rig.wait(600);
+    // No nudging through Birch any more: both consoles skip the opening and
+    // land in Littleroot by themselves. Anything pressed here would be pressed
+    // at whatever is actually on screen.
+    await rig.wait(900);
     await rig.shot('/tmp/claude-0/stage9-started');
 
     t.note('maps', `p1=0x${(await mapOf(rig, 0)).toString(16)} ` +
@@ -121,6 +128,21 @@ async function main() {
     t.check('player 2 got in with no save and no intro',
             (await mapOf(rig, 1)) !== 0,
             'player 2 never reached the overworld');
+
+    // And in the same world as Player 1.
+    //
+    // Player 2's console starts before a byte has crossed the link, so it has
+    // to guess a region, and it guesses Hoenn. Player 1 may have chosen Kanto
+    // on the title screen -- which is sticky, so "I switched it back" does not
+    // undo it. Without the region travelling with the world sync the two spent
+    // the session on different continents wearing different skins, which is
+    // exactly what came back from the first real playtest.
+    await rig.wait(900);
+    const sameMap = (await mapOf(rig, 0)) === (await mapOf(rig, 1));
+    t.note('together', `p1=0x${(await mapOf(rig, 0)).toString(16)} ` +
+                       `p2=0x${(await mapOf(rig, 1)).toString(16)}`);
+    t.check('and both players ended up in the same place', sameMap,
+            'the two consoles are on different maps');
 
     t.summary();
   } finally {

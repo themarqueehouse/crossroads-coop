@@ -336,7 +336,14 @@ void SetLocalLinkPlayerId(u8 playerId)
 static void InitLocalLinkPlayer(void)
 {
     gLocalLinkPlayer.trainerId = READ_OTID_FROM_SAVE;
-    StringCopy(gLocalLinkPlayer.name, gSaveBlock2Ptr->playerName);
+    // Bounded. name is a fixed field with the rest of the block behind it, and
+    // playerName is only guaranteed terminated once something has set it. A
+    // console that reached the link without passing a naming screen has a
+    // zero-filled name, EOS is 0xFF, and the copy ran on through gender,
+    // linkType and version -- so the block the partner received failed its own
+    // sanity checks and the two sat in the player exchange until it timed out.
+    StringCopyN(gLocalLinkPlayer.name, gSaveBlock2Ptr->playerName, PLAYER_NAME_LENGTH);
+    gLocalLinkPlayer.name[PLAYER_NAME_LENGTH] = EOS;
     gLocalLinkPlayer.gender = gSaveBlock2Ptr->playerGender;
     gLocalLinkPlayer.linkType = gLinkType;
     gLocalLinkPlayer.language = gGameLanguage;

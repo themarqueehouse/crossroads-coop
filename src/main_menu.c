@@ -1036,9 +1036,11 @@ static void Task_CoopWaitForPartner(u8 taskId)
         // from a lit menu straight into the game.
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 0x10, RGB_BLACK);
         gTasks[taskId].tCoopFadedBack = TRUE;
+        gCoopDbgJoinEntry = 53;
         return;
     }
 
+    gCoopDbgJoinEntry = 54;
     gTasks[taskId].func = Task_HandleMainMenuAPressed;
 }
 
@@ -1047,8 +1049,11 @@ static void Task_HandleMainMenuAPressed(u8 taskId)
     bool8 wirelessAdapterConnected;
     u8 action;
 
+    gCoopDbgJoinEntry = 50;
+
     if (!gPaletteFade.active)
     {
+        gCoopDbgJoinEntry = 51;
         if (gTasks[taskId].tMenuType == HAS_MYSTERY_EVENTS)
             RemoveScrollIndicatorArrowPair(gTasks[taskId].tScrollArrowTaskId);
         ClearStdWindowAndFrame(0, TRUE);
@@ -1163,6 +1168,8 @@ static void Task_HandleMainMenuAPressed(u8 taskId)
         ChangeBgY(0, 0, BG_COORD_SET);
         ChangeBgY(1, 0, BG_COORD_SET);
 
+        gCoopDbgMenuAction = (gTasks[taskId].tMenuType << 4) | action;
+
         // This hack is for two people. Starting or continuing the adventure
         // alone would advance a save the other player is meant to share, past
         // story beats they are supposed to be standing next to -- so it waits
@@ -1191,6 +1198,7 @@ static void Task_HandleMainMenuAPressed(u8 taskId)
             BeginNormalPaletteFade(PALETTES_ALL, 0, 0x10, 0, RGB_BLACK);
             gTasks[taskId].tCoopFadedBack = FALSE;
             gTasks[taskId].func = Task_CoopWaitForPartner;
+            gCoopDbgJoinEntry = 52;
             return;
         }
 
@@ -1198,8 +1206,40 @@ static void Task_HandleMainMenuAPressed(u8 taskId)
         {
         case ACTION_NEW_GAME:
         default:
+            gCoopDbgJoinEntry = 55;
+
+            // In co-op, skip the opening entirely. Two players land in their
+            // home town together and are asked who they are and which starter
+            // they want once they are there. Sitting one of them through the
+            // van and Birch's speech -- or Oak's -- while the other waits is
+            // the wrong shape for a game meant to be played together, and it
+            // put the two consoles minutes out of phase, which the link did
+            // not survive.
+            //
+            // Ahead of the isFrlgInt branch below, deliberately. That branch
+            // runs the FireRed opening and returns, so a co-op check placed
+            // after it was simply never reached for anyone who picked Kanto on
+            // the title screen -- which is sticky, so "I switched it back to
+            // Emerald" did not undo it. Region is honoured here instead of
+            // forced: whichever title screen the player came through is the
+            // region they get, and the join sends it to Player 2 so both
+            // consoles wear the same skin.
+            if (IsCoopSessionPaired())
+            {
+                gCoopDbgJoinEntry = 57;
+                gPlttBufferUnfaded[0] = RGB_BLACK;
+                gPlttBufferFaded[0] = RGB_BLACK;
+                gSaveBlock2Ptr->playerRegion = isFrlgInt ? REGION_KANTO : REGION_HOENN;
+                sCurrItemAndOptionMenuCheck = 0;
+                DestroyTask(taskId);
+                FreeAllWindowBuffers();
+                SetMainCallback2(CB2_CoopNewGameSkipIntro);
+                return;
+            }
+
             if (isFrlgInt)
             {
+                gCoopDbgJoinEntry = 56;
                 DestroyTask(taskId);
                 FreeAllWindowBuffers();
                 if (action != ACTION_OPTION)
@@ -1213,8 +1253,9 @@ static void Task_HandleMainMenuAPressed(u8 taskId)
 
             gPlttBufferUnfaded[0] = RGB_BLACK;
             gPlttBufferFaded[0] = RGB_BLACK;
-            gTasks[taskId].func = Task_NewGameBirchSpeech_Init;
             gSaveBlock2Ptr->playerRegion = REGION_HOENN;
+
+            gTasks[taskId].func = Task_NewGameBirchSpeech_Init;
             break;
         case ACTION_CONTINUE:
             gPlttBufferUnfaded[0] = RGB_BLACK;

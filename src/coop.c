@@ -22,6 +22,7 @@
 #include "field_message_box.h"
 #include "field_control_avatar.h"
 #include "event_scripts.h"
+#include "intro.h"
 #include "constants/event_objects.h"
 
 // ---------------------------------------------------------------------------
@@ -1097,6 +1098,7 @@ static void GatherWorldState(struct CoopWorldState *out)
         out->pcItems[i] = gSaveBlock1Ptr->pcItems[i];
 
     out->money = GetMoney(&gSaveBlock1Ptr->money);
+    out->playerRegion = gSaveBlock2Ptr->playerRegion;
 }
 
 // Bring this console up to date with the shared world.
@@ -1156,6 +1158,18 @@ static void ApplyWorldState(const struct CoopWorldState *in)
         gSaveBlock1Ptr->pcItems[i] = in->pcItems[i];
 
     SetMoney(&gSaveBlock1Ptr->money, in->money);
+
+    // Adopt Player 1's region, and with it the presentation that hangs off it.
+    //
+    // isFrlg and isFrlgInt are not in the save block -- SetInitialGame derives
+    // them from playerRegion, and until something calls it they keep whatever
+    // the title screen left behind. The skin is read fresh on the next map
+    // load, which the warp onto Player 1's map provides a moment after this.
+    if (in->playerRegion == REGION_KANTO || in->playerRegion == REGION_HOENN)
+    {
+        gSaveBlock2Ptr->playerRegion = in->playerRegion;
+        SetInitialGame();
+    }
 }
 
 // Take over the character Player 1 handed back.
@@ -1274,6 +1288,11 @@ bool8 IsCoopSessionEngaged(void)
 // looks identical to the menu never releasing -- the last frame just stays on
 // screen either way.
 EWRAM_DATA u8 gCoopDbgJoinEntry = 0;
+
+// (menu type << 4) | action, as the main menu computed it. Which branch the
+// dispatch took is not visible from the screen: a menu that holds and a menu
+// that dispatched to the wrong action look the same from outside.
+EWRAM_DATA u8 gCoopDbgMenuAction = 0;
 
 // Silence every outgoing sync for a moment.
 //
@@ -1629,6 +1648,24 @@ void Coop_Update(void)
                         // the player is actually in control.
                         sPendingRecord = *stored;
                         sHasPendingRecord = TRUE;
+                    }
+                    else
+                    {
+                        // Nobody has played as Player 2 in this save before,
+                        // so there is no character and no saved spot to go
+                        // back to -- but there is still a partner standing
+                        // somewhere, and Player 2 should be standing next to
+                        // them.
+                        //
+                        // The same wait the travel-together warp uses, for the
+                        // same reason: it goes as soon as this console is its
+                        // own master, and it reads the live position broadcast
+                        // rather than anything stored, so it lands where
+                        // Player 1 actually is. Without it a first session put
+                        // Player 2 in Littleroot and left them there while
+                        // Player 1 started the game in Pallet Town.
+                        sFollowPending = TRUE;
+                        sFollowWaited = 0;
                     }
                     sGotPlayer2 = TRUE;
                 }

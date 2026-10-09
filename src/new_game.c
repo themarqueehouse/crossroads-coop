@@ -166,7 +166,21 @@ void NewGameInitData(void)
     if (gSaveFileStatus == SAVE_STATUS_EMPTY || gSaveFileStatus == SAVE_STATUS_CORRUPT)
         RtcReset();
 
-    StringCopy(rivalName, gSaveBlock2Ptr->rivalName);
+    // Bounded, because the source is not guaranteed to be terminated.
+    //
+    // This saves the rival's name across the wipe below and puts it back
+    // afterwards, and an unbounded StringCopy is safe only as long as whatever
+    // ran before this set the name. Both openings do -- Birch's speech and
+    // Oak's -- so on the ordinary paths it never mattered. Skipping the opening
+    // is what exposed it: a console whose SaveBlock2 has only been through
+    // Sav2_ClearSetDefault has a rivalName of zeroes, and EOS is 0xFF, so the
+    // copy walked out of the field and kept going until it found a 0xFF
+    // somewhere further into the save block -- hundreds of bytes, into eight
+    // bytes of stack. It took the return address with it and the console froze
+    // on the spot, with the last frame still on screen.
+    StringCopyN(rivalName, gSaveBlock2Ptr->rivalName, PLAYER_NAME_LENGTH);
+    rivalName[PLAYER_NAME_LENGTH] = EOS;
+
     gDifferentSaveFile = TRUE;
     gSaveBlock2Ptr->encryptionKey = 0;
     ZeroPlayerPartyMons();

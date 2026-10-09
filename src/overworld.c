@@ -1921,7 +1921,90 @@ static bool8 RunFieldCallback(void)
 // The placeholder name and gender are overwritten by the stored record the
 // moment it arrives. On a first session there is nothing stored, and that is
 // when Player 2 is asked who they are -- once.
+static const u8 gText_CoopPlayerOneDefaultName[] = _("PLAYER1");
 static const u8 gText_CoopPlayerTwoDefaultName[] = _("PLAYER2");
+
+// Outside the front door of the player's house, in whichever region they are
+// starting in. Both intro-free entry points land here, so the two cannot drift
+// apart: Player 2 used to be hardcoded into Littleroot while Player 1 could
+// have chosen Kanto, and the pair then spent the session on different
+// continents with mismatched menus and music.
+static void Coop_WarpToStartTown(void)
+{
+    if (gSaveBlock2Ptr->playerRegion == REGION_KANTO)
+        SetWarpDestination(MAP_GROUP(MAP_PALLET_TOWN), MAP_NUM(MAP_PALLET_TOWN),
+                           WARP_ID_NONE, 6, 8);
+    else
+        SetWarpDestination(MAP_GROUP(MAP_LITTLEROOT_TOWN), MAP_NUM(MAP_LITTLEROOT_TOWN),
+                           WARP_ID_NONE, 5, 8);
+    WarpIntoMap();
+}
+
+// Player 1 starting a fresh co-op game: a real new game, without the opening.
+//
+// Everything CB2_NewGame does, except where it leaves you. The ordinary one
+// hands off to ExecuteTruckSequence -- waking in the back of the moving van,
+// the start of a story told to one person. Two players skipping that is the
+// whole point: they land in Littleroot together and get asked who they are
+// and which starter they want, there, in the world.
+//
+// It matters that both consoles arrive at roughly the same moment. Player 2
+// enters as soon as the pair is up, and when Player 1 was still minutes deep
+// in Birch's speech the two were so far out of phase that Player 2 sat alone
+// in the link exchange, retrying every fifteen seconds against a console that
+// had not opened its link yet, for as long as the intro lasted.
+void CB2_CoopNewGameSkipIntro(void)
+{
+    gCoopDbgJoinEntry = 40;
+    FieldClearVBlankHBlankCallbacks();
+    StopMapMusic();
+    ResetSafariZoneFlag_();
+    gCoopDbgJoinEntry = 41;
+
+    // Deaf while the save is wiped and rebuilt.
+    //
+    // A new game is thousands of flag, Pokedex, bag and storage writes, and
+    // every one of them has a co-op hook on it. With the link already up --
+    // which it is, because the pair had to be there for this path to be taken
+    // at all -- those hooks queue a frame each, the backlog fills within the
+    // first few hundred, and the console stops advancing frames entirely
+    // somewhere inside ClearSav1. Nothing on screen changes, so from outside
+    // it is indistinguishable from a menu that never let go.
+    //
+    // There is nothing worth sending anyway: this is the moment the shared
+    // world is being created, and the partner is creating their own copy of it
+    // at the same time.
+    Coop_SuppressSync(TRUE);
+    NewGameInitData();
+    Coop_SuppressSync(FALSE);
+
+    // A name, which the naming screen inside the opening would have asked for.
+    // Player 1 is asked properly once they are standing in the world; this is
+    // only so the link has something to carry in the meantime. Without it the
+    // console enters the player exchange nameless and the partner's console
+    // has nothing to show in its place.
+    if (gSaveBlock2Ptr->playerName[0] == EOS || gSaveBlock2Ptr->playerName[0] == 0)
+        StringCopy(gSaveBlock2Ptr->playerName, gText_CoopPlayerOneDefaultName);
+
+    gCoopDbgJoinEntry = 42;
+
+    // NewGameInitData finishes by putting the player indoors where their
+    // opening would have begun -- the back of the moving van, or the bedroom
+    // above Oak's town. Overrule it: outside the front door of whichever house
+    // belongs to the region they chose.
+    Coop_WarpToStartTown();
+
+    ResetInitialPlayerAvatarState();
+    PlayTimeCounter_Start();
+    ScriptContext_Init();
+    UnlockPlayerFieldControls();
+    gFieldCallback = FieldCB_WarpExitFadeFromBlack;
+    gFieldCallback2 = NULL;
+    DoMapLoadLoop(&gMain.state);
+    SetFieldVBlankCallback();
+    SetMainCallback1(CB1_Overworld);
+    SetMainCallback2(CB2_Overworld);
+}
 
 void CB2_CoopJoinNewGame(void)
 {
@@ -1957,9 +2040,7 @@ void CB2_CoopJoinNewGame(void)
     if (gSaveBlock2Ptr->playerName[0] == EOS)
         StringCopy(gSaveBlock2Ptr->playerName, gText_CoopPlayerTwoDefaultName);
 
-    SetWarpDestination(MAP_LITTLEROOT_TOWN >> 8, MAP_LITTLEROOT_TOWN & 0xFF,
-                       WARP_ID_NONE, 5, 8);
-    WarpIntoMap();
+    Coop_WarpToStartTown();
 
     ResetInitialPlayerAvatarState();
     PlayTimeCounter_Start();

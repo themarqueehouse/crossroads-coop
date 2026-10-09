@@ -84,6 +84,7 @@ WANTED_SYMBOLS = {
     "gCoopDbgBacklogMax": "dbgBacklogMaxAddr",
     "gCoopDbgStalls": "dbgStallsAddr",
     "gCoopDbgJoinEntry": "dbgJoinEntryAddr",
+    "gCoopDbgMenuAction": "dbgMenuActionAddr",
 }
 
 # Symbol -> the field names its entries carry, in order.

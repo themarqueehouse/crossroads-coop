@@ -78,6 +78,17 @@ struct CoopWorldState
     // different encryption keys, so the stored form means nothing across the
     // link.
     u32 money;
+
+    // Which half of the world this save belongs to, and with it the whole
+    // presentation: menu frames, battle backgrounds, music, door animations
+    // and the overworld skin all key off it. Player 1 owns the save, so Player
+    // 1 owns the region.
+    //
+    // Player 2 cannot know it before joining -- their console starts the
+    // moment the pair is up, which is before a single byte has crossed the
+    // link -- so they start in Hoenn and adopt this. Left out, the two phones
+    // sat in different regions wearing different skins for the whole session.
+    u8 playerRegion;
 }; // about 1.6 KB
 
 // Live changes, broadcast as they happen.
@@ -333,6 +344,7 @@ bool8 Coop_IsJoiningPlayer(void);
  */
 void Coop_SuppressSync(bool8 suppress);
 extern u8 gCoopDbgJoinEntry;
+extern u8 gCoopDbgMenuAction;
 
 /** True once both players are present, whether or not the link is up yet. */
 bool8 IsCoopSessionPaired(void);
