@@ -80,6 +80,16 @@ async function main() {
             claimed === 0,
             'the save already has a player 2 -- joining overwrites their name and gender');
 
+    // The story flags, which are what stop Route 101 running Birch at two
+    // players at two different speeds.
+    const flagSet = async (id) =>
+      (((await rig.u8(0, flagsAddr + (id >> 3))) >> (id & 7)) & 1) === 1;
+    const started = await flagSet(OFFSETS.flagAdventureStarted);
+    const dex = await flagSet(OFFSETS.flagPokedexGet);
+    t.note('story flags', `adventure started=${started} pokedex=${dex}`);
+    t.check('the story has actually begun', started && dex,
+            'badges on a brand-new story -- Birch still runs at you on Route 101');
+
     t.summary();
   } finally {
     await rig.close();

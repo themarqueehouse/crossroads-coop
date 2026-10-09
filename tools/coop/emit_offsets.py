@@ -97,6 +97,7 @@ ARRAYS = {
         "flags", "numFlagBytes", "dexSeen", "dexCaught", "numDexFlagBytes",
         "flagBadge01", "tempFlagsSize", "bag", "encryptionKey",
         "sb1Location", "warpMapNum", "sb1Money",
+        "flagAdventureStarted", "flagPokedexGet",
     ],
 }
 

@@ -16,7 +16,6 @@ import { startRig } from './rig.mjs';
 const PORT = 8805;
 const ROM = '/home/claude/crossroads/pokeemerald.gba';
 const OUT = process.argv[2] || '/home/claude/crossroads/coop/crossroads-midgame.sav';
-const OUT_P2 = '/home/claude/crossroads/coop/crossroads-player2.sav';
 const SCRIPTS_MENU_INDEX = 5;
 
 const isBusy = async (rig, w) =>
@@ -72,13 +71,9 @@ async function main() {
     if (!done) throw new Error('the setup script never finished');
 
     console.log('\n--- saving ---');
-    // Player 2 saves first. Player 1's save script clears the Player 2 slot
-    // and writes immediately after, so anything core 1 does later cannot
-    // re-claim it.
-    await runDebugScript(rig, 1, 15);
-    await rig.wait(420);
-    await freeUp(rig, 1);
-
+    // Script 15 empties the Player 2 slot and writes in the same breath, so
+    // the partner console the rig runs cannot leave its character in the file
+    // somebody else is going to start from.
     await runDebugScript(rig, 0, 15);
     // The save itself takes a moment and must not be interrupted.
     await rig.wait(600);
@@ -95,27 +90,6 @@ async function main() {
 
     writeFileSync(OUT, Buffer.from(save));
     console.log(`\nwrote ${OUT} (${save.length} bytes)`);
-
-    // Player 2's own save, so they never see the intro again.
-    //
-    // Their character does not live on their phone -- it comes over the link
-    // out of Player 1's save -- but their console still needs A save, because
-    // without one the menu offers New Game only and they have to sit through
-    // Birch, the naming screen and the boy/girl question every single session.
-    // This is core 1's own file, which by this point is a plain started game.
-    // What is in it barely matters; that it exists is the point.
-    const p2 = await rig.page.evaluate(async () => {
-      await window.__pair.sync(1);
-      const s = window.__pair.save(1);
-      return s ? Array.from(s) : null;
-    });
-
-    if (p2) {
-      writeFileSync(OUT_P2, Buffer.from(p2));
-      console.log(`wrote ${OUT_P2} (${p2.length} bytes)`);
-    } else {
-      console.log('no save on core 1 -- player 2 will have to start a new game');
-    }
 
     // A GBA save is 128 KiB of flash in 4 KiB sectors, and Emerald stamps each
     // one it writes with 0x08012025 near the end. Counting those is the check
