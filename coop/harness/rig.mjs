@@ -58,7 +58,8 @@ export function decodeName(bytes) {
 // every prompt and lets the repetition do the work.
 const NUDGE = [null, 'A', 'A', 'A', 'Start', null, 'A', 'Start'];
 
-export async function startRig({ rom, port, introLoops = 300, settle = 1200 }) {
+export async function startRig({ rom, port, introLoops = 300, settle = 1200,
+                                 paired = true }) {
   assertOffsetsFresh(rom);
   const { size } = await stat(rom);
   console.log(`rom: ${rom} (${(size / 1048576).toFixed(1)} MiB)`);
@@ -88,7 +89,7 @@ export async function startRig({ rom, port, introLoops = 300, settle = 1200 }) {
   if (found.some((f) => f.base === null))
     throw new Error('a core never published a live mailbox');
 
-  await page.evaluate(() => window.__pair.openSession());
+  await page.evaluate((p) => window.__pair.openSession(p), paired);
   console.log('session opened; relay pumping in-page every frame');
 
   console.log('walking both through the intro...');
@@ -132,6 +133,7 @@ export async function startRig({ rom, port, introLoops = 300, settle = 1200 }) {
       page.evaluate(([w, k]) => window.__pair.letGo(w, k), [which, key]),
     mailboxes: () => page.evaluate(() => [0, 1].map((n) => window.__pair.mailbox(n))),
     reconnect: (gap = 240) => page.evaluate((g) => window.__pair.reconnect(g), gap),
+    pairUp: () => page.evaluate(() => window.__pair.pairUp()),
 
     read: (which, addr, len) =>
       page.evaluate(([w, a, l]) => window.__pair.readAt(w, a, l), [which, addr, len]),

@@ -14,6 +14,7 @@
 #include "link.h"
 #include "main.h"
 #include "main_menu.h"
+#include "coop.h"
 #include "menu.h"
 #include "list_menu.h"
 #include "mystery_event_menu.h"
@@ -189,6 +190,7 @@ static void Task_WaitForBatteryDryErrorWindow(u8);
 static void MainMenu_FormatSavegameText(void);
 static void HighlightSelectedMainMenuItem(enum PartyMenuType, u8, s16);
 static void Task_HandleMainMenuInput(u8);
+static void Task_CoopWaitForPartner(u8);
 static void Task_HandleMainMenuAPressed(u8);
 static void Task_HandleMainMenuBPressed(u8);
 static void Task_NewGameBirchSpeech_Init(u8);
@@ -427,6 +429,7 @@ static const u16 sMainMenuBgPal[] = INCBIN_U16("graphics/interface/main_menu_bg.
 static const u16 sMainMenuTextPal[] = INCBIN_U16("graphics/interface/main_menu_text.gbapal");
 
 static const u8 sTextColor_Headers[] = {TEXT_DYNAMIC_COLOR_1, TEXT_DYNAMIC_COLOR_2, TEXT_DYNAMIC_COLOR_3};
+static const u8 sText_CoopWaitingForPartner[] = _("Waiting for your partner...");
 static const u8 sTextColor_MenuInfo[] = {TEXT_DYNAMIC_COLOR_1, TEXT_COLOR_WHITE, TEXT_DYNAMIC_COLOR_3};
 
 static const struct BgTemplate sMainMenuBgTemplates[] = {
@@ -639,6 +642,7 @@ static u32 InitMainMenu(bool8 returningFromOptionsMenu)
 #define tScrollArrowTaskId data[13]
 #define tIsScrolled data[14]
 #define tWirelessAdapterConnected data[15]
+#define tCoopFadedBack data[11]   // the two-player gate's own state
 
 #define tArrowTaskIsScrolled data[15]   // For scroll indicator arrow task
 
@@ -953,6 +957,34 @@ static void Task_HandleMainMenuInput(u8 taskId)
         gTasks[taskId].func = Task_HighlightSelectedMainMenuItem;
 }
 
+// Sit on the main menu until the other console is there, then start.
+//
+// Going back into Task_HandleMainMenuAPressed rather than dispatching from
+// here is what keeps this small: the menu selection is still in the task, so
+// re-entering recomputes the same action and runs the ordinary path. The only
+// things that happen twice are the window clears at the top of it, which do
+// not care.
+static void Task_CoopWaitForPartner(u8 taskId)
+{
+    if (gPaletteFade.active)
+        return;
+
+    if (!gTasks[taskId].tCoopFadedBack)
+    {
+        if (!IsCoopSessionPaired())
+            return;
+
+        // Back to black before handing over, so the dispatch resumes in the
+        // state it expects -- faded out, fade finished -- rather than cutting
+        // from a lit menu straight into the game.
+        BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 0x10, RGB_BLACK);
+        gTasks[taskId].tCoopFadedBack = TRUE;
+        return;
+    }
+
+    gTasks[taskId].func = Task_HandleMainMenuAPressed;
+}
+
 static void Task_HandleMainMenuAPressed(u8 taskId)
 {
     bool8 wirelessAdapterConnected;
@@ -1073,6 +1105,38 @@ static void Task_HandleMainMenuAPressed(u8 taskId)
         }
         ChangeBgY(0, 0, BG_COORD_SET);
         ChangeBgY(1, 0, BG_COORD_SET);
+
+        // This hack is for two people. Starting or continuing the adventure
+        // alone would advance a save the other player is meant to share, past
+        // story beats they are supposed to be standing next to -- so it waits
+        // for them here rather than letting one player get ahead.
+        //
+        // Held at the menu rather than before the title screen, deliberately.
+        // A ROM that shows nothing until a partner appears looks broken when
+        // the relay is down, with nowhere to say otherwise; this way the game
+        // visibly boots, the options menu still works, and the reason it is
+        // not starting is on screen. Everything else -- options, mystery gift
+        // -- is untouched.
+        if ((action == ACTION_NEW_GAME || action == ACTION_CONTINUE)
+            && !IsCoopSessionPaired())
+        {
+            FillWindowPixelBuffer(0, PIXEL_FILL(0xA));
+            AddTextPrinterParameterized3(0, FONT_NORMAL, 0, 1, sTextColor_Headers,
+                                         TEXT_SKIP_DRAW, sText_CoopWaitingForPartner);
+            PutWindowTilemap(0);
+            CopyWindowToVram(0, COPYWIN_GFX);
+            DrawMainMenuWindowBorder(&sWindowTemplates_MainMenu[0], MAIN_MENU_BORDER_TILE);
+            // Fade back in to show it. Pressing A on the menu starts a fade to
+            // black and this function does not run until that fade has
+            // finished, so a notice drawn here lands on an already-black
+            // screen: the gate worked and the player was told nothing, which
+            // is the brick-looking ROM this was meant to avoid.
+            BeginNormalPaletteFade(PALETTES_ALL, 0, 0x10, 0, RGB_BLACK);
+            gTasks[taskId].tCoopFadedBack = FALSE;
+            gTasks[taskId].func = Task_CoopWaitForPartner;
+            return;
+        }
+
         switch (action)
         {
         case ACTION_NEW_GAME:

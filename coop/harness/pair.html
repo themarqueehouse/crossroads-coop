@@ -177,11 +177,15 @@ window.__pair = {
     return out;
   },
 
-  openSession() {
+  // paired=false brings the relay up but leaves the mailbox saying nobody is
+  // there, which is what a console looks like when the other player has not
+  // joined yet. The two-player gate on the main menu is the only thing that
+  // reads it before the overworld exists, so it is the only way to test it.
+  openSession(paired = true) {
     for (const c of cores) {
       c.setByte(OFF.localId, c.id);
-      c.setByte(OFF.playerCount, 2);
-      c.setByte(OFF.hostStatus, 2); // NET_HOST_READY
+      c.setByte(OFF.playerCount, paired ? 2 : 1);
+      c.setByte(OFF.hostStatus, paired ? 2 : 1); // NET_HOST_READY : still waiting
     }
     // From here the relay runs on its own, every animation frame, so it keeps
     // pace with the cores instead of trailing a driver outside the page.
@@ -192,6 +196,16 @@ window.__pair = {
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
+    }
+    return true;
+  },
+
+  // Bring the missing player in, once a test has checked what happens
+  // without them.
+  pairUp() {
+    for (const c of cores) {
+      c.setByte(OFF.playerCount, 2);
+      c.setByte(OFF.hostStatus, 2);
     }
     return true;
   },
