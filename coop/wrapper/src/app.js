@@ -101,7 +101,25 @@ export class CoopApp {
 
     if (saveFile) {
       this.log('restoring save…');
-      await new Promise((resolve) => this.core.uploadSaveOrSaveState(saveFile, resolve));
+
+      // Renamed to match the ROM before it goes in. mGBA pairs a save to a
+      // game by filename and nothing else, so a perfectly good save called
+      // anything other than <rom>.sav is simply not found -- and the failure
+      // is silent and misleading: the game boots to a main menu offering NEW
+      // GAME only, exactly as though the save were corrupt or absent.
+      //
+      // A save state is left alone. Those are matched differently and
+      // renaming one would break it.
+      const isState = /\.(ss\d*|state)$/i.test(saveFile.name);
+      const wanted = romFile.name.replace(/\.gba$/i, '') + '.sav';
+      const toUpload = (isState || saveFile.name === wanted)
+        ? saveFile
+        : new File([saveFile], wanted, { type: saveFile.type });
+
+      if (toUpload !== saveFile)
+        this.log(`(renamed ${saveFile.name} → ${wanted} so mGBA pairs it with the ROM)`);
+
+      await new Promise((resolve) => this.core.uploadSaveOrSaveState(toUpload, resolve));
     }
 
     if (!this.core.loadGame(`${this.core.filePaths().gamePath}/${romFile.name}`)) {
