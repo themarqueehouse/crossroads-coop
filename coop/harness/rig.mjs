@@ -170,6 +170,35 @@ export async function startRig({ rom, port, introLoops = 300, settle = 1200,
     },
   };
 
+  // Make sure both consoles are actually back in the player's hands.
+  //
+  // The intro is got through by mashing A, which does not stop at the
+  // overworld: the last press lands on a television, a sign or a menu, and the
+  // eight B presses above are a guess at how many it takes to back out of
+  // whatever that was. Usually enough. About one run in five it was not, and
+  // the console sat with its field controls locked -- which is indistinguish-
+  // able from a console that is simply idle, right up until something needs it
+  // to be free.
+  //
+  // What that cost: a mirrored scene will not start on a console whose
+  // controls are locked, so stage 3 reported "player 2 never played the scene"
+  // at about that same one-in-five, for a ROM that was working. A flaky test
+  // is worse than a failing one -- it gets re-run until it passes, and then it
+  // is not a test of anything.
+  for (const w of [0, 1]) {
+    let free = false;
+    for (let i = 0; i < 24 && !free; i++) {
+      const mb = await api.mailbox(w);
+      free = !mb.flags.includes('SCRIPT_BUSY');
+      if (!free) {
+        await api.tap(w, 'B', 6);
+        await api.wait(20);
+      }
+    }
+    if (!free)
+      throw new Error(`core ${w}: never came back to the player after the intro`);
+  }
+
   return api;
 }
 

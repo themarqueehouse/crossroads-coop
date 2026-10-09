@@ -314,7 +314,16 @@ static EWRAM_DATA u16 sUsedPeerGateSeq = 0;
 // How long a scene's opening gate waits before giving up. Generous, because the
 // usual reason the partner is slow is that they are mid-conversation with an NPC
 // of their own, and that is not a fault. Only the opening gate ever uses this.
-#define SCENE_GATE_TIMEOUT_FRAMES 600 // 10 seconds
+//
+// Was ten seconds, which is not generous at all once you watch somebody play:
+// an NPC with three boxes of dialogue takes longer than that to read, and the
+// scene was then dropped on both consoles. Nothing breaks when it is -- the
+// trigger is left unfired and runs again next time they step on it -- but
+// "walk onto the trigger and nothing happens" is not a thing a player can make
+// sense of. Half a minute covers a conversation; the player who got there
+// first is looking at "Waiting for your partner", not a blank screen, so the
+// wait explains itself.
+#define SCENE_GATE_TIMEOUT_FRAMES 1800 // 30 seconds
 
 // A gate waiting on the other player to finish CHOOSING gets far longer.
 //
@@ -600,7 +609,22 @@ static void Coop_UpdateFollow(void)
     // arrived next to us.
     if (gCoopPeer.mapGroup == gSaveBlock1Ptr->location.mapGroup
         && gCoopPeer.mapNum == gSaveBlock1Ptr->location.mapNum)
+    {
+        // Unless this was the first-session placement, in which case being on
+        // their map IS the goal and it is already met.
+        //
+        // That one deliberately has no deadline -- Player 2 has nowhere else
+        // to be -- so without this it stayed armed for the whole session,
+        // waiting for the two to be apart. The next time the partner walked
+        // through a door, hours later, it fired: Player 2 was yanked through
+        // after them by a request made when the game started.
+        if (sFollowIsFirstPlacement)
+        {
+            sFollowPending = FALSE;
+            sFollowIsFirstPlacement = FALSE;
+        }
         return;
+    }
 
     sFollowPending = FALSE;
     sFollowIsFirstPlacement = FALSE;
@@ -656,6 +680,20 @@ void Coop_ReceiveGate(u8 playerId, const u16 *cmd)
 // because triggering one locks its field controls.
 static EWRAM_DATA const u8 *sSceneSendPtr = NULL;
 static EWRAM_DATA u16 sSceneSendGate = 0;
+
+// Repeats, and a sequence number so the repeats are recognised as one scene.
+//
+// This went out exactly once, alone among the things this protocol sends --
+// gates repeat four times, "come with me" six, a scene's own page turns four.
+// One lost frame and the partner simply never played the scene: the trigger
+// had already fired on this console, so it was not coming again, and the two
+// players walked away from the same spot having seen different things. It
+// showed up as about one run in five of the mirrored-scene check, which is
+// also roughly how often it would have happened to somebody playing.
+#define SCENE_SENDS 4
+static EWRAM_DATA u8 sSceneSendsLeft = 0;
+static EWRAM_DATA u16 sSceneSendSeq = 0;
+static EWRAM_DATA u16 sUsedPeerSceneSeq = 0;
 
 // Which object event the scene was started by talking to, if any.
 //
@@ -753,6 +791,10 @@ bool8 Coop_BroadcastScene(const u8 *resume, u16 gateId)
 
     sSceneSendPtr = resume;
     sSceneSendGate = gateId;
+    sSceneSendsLeft = SCENE_SENDS;
+    sSceneSendSeq++;
+    if (sSceneSendSeq == 0)
+        sSceneSendSeq = 1;
     sSceneSendLocalId = gSpecialVar_LastTalked;
     sInHostScene = TRUE;
     return TRUE;
@@ -763,7 +805,7 @@ static bool8 CoopSendScene(u16 *sendCmd)
 {
     u32 off;
 
-    if (sSceneSendPtr == NULL)
+    if (sSceneSendPtr == NULL || sSceneSendsLeft == 0)
         return FALSE;
 
     off = (u32)sSceneSendPtr - ROM_BASE;
@@ -777,8 +819,11 @@ static bool8 CoopSendScene(u16 *sendCmd)
     // object events and coordinates belong somewhere else.
     sendCmd[4] = OurMapWord();
     sendCmd[5] = sSceneSendLocalId;
+    sendCmd[6] = sSceneSendSeq;
 
-    sSceneSendPtr = NULL;
+    if (--sSceneSendsLeft == 0)
+        sSceneSendPtr = NULL;
+
     return TRUE;
 }
 
@@ -792,6 +837,11 @@ void Coop_ReceiveScene(u8 playerId, const u16 *cmd)
     if (cmd[4] != OurMapWord())
         return;
 
+    // One of the repeats of a scene we have already taken. Accepting it again
+    // would replay a scene that may well be running right now.
+    if (cmd[6] == sUsedPeerSceneSeq)
+        return;
+
     off = cmd[2] | ((u32)cmd[3] << 16);
 
     // A script pointer arriving over a wire gets checked before it is jumped
@@ -801,6 +851,7 @@ void Coop_ReceiveScene(u8 playerId, const u16 *cmd)
     if (off >= 0x02000000)
         return;
 
+    sUsedPeerSceneSeq = cmd[6];
     sPendingScene = (const u8 *)(ROM_BASE + off);
     sPendingSceneFrames = 0;
     sPendingSceneLocalId = cmd[5];
@@ -970,6 +1021,10 @@ static void ResetScenes(void)
 {
     sSceneSendPtr = NULL;
     sSceneSendGate = 0;
+    sSceneSendsLeft = 0;
+    // Not the sequence numbers: they are what tells a repeat from a new
+    // scene, and zeroing them across a reconnect would make the next scene
+    // look like one already taken.
     sPendingScene = NULL;
     sPendingSceneFrames = 0;
     sPendingSceneLocalId = 0;

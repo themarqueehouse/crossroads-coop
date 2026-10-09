@@ -264,13 +264,18 @@ async function main() {
     await runDebugScript(rig, 0, 1);
     await rig.wait(120);
 
+    // Screenshot first. Everything in this window burns frames against the
+    // deferred scene's timeout, and a screenshot burns far more of them than
+    // a memory read does -- taking it after the checks spent enough of the
+    // budget to drop the scene on about one run in five, which read as the
+    // ROM failing to defer it.
+    await rig.shot('/tmp/claude-0/stage3-waiting');
     const waiting = await rig.mailbox(0);
     t.note('player 1', `gate=${waiting.gateId} flags=${waiting.flags}`);
     t.check('player 1 is held at the gate', waiting.gateId === GATE_TEST &&
             waiting.flags.includes('AT_GATE'));
     t.check('player 2 has not started it yet',
             (await rig.gateLog(1)).length === 0);
-    await rig.shot('/tmp/claude-0/stage3-waiting');
 
     // Let player 2 out of the conversation. B rather than A: A would just
     // read the television again.
@@ -282,8 +287,16 @@ async function main() {
     for (let i = 0; i < 4; i++) { await rig.tap(1, 'B', 6); await rig.wait(20); }
     await rig.wait(120);
     const freed = (await rig.gateLog(1)).includes(GATE_TEST);
+    // Say which of the two it was. A scene that never arrived and a scene
+    // that arrived and could not start look identical in the gate log, and
+    // the difference is the difference between a transport bug and a
+    // timeout -- worth not having to reproduce it twice to find out.
+    const pend = await rig.u32(1, OFFSETS.pendingSceneAddr);
+    const waited = await rig.u16(1, OFFSETS.pendingSceneFramesAddr);
     t.check('the scene starts as soon as player 2 is free', freed,
-            freed ? '' : 'the deferred scene was dropped');
+            freed ? ''
+                  : `the deferred scene was dropped (pending=0x${pend.toString(16)} ` +
+                    `waited=${waited} frames, p2 busy=${await isBusy(rig, 1)})`);
 
     for (let i = 0; i < 6; i++) { await rig.tap('both', 'A', 8); await rig.wait(25); }
     await rig.wait(90);

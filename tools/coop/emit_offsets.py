@@ -107,6 +107,12 @@ WANTED_SYMBOLS = {
     "sPeerFollowerSpecies": "peerFollowerSpeciesAddr",
     "sPeerFollowerObjectId": "peerFollowerObjectIdAddr",
     "gObjectEvents": "objectEventsAddr",
+    # A mirrored scene that has arrived but not started yet, and how long it
+    # has been waiting. "Player 2 never played the scene" has two very
+    # different causes -- it never arrived, or it arrived and could not start
+    # -- and the gate log cannot tell them apart.
+    "sPendingScene": "pendingSceneAddr",
+    "sPendingSceneFrames": "pendingSceneFramesAddr",
 }
 
 # Symbol -> the field names its entries carry, in order.
