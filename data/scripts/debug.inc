@@ -363,6 +363,55 @@ Debug_EventScript_Script_13::
 	release
 	end
 
+@ MID-GAME TEST SAVE (R+Start, Scripts…, Script 14). Run on PLAYER 1 only,
+@ then let it save itself.
+@
+@ The point is to start a playtest somewhere worth testing rather than in a
+@ bedroom: all eight badges so every HM is usable, every HM in the bag, a team
+@ that can carry them, and enough supplies to get into trouble with.
+@
+@ The HMs are handed over as items rather than taught here. Which moves a
+@ Pokemon knows depends on how it was generated, and quietly ending up without
+@ Surf would waste a playtest; with reusable TMs and HMs, teaching them takes
+@ a few seconds and is visible.
+Debug_EventScript_Script_14::
+	setflag FLAG_BADGE01_GET
+	setflag FLAG_BADGE02_GET
+	setflag FLAG_BADGE03_GET
+	setflag FLAG_BADGE04_GET
+	setflag FLAG_BADGE05_GET
+	setflag FLAG_BADGE06_GET
+	setflag FLAG_BADGE07_GET
+	setflag FLAG_BADGE08_GET
+	giveitem ITEM_HM_CUT
+	giveitem ITEM_HM_FLY
+	giveitem ITEM_HM_SURF
+	giveitem ITEM_HM_STRENGTH
+	giveitem ITEM_HM_FLASH
+	giveitem ITEM_HM_ROCK_SMASH
+	giveitem ITEM_HM_WATERFALL
+	giveitem ITEM_HM_DIVE
+	giveitem ITEM_HYPER_POTION, 20
+	giveitem ITEM_FULL_RESTORE, 10
+	giveitem ITEM_REVIVE, 10
+	giveitem ITEM_ULTRA_BALL, 30
+	giveitem ITEM_ESCAPE_ROPE, 5
+	givemon SPECIES_SWAMPERT, 50
+	givemon SPECIES_SWELLOW, 50
+	givemon SPECIES_GARDEVOIR, 50
+	givemon SPECIES_AGGRON, 50
+	givemon SPECIES_FLYGON, 50
+	givemon SPECIES_MANECTRIC, 50
+	release
+	end
+
+@ Saves the game where it stands (R+Start, Scripts…, Script 15). Run it after
+@ Script 14, on Player 1.
+Debug_EventScript_Script_15::
+	callnative Debug_SaveNow
+	release
+	end
+
 Debug_CheckSaveBlock::
 	callnative CheckSaveBlock1Size
 	msgbox Debug_SaveBlock1Size, MSGBOX_DEFAULT

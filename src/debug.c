@@ -388,6 +388,8 @@ extern const u8 Debug_EventScript_Script_10[];
 extern const u8 Debug_EventScript_Script_11[];
 extern const u8 Debug_EventScript_Script_12[];
 extern const u8 Debug_EventScript_Script_13[];
+extern const u8 Debug_EventScript_Script_14[];
+extern const u8 Debug_EventScript_Script_15[];
 extern const u8 DebugScript_DaycareMonsNotCompatible[];
 extern const u8 DebugScript_OneDaycareMons[];
 extern const u8 DebugScript_ZeroDaycareMons[];
@@ -667,6 +669,8 @@ static const struct DebugMenuOption sDebugMenu_Actions_Scripts[] =
     { COMPOUND_STRING("Script 11"), DebugAction_ExecuteScript, Debug_EventScript_Script_11 },
     { COMPOUND_STRING("Script 12"), DebugAction_ExecuteScript, Debug_EventScript_Script_12 },
     { COMPOUND_STRING("Script 13"), DebugAction_ExecuteScript, Debug_EventScript_Script_13 },
+    { COMPOUND_STRING("Script 14"), DebugAction_ExecuteScript, Debug_EventScript_Script_14 },
+    { COMPOUND_STRING("Script 15"), DebugAction_ExecuteScript, Debug_EventScript_Script_15 },
     { NULL }
 };
 
@@ -1634,6 +1638,17 @@ static void DebugAction_Util_Warp_SelectWarp(u8 taskId)
 #undef tMapGroup
 #undef tMapNum
 #undef tWarp
+
+// Write the save, from a script.
+//
+// The start menu's Save is a conversation -- a yes/no, a "there is already a
+// file" and a wait -- and a save produced for somebody else to start from
+// should not depend on a rig getting all of that right. This is the same call
+// the menu ends up making.
+void Debug_SaveNow(struct ScriptContext *ctx)
+{
+    TrySavingData(SAVE_NORMAL);
+}
 
 void CheckSaveBlock1Size(struct ScriptContext *ctx)
 {

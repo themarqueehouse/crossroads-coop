@@ -59,7 +59,7 @@ export function decodeName(bytes) {
 const NUDGE = [null, 'A', 'A', 'A', 'Start', null, 'A', 'Start'];
 
 export async function startRig({ rom, port, introLoops = 300, settle = 1200,
-                                 paired = true }) {
+                                 paired = true, saveB64 = null }) {
   assertOffsetsFresh(rom);
   const { size } = await stat(rom);
   console.log(`rom: ${rom} (${(size / 1048576).toFixed(1)} MiB)`);
@@ -78,8 +78,8 @@ export async function startRig({ rom, port, introLoops = 300, settle = 1200,
   await page.waitForFunction(() => !!window.__pair);
 
   console.log('booting both cores in one page...');
-  await page.evaluate(([u, n]) => window.__pair.boot(u, n),
-    [`http://127.0.0.1:${port}/rom.gba`, basename(rom)]);
+  await page.evaluate(([u, n, s]) => window.__pair.boot(u, n, s),
+    [`http://127.0.0.1:${port}/rom.gba`, basename(rom), saveB64]);
   await page.evaluate(() => window.__pair.wait(120));
 
   const found = await page.evaluate(() => window.__pair.locate());

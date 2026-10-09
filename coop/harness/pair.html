@@ -68,7 +68,7 @@ class Core {
     this.lastGate = 0;
   }
 
-  async boot(romUrl, romName) {
+  async boot(romUrl, romName, saveB64) {
     const bytes = await (await fetch(romUrl)).arrayBuffer();
     this.core = await mGBA({ canvas: document.getElementById('s' + this.id) });
     this.core.setLogger?.(() => {});
@@ -83,6 +83,19 @@ class Core {
     await this.core.FSInit();
     const file = new File([new Uint8Array(bytes)], romName);
     await new Promise((res) => this.core.uploadRom(file, res));
+
+    // A save to start from, if one was handed in. It has to be on the chip
+    // before loadGame, and named after the ROM, because that is how mGBA
+    // decides the two belong together.
+    if (saveB64) {
+      const raw = atob(saveB64);
+      const sav = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) sav[i] = raw.charCodeAt(i);
+      const saveName = romName.replace(/\.gba$/i, '.sav');
+      await new Promise((res) =>
+        this.core.uploadSaveOrSaveState(new File([sav], saveName), res));
+    }
+
     if (!this.core.loadGame(`${this.core.filePaths().gamePath}/${romName}`))
       throw new Error(`core ${this.id}: loadGame refused`);
     this.core.addCoreCallbacks({ keysReadCallback: () => { this.frames++; } });
@@ -149,8 +162,10 @@ function pumpOnce() {
 }
 
 window.__pair = {
-  async boot(romUrl, romName) {
-    for (const c of cores) await c.boot(romUrl, romName);
+  // saveB64 goes to core 0 only: Player 1 owns the save, and Player 2's
+  // console is meant to start blank and take its character over the link.
+  async boot(romUrl, romName, saveB64) {
+    for (const c of cores) await c.boot(romUrl, romName, c.id === 0 ? saveB64 : null);
     return true;
   },
 
@@ -208,6 +223,18 @@ window.__pair = {
       c.setByte(OFF.hostStatus, 2);
     }
     return true;
+  },
+
+  // The save chip's contents, for building a starting save to hand over.
+  // FSSync flushes the emulator's filesystem first; without it the bytes can
+  // be a save or two behind what the game thinks it wrote.
+  async sync() {
+    await cores[0].core.FSSync();
+    return true;
+  },
+
+  save() {
+    return cores[0].core.getSave();
   },
 
   // Which gates each core passed through, in order.
