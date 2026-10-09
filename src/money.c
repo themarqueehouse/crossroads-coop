@@ -1,5 +1,6 @@
 #include "global.h"
 #include "money.h"
+#include "coop.h"
 #include "config/coop.h"
 #include "graphics.h"
 #include "event_data.h"
@@ -71,9 +72,35 @@ u32 GetMoney(u32 *moneyPtr)
     return *moneyPtr ^ gSaveBlock2Ptr->encryptionKey;
 }
 
+// The last amount put on the link, so an unchanged total -- which is most of
+// them once the wallet is full -- costs nothing.
+static EWRAM_DATA u32 sLastSyncedMoney = 0;
+
 void SetMoney(u32 *moneyPtr, u32 newValue)
 {
     *moneyPtr = gSaveBlock2Ptr->encryptionKey ^ newValue;
+
+    // One shared wallet. Every path that changes money -- AddMoney,
+    // RemoveMoney, a script, a sale -- comes through here, so this is the only
+    // hook needed.
+    //
+    // With COOP_UNLIMITED_MONEY this does almost nothing, because almost
+    // nothing changes the figure: RemoveMoney returns early and AddMoney
+    // clamps at the maximum it is already sitting on. It is here so that
+    // turning that setting off actually gives two players one wallet, which
+    // the setting's comment used to promise and the code did not deliver.
+    //
+    // Only the player's own money. Game Corner coins and anything else passing
+    // a different pointer are not a shared purse.
+    //
+    // The amount travels decrypted and absolute: the two consoles have
+    // different encryption keys, and sending the total rather than the change
+    // means a lost message costs nothing once the next one arrives.
+    if (moneyPtr == &gSaveBlock1Ptr->money && newValue != sLastSyncedMoney)
+    {
+        sLastSyncedMoney = newValue;
+        Coop_QueueDelta(COOP_DELTA_MONEY, newValue >> 16, newValue & 0xFFFF);
+    }
 }
 
 bool8 IsEnoughMoney(u32 *moneyPtr, u32 cost)

@@ -328,6 +328,22 @@ Debug_EventScript_Script_10::
 	release
 	end
 
+@ Co-op PERSISTENCE test (R+Start, Scripts…, Script 11). Run on PLAYER 2.
+@ Gives one Pokemon and spends some money. Both have to reach the other
+@ console: the party through the record resend, the money through a delta.
+@
+@ Spends rather than earns. The debug save starts at MAX_MONEY, so addmoney
+@ is a no-op there and a test built on it passes whether or not anything is
+@ shared -- which is exactly what the first version of this did.
+@ removemoney goes FIRST. givemon runs a waitstate for the "got a Pokemon"
+@ flow, and nothing after it in a debug-menu script runs -- which looked
+@ exactly like money not being shared.
+Debug_EventScript_Script_11::
+	removemoney 4242, 0
+	givemon SPECIES_LATIOS, 50
+	release
+	end
+
 Debug_CheckSaveBlock::
 	callnative CheckSaveBlock1Size
 	msgbox Debug_SaveBlock1Size, MSGBOX_DEFAULT

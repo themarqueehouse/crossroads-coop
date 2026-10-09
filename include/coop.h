@@ -73,6 +73,11 @@ struct CoopWorldState
     // why that is not optional.
     struct Bag bag;
     struct ItemSlot pcItems[PC_ITEMS_COUNT];
+
+    // Decrypted, like the bag quantities above: the two consoles have
+    // different encryption keys, so the stored form means nothing across the
+    // link.
+    u32 money;
 }; // about 1.6 KB
 
 // Live changes, broadcast as they happen.
@@ -94,6 +99,7 @@ enum CoopDeltaKind
     // receiver's key and find the right pocket without being told.
     COOP_DELTA_ITEM_ADD,
     COOP_DELTA_ITEM_REMOVE,
+    COOP_DELTA_MONEY,
 };
 
 // ---------------------------------------------------------------------------

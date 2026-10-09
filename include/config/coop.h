@@ -10,12 +10,15 @@
 // wallet, and grinding for it is the least interesting part of the game. Shops
 // still work normally; you simply always have enough.
 //
-// It also happens to remove money from the shared-state problem entirely:
-// nothing to sync, and no need to handle the per-console encryption key for it.
-// That is a convenience, not the reason.
+// It also happens to sidestep the shared-state problem: with nothing ever
+// spent there is nothing to disagree about.
 //
-// Set to FALSE to play with ordinary money. Nothing else needs changing: the
-// amount is still stored and still displayed, it is simply never decremented.
+// Set to FALSE to play with ordinary money. Nothing else needs changing -- and
+// that is now true rather than nearly true. Money is synced either way: it
+// rides in the join snapshot and in a live delta, both decrypted, since the
+// two consoles have different encryption keys and the stored form means
+// nothing across the link. Before that it was simply unshared, which did not
+// show while this was TRUE because the figure never moved.
 #define COOP_UNLIMITED_MONEY TRUE
 
 #endif // GUARD_CONFIG_COOP_H

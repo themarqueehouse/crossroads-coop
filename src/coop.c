@@ -1,5 +1,7 @@
 #include "global.h"
 #include "coop.h"
+#include "fieldmap.h"
+#include "money.h"
 #include "coop_sync.h"
 #include "link.h"
 #include "net_link.h"
@@ -51,6 +53,39 @@ static EWRAM_DATA bool8 sGotWorld = FALSE;
 // Staging for an outgoing record. The transfer reads its source across
 // many frames, so it cannot point at a caller's stack.
 static EWRAM_DATA struct CoopPlayer2 sOutgoingRecord = {0};
+
+// Player 2's party, kept alive in Player 1's save.
+//
+// The join hands the record over once and that used to be the end of it: every
+// level gained, every Pokemon caught and every move learned on Player 2's side
+// existed only in Player 2's RAM, and was gone the moment the session ended.
+// Player 1 saves, Player 2 comes back tomorrow with the team they first
+// joined with.
+//
+// Re-sending on a timer alone is too expensive -- the record is 632 bytes
+// against a transport that carries a few hundred bytes a second, and a battle
+// needs that room. So it goes only when the party has actually changed, found
+// by checksumming the part that matters. Position and play time are
+// deliberately NOT in the checksum: they change constantly, and position is
+// already arriving every frame for the sprite (see Coop_ReceivePosition).
+#define RECORD_CHECK_INTERVAL 120
+static EWRAM_DATA u16 sRecordCheckTimer = 0;
+static EWRAM_DATA u32 sLastSentPartyHash = 0;
+
+static u32 HashLocalParty(void)
+{
+    const u8 *bytes = (const u8 *)gPlayerParty;
+    u32 n = sizeof(struct Pokemon) * PARTY_SIZE;
+    u32 h = 2166136261u;  // FNV-1a
+    u32 i;
+
+    h = (h ^ gPlayerPartyCount) * 16777619u;
+
+    for (i = 0; i < n; i++)
+        h = (h ^ bytes[i]) * 16777619u;
+
+    return h;
+}
 // Player 2 only: the stored character handed back by Player 1, waiting to be
 // taken over. Held rather than applied immediately because adopting an identity
 // and party needs a safe moment, not whichever frame the last chunk landed on.
@@ -204,6 +239,12 @@ void Coop_ReceiveDelta(u8 playerId, const u16 *cmd)
         break;
     case COOP_DELTA_ITEM_REMOVE:
         RemoveBagItem(id, value);
+        break;
+    case COOP_DELTA_MONEY:
+        // The whole amount, not the change. A delta that went missing would
+        // leave the two wallets disagreeing for ever; an absolute figure is
+        // corrected by the very next purchase.
+        SetMoney(&gSaveBlock1Ptr->money, ((u32)id << 16) | value);
         break;
     }
 
@@ -942,6 +983,8 @@ static void GatherWorldState(struct CoopWorldState *out)
 
     for (i = 0; i < PC_ITEMS_COUNT; i++)
         out->pcItems[i] = gSaveBlock1Ptr->pcItems[i];
+
+    out->money = GetMoney(&gSaveBlock1Ptr->money);
 }
 
 // Bring this console up to date with the shared world.
@@ -999,6 +1042,8 @@ static void ApplyWorldState(const struct CoopWorldState *in)
 
     for (i = 0; i < PC_ITEMS_COUNT; i++)
         gSaveBlock1Ptr->pcItems[i] = in->pcItems[i];
+
+    SetMoney(&gSaveBlock1Ptr->money, in->money);
 }
 
 // Take over the character Player 1 handed back.
@@ -1388,6 +1433,34 @@ void Coop_Update(void)
                     Coop_BeginBoxJoinSync();
                 }
                 break;
+
+            case COOP_JOIN_DONE:
+                // Player 2 re-sends its record whenever its party changes.
+                // Taking those is what makes the progress stick: this copy is
+                // the one that goes into the save.
+                //
+                // Position is left alone. It is maintained every frame from
+                // the live broadcast, so the copy in an arriving record is
+                // older than what is already here.
+                if (CoopSync_HasReceived(COOP_STREAM_PLAYER2))
+                {
+                    u16 size;
+                    const void *rec = CoopSync_GetReceived(COOP_STREAM_PLAYER2, &size);
+
+                    if (rec != NULL && size == sizeof(struct CoopPlayer2))
+                    {
+                        struct CoopPlayer2 *dst = GetCoopPlayer2();
+                        struct Coords16 pos = dst->pos;
+                        struct WarpData location = dst->location;
+
+                        *dst = *(const struct CoopPlayer2 *)rec;
+                        dst->pos = pos;
+                        dst->location = location;
+                    }
+
+                    CoopSync_ClearReceived();
+                }
+                break;
             }
         }
         else
@@ -1438,7 +1511,28 @@ void Coop_Update(void)
                 GatherLocalPlayerRecord(&sOutgoingRecord);
                 CoopSync_Send(COOP_STREAM_PLAYER2, &sOutgoingRecord,
                               sizeof(sOutgoingRecord));
+                sLastSentPartyHash = HashLocalParty();
                 sJoinStep = COOP_JOIN_DONE;
+            }
+            else if (sJoinStep == COOP_JOIN_DONE && !CoopSync_IsSending()
+                     && !sSuspendedForBattle)
+            {
+                // Checked on a timer rather than every frame: hashing six
+                // Pokemon is cheap but not free, and nothing changes a party
+                // faster than this notices.
+                if (++sRecordCheckTimer >= RECORD_CHECK_INTERVAL)
+                {
+                    u32 hash = HashLocalParty();
+
+                    sRecordCheckTimer = 0;
+                    if (hash != sLastSentPartyHash)
+                    {
+                        GatherLocalPlayerRecord(&sOutgoingRecord);
+                        CoopSync_Send(COOP_STREAM_PLAYER2, &sOutgoingRecord,
+                                      sizeof(sOutgoingRecord));
+                        sLastSentPartyHash = hash;
+                    }
+                }
             }
         }
         break;
@@ -1569,6 +1663,29 @@ void Coop_ReceivePosition(u8 playerId, const u16 *cmd)
     gCoopPeer.moving = cmd[5] & 1;
     gCoopPeer.lastSeenFrame = sFrameCounter;
     gCoopPeer.valid = TRUE;
+
+    // Player 1 owns the save, so Player 2's saved whereabouts have to come
+    // from here. They arrive every frame anyway for the sprite; writing them
+    // through costs nothing and means the record in the save is never more
+    // than a frame stale, without the heavy record being re-sent just because
+    // somebody took a step.
+    if (NetLink_IsMaster())
+    {
+        struct CoopPlayer2 *rec = GetCoopPlayer2();
+
+        if (rec->claimed)
+        {
+            rec->location.mapGroup = gCoopPeer.mapGroup;
+            rec->location.mapNum = gCoopPeer.mapNum;
+            // Back out of camera space. The broadcast carries map coords
+            // plus MAP_OFFSET, because that is what gObjectEvents and the
+            // spawn helper want; gSaveBlock1Ptr->pos, which this mirrors,
+            // does not. Writing it through raw would resume Player 2 seven
+            // tiles from where they stood, every session.
+            rec->pos.x = gCoopPeer.x - MAP_OFFSET;
+            rec->pos.y = gCoopPeer.y - MAP_OFFSET;
+        }
+    }
 
     gNetMailbox.posRecv++;
 }

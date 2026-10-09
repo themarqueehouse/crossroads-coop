@@ -44,4 +44,5 @@ const unsigned gCoopWorldOffsets[] = {
     // partner to another map had no effect.
     offsetof(struct SaveBlock1, location),
     offsetof(struct WarpData, mapNum),
+    offsetof(struct SaveBlock1, money),
 };
