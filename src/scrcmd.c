@@ -1990,10 +1990,23 @@ bool8 ScrCmd_closemessage(struct ScriptContext *ctx)
 
 static bool8 WaitForAorBPress(void)
 {
-    if (JOY_NEW(A_BUTTON))
+    // In a mirrored story scene, only one console's buttons count.
+    //
+    // Both consoles run the same script. Left to themselves each advanced on
+    // its own press, so the player who pressed faster finished the
+    // conversation and walked away while their partner was still three boxes
+    // behind talking to the same NPC. Whoever walked into the scene paces it;
+    // the other side advances when they do.
+    if (Coop_SceneFollowerWaits())
+        return Coop_SceneTakeAdvance();
+
+    if (JOY_NEW(A_BUTTON) || JOY_NEW(B_BUTTON))
+    {
+        // Tell the partner, if they are watching this scene with us.
+        Coop_SceneAdvanced();
         return TRUE;
-    if (JOY_NEW(B_BUTTON))
-        return TRUE;
+    }
+
     return FALSE;
 }
 

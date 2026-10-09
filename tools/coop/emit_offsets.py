@@ -96,6 +96,12 @@ WANTED_SYMBOLS = {
     "gCoopDbgGateSent": "dbgGateSentAddr",
     "gCoopDbgGateRecv": "dbgGateRecvAddr",
     "gCoopDbgPosEvicted": "dbgPosEvictedAddr",
+    # Who is pacing a mirrored scene and how far each side has got through it.
+    # The script pointer cannot answer that: msgbox routes every box through
+    # one shared routine, so all four boxes of a scene park the pointer at the
+    # same ROM address and a test comparing it cannot tell them apart.
+    "sSceneAdvanceSent": "sceneAdvanceSentAddr",
+    "sSceneAdvanceUsed": "sceneAdvanceUsedAddr",
 }
 
 # Symbol -> the field names its entries carry, in order.

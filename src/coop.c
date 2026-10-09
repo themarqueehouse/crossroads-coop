@@ -686,6 +686,29 @@ static EWRAM_DATA bool8 sInGuestScene = FALSE;
 // same script", which is what makes a nested coopscene safe.
 static EWRAM_DATA bool8 sInHostScene = FALSE;
 
+// Pacing a mirrored scene.
+//
+// The console that triggered the scene counts its own presses; the other one
+// counts how many of them it has used. A count rather than a bare "advance"
+// because the transport is allowed to lose a frame: a missed pulse would hang
+// the follower on a message box for ever, while a missed count catches up by
+// itself on the next one.
+//
+// It is the driver's count that travels, not a delta, for the same reason.
+static EWRAM_DATA u16 sSceneAdvanceSent = 0;    // driver: presses so far
+static EWRAM_DATA u16 sSceneAdvanceHeard = 0;   // follower: the driver's count
+static EWRAM_DATA u16 sSceneAdvanceUsed = 0;    // follower: how many consumed
+static EWRAM_DATA u8 sSceneAdvanceSendsLeft = 0;
+static EWRAM_DATA u16 sSceneAdvanceWaited = 0;
+
+// Repeats, so one dropped frame does not strand the follower mid-sentence.
+// Cheap: a scene is a few dozen presses, not a per-frame broadcast.
+#define SCENE_ADVANCE_SENDS 4
+
+// How long the follower waits on a silent driver before taking its own
+// buttons back. Ten seconds.
+#define SCENE_ADVANCE_WAIT_FRAMES 600
+
 // Set while a co-op battle owns the link. See Coop_SuspendForBattle.
 static EWRAM_DATA bool8 sSuspendedForBattle = FALSE;
 
@@ -830,6 +853,16 @@ void Coop_UpdatePendingScene(void)
         return;
 
     AdoptSceneSpeaker();
+
+    // Start level with the driver rather than from zero. The driver's count
+    // runs for the whole session, not per scene, so "how many presses have
+    // happened since this scene began" is the difference from whatever it
+    // stood at the moment this console joined the scene. Zeroing instead
+    // would make every press the driver had ever made look like a pending
+    // advance, and the follower would skip the scene outright.
+    sSceneAdvanceUsed = sSceneAdvanceHeard;
+    sSceneAdvanceWaited = 0;
+
     ScriptContext_SetupScript(sPendingScene);
     sPendingScene = NULL;
     sInGuestScene = TRUE;
@@ -838,6 +871,84 @@ void Coop_UpdatePendingScene(void)
 bool8 Coop_IsSceneGuest(void)
 {
     return sInGuestScene;
+}
+
+// --- pacing -----------------------------------------------------------------
+
+bool8 Coop_SceneFollowerWaits(void)
+{
+    return sInGuestScene && IsCoopLinkActive();
+}
+
+// The follower's text prints instantly, because it has nothing to pace. See
+// IsPlayerTextSpeedInstant.
+bool8 Coop_SceneTextIsInstant(void)
+{
+    return Coop_SceneFollowerWaits();
+}
+
+// The driver pressed A. Count it and start telling the partner.
+void Coop_SceneAdvanced(void)
+{
+    if (!sInHostScene || !IsCoopLinkActive())
+        return;
+
+    sSceneAdvanceSent++;
+    sSceneAdvanceSendsLeft = SCENE_ADVANCE_SENDS;
+}
+
+// The follower: has the driver moved on yet?
+bool8 Coop_SceneTakeAdvance(void)
+{
+    // u16 subtraction, so this still reads correctly across the wrap.
+    if ((u16)(sSceneAdvanceHeard - sSceneAdvanceUsed) != 0)
+    {
+        sSceneAdvanceUsed++;
+        sSceneAdvanceWaited = 0;
+        return TRUE;
+    }
+
+    // Nothing has come for a long time. Hand the buttons back.
+    //
+    // The repeats above make a lost advance unlikely rather than impossible,
+    // and the cost of one is a console frozen on a message box with no way out
+    // -- the script cannot end, so nothing clears the state that is waiting on
+    // it. Ten seconds of silence is already a broken link or a partner who has
+    // put their phone down; letting this player read on by themselves is a
+    // worse scene than intended and a far better outcome than a locked game.
+    if (sSceneAdvanceWaited < SCENE_ADVANCE_WAIT_FRAMES)
+    {
+        sSceneAdvanceWaited++;
+        return FALSE;
+    }
+
+    if (JOY_NEW(A_BUTTON) || JOY_NEW(B_BUTTON))
+    {
+        sSceneAdvanceWaited = 0;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+static bool8 CoopSendSceneAdvance(u16 *sendCmd)
+{
+    if (sSceneAdvanceSendsLeft == 0)
+        return FALSE;
+
+    sendCmd[0] = LINKCMD_COOP_ADVANCE;
+    sendCmd[1] = sSceneAdvanceSent;
+    sSceneAdvanceSendsLeft--;
+
+    return TRUE;
+}
+
+void Coop_ReceiveSceneAdvance(u8 playerId, const u16 *cmd)
+{
+    if (playerId == GetMultiplayerId())
+        return;
+
+    sSceneAdvanceHeard = cmd[1];
 }
 
 bool8 Coop_IsInMirroredScene(void)
@@ -865,6 +976,11 @@ static void ResetScenes(void)
     sSceneSendLocalId = 0;
     sInGuestScene = FALSE;
     sInHostScene = FALSE;
+    // Not the driver's own count: it is this console's, it is monotonic, and
+    // the partner baselines against whatever it last heard. Resetting it would
+    // make the next scene's first press look like a step backwards.
+    sSceneAdvanceSendsLeft = 0;
+    sSceneAdvanceWaited = 0;
 }
 
 static void ResetGates(void)
@@ -1838,6 +1954,12 @@ static void CoopSendPositionCB(void)
     // gate's whole timeout waiting for a scene stuck behind it. Everything below
     // can wait a frame; a partner sat on a dark screen cannot.
     if (CoopSendScene(gSendCmd))
+        return;
+
+    // Ahead of the gate, and for the same reason the scene is: a partner
+    // sitting on a message box waiting to be let through is a partner looking
+    // at a screen that has stopped.
+    if (CoopSendSceneAdvance(gSendCmd))
         return;
 
     if (CoopSendGate(gSendCmd))

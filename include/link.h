@@ -88,6 +88,10 @@
 // Co-op: "I am travelling -- come with me." Carries no destination; see
 // Coop_FollowMe.
 #define LINKCMD_COOP_FOLLOW             0x3338
+// Co-op: how many times the console pacing a mirrored scene has pressed on
+// through it. A running count rather than a pulse, so a dropped frame catches
+// up on the next press instead of stranding the partner on a message box.
+#define LINKCMD_COOP_ADVANCE            0x3339
 #define LINKCMD_SEND_HELD_KEYS          0xCAFE
 #define LINKCMD_SEND_BLOCK_REQ          0xCCCC
 #define LINKCMD_START_TRADE             0xCCDD

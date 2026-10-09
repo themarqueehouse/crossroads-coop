@@ -281,6 +281,20 @@ void Coop_UpdatePendingScene(void);
  */
 bool8 Coop_IsSceneGuest(void);
 
+/** TRUE when this console is watching a scene someone else is pacing. */
+bool8 Coop_SceneFollowerWaits(void);
+
+/** TRUE when text should print instantly: the follower has nothing to pace. */
+bool8 Coop_SceneTextIsInstant(void);
+
+/** The driver pressed on through a message box. Tell the partner. */
+void Coop_SceneAdvanced(void);
+
+/** The follower: TRUE once the driver has moved on (or has gone silent). */
+bool8 Coop_SceneTakeAdvance(void);
+
+void Coop_ReceiveSceneAdvance(u8 playerId, const u16 *cmd);
+
 /**
  * True while BOTH consoles are already inside the same mirrored script.
  *

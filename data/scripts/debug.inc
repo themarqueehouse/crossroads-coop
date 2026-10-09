@@ -439,6 +439,35 @@ Debug_EventScript_Script_16::
 	release
 	end
 
+@ LOCKSTEP DIALOGUE TEST (R+Start, Scripts..., Script 17). Run on ONE console.
+@
+@ Four message boxes in a mirrored scene, with no gate between them. Script 1
+@ has gates either side of its boxes, so the two consoles were pulled back
+@ level whatever happened in between and the thing that drifts was never under
+@ test. This is the shape a real story scene has: a run of boxes paced only by
+@ whoever is pressing A.
+Debug_EventScript_Script_17::
+	coopscene GATE_TEST_LOCKSTEP
+	lockall
+	msgbox Debug_Text_CoopLockstep1, MSGBOX_DEFAULT
+	msgbox Debug_Text_CoopLockstep2, MSGBOX_DEFAULT
+	msgbox Debug_Text_CoopLockstep3, MSGBOX_DEFAULT
+	msgbox Debug_Text_CoopLockstep4, MSGBOX_DEFAULT
+	releaseall
+	end
+
+Debug_Text_CoopLockstep1:
+	.string "One.$"
+
+Debug_Text_CoopLockstep2:
+	.string "Two.$"
+
+Debug_Text_CoopLockstep3:
+	.string "Three.$"
+
+Debug_Text_CoopLockstep4:
+	.string "Four.$"
+
 Debug_Text_CoopBusy:
 	.string "Standing here, mid-conversation,\n"
 	.string "so your partner's console has\l"

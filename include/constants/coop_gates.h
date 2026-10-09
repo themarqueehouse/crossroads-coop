@@ -34,6 +34,7 @@
 #define GATE_TEST_SECOND 2
 #define GATE_TEST_GIFT   3
 #define GATE_TEST_BATTLE 4
+#define GATE_TEST_LOCKSTEP 5
 
 // Story gates start at 100, numbered in rough story order with gaps left for
 // whatever gets inserted later.

@@ -1,6 +1,7 @@
 #include "global.h"
 #include "battle.h"
 #include "blit.h"
+#include "coop.h"
 #include "dynamic_placeholder_text_util.h"
 #include "event_data.h"
 #include "field_name_box.h"
@@ -352,6 +353,18 @@ u32 GetPlayerTextScrollSpeed(void)
 
 bool32 IsPlayerTextSpeedInstant(void)
 {
+    // In a mirrored story scene, the console that did not trigger it prints
+    // instantly and then waits.
+    //
+    // Both consoles run the same script, but each was printing at its own text
+    // speed and advancing on its own button press, so the two drifted apart a
+    // box at a time: one player finished the conversation and walked off with
+    // Oak while their partner's copy of Oak was still talking. Only one person
+    // paces a scene now -- whoever walked into it -- and the other side has
+    // nothing left to pace, so there is no speed left to disagree about.
+    if (Coop_SceneTextIsInstant())
+        return TRUE;
+
     return GetPlayerTextSpeed() == OPTIONS_TEXT_SPEED_INSTANT;
 }
 
