@@ -71,6 +71,7 @@
 #include "rtc.h"
 #include "fake_rtc.h"
 #include "save.h"
+#include "coop.h"
 #include "vs_seeker.h"
 #include "load_save.h"
 #include "battle_partner.h"
@@ -1638,6 +1639,22 @@ static void DebugAction_Util_Warp_SelectWarp(u8 taskId)
 #undef tMapGroup
 #undef tMapNum
 #undef tWarp
+
+// Empty the Player 2 slot, from a script.
+//
+// A save made with a partner console attached comes out with that partner's
+// character stored in it, and the join hands it to whoever connects next --
+// overwriting the name and gender they just chose with somebody else's. A
+// save meant to be handed to other people has to leave that slot empty.
+void Debug_ClearCoopPlayer2(struct ScriptContext *ctx)
+{
+    struct CoopPlayer2 *rec = GetCoopPlayer2();
+    u32 i;
+    u8 *bytes = (u8 *)rec;
+
+    for (i = 0; i < sizeof(struct CoopPlayer2); i++)
+        bytes[i] = 0;
+}
 
 // Write the save, from a script.
 //

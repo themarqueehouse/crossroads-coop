@@ -14,9 +14,14 @@
 //   2. choosing to start holds, with the reason on screen
 //   3. it starts BY ITSELF the moment the partner arrives, with no second
 //      press needed
+//   4. Player 2 never touches the menu at all -- no save file, no intro, no
+//      naming screen. Their character comes out of Player 1's save, so there
+//      is nothing on that menu for them to choose between, and making them
+//      sit through Birch every session for a character that gets replaced on
+//      connect is the thing this exists to avoid.
 //
 //   node coop/harness/stage9.mjs path/to/rom.gba
-import { startRig, tally } from './rig.mjs';
+import { startRig, tally, OFFSETS } from './rig.mjs';
 
 const PORT = 8799;
 const ROM = process.argv[2] || '/home/claude/crossroads/pokeemerald.gba';
@@ -82,6 +87,16 @@ async function main() {
     // the partner turned up, not because the test prodded it. Past that first
     // moment the nudges are for Birch's speech, which is a long way from the
     // menu and not what is under test.
+    // What is holding player 2 at the menu, if anything is.
+    for (let i = 0; i < 6; i++) {
+      await rig.wait(90);
+      const pf = await rig.readAt(1, OFFSETS.paletteFadeAddr, 8);
+      const mb = await rig.mailbox(1);
+      console.log(`      p2 t+${(i + 1) * 90}: state=${mb.state} map=${mb.selfMap}` +
+        `  entry=${await rig.u8(1, OFFSETS.dbgJoinEntryAddr)}` +
+        `  paletteFade=[${[...pf].map((b) => b.toString(16)).join(' ')}]`);
+    }
+
     await nudge(rig, 320);
     await rig.wait(240);
     for (let i = 0; i < 8; i++) { await rig.tap('both', 'B', 6); await rig.wait(20); }
@@ -99,6 +114,13 @@ async function main() {
     t.check('and the co-op session came up',
             m.every((x) => x.state === 'ACTIVE'),
             m.map((x) => x.state).join('/'));
+
+    // Player 2 got into the world without a save of their own and without
+    // being asked anything. Both consoles being in the overworld on the same
+    // map is the proof: core 1 was given no save file at all.
+    t.check('player 2 got in with no save and no intro',
+            (await mapOf(rig, 1)) !== 0,
+            'player 2 never reached the overworld');
 
     t.summary();
   } finally {

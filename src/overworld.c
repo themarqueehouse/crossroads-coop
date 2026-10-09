@@ -1910,6 +1910,72 @@ static bool8 RunFieldCallback(void)
     return TRUE;
 }
 
+// Player 2's way in: a new game with no intro and no naming screen.
+//
+// Identical to CB2_NewGame except for the field callback. The ordinary one
+// runs ExecuteTruckSequence -- waking up in the back of the moving van, which
+// is the start of a story Player 2 is not starting; they are walking into one
+// already in progress. This fades in on the spot instead, and the join warps
+// them to their partner a moment later.
+//
+// The placeholder name and gender are overwritten by the stored record the
+// moment it arrives. On a first session there is nothing stored, and that is
+// when Player 2 is asked who they are -- once.
+static const u8 gText_CoopPlayerTwoDefaultName[] = _("PLAYER2");
+
+void CB2_CoopJoinNewGame(void)
+{
+    gCoopDbgJoinEntry = 2;
+    FieldClearVBlankHBlankCallbacks();
+    StopMapMusic();
+
+    // Deliberately NOT NewGameInitData.
+    //
+    // There is nothing for it to initialise. A console with no save file has
+    // already had Sav2_ClearSetDefault run over it at boot, so the blocks are
+    // default and the party is empty -- NewGameInitData would be a second,
+    // much heavier wipe of state that is already clean. Running it here wedges
+    // the console outright: it never gets as far as ClearSav1, and the last
+    // frame stays on screen, which from outside is indistinguishable from a
+    // menu that never let go.
+    //
+    // Everything it would have set up is about to be replaced anyway. Player
+    // 2's world arrives from Player 1 and their character arrives with it.
+    // All this has to do is put them somewhere real to stand while that
+    // happens.
+    gSaveBlock2Ptr->playerRegion = REGION_HOENN;
+
+    // A trainer id and a name, which NewGameInitData would have provided and
+    // the naming screen would have filled in. Without them this console goes
+    // into the player exchange as id 0 with a blank name, and the exchange
+    // never completes -- both consoles sit in EXCHANGING for ever.
+    //
+    // Placeholders. The stored record replaces them a moment later, and on a
+    // first session Player 2 is asked who they are once.
+    SetTrainerId((Random() << 16) | GetGeneratedTrainerIdLower(),
+                 gSaveBlock2Ptr->playerTrainerId);
+    if (gSaveBlock2Ptr->playerName[0] == EOS)
+        StringCopy(gSaveBlock2Ptr->playerName, gText_CoopPlayerTwoDefaultName);
+
+    SetWarpDestination(MAP_LITTLEROOT_TOWN >> 8, MAP_LITTLEROOT_TOWN & 0xFF,
+                       WARP_ID_NONE, 5, 8);
+    WarpIntoMap();
+
+    ResetInitialPlayerAvatarState();
+    PlayTimeCounter_Start();
+    ScriptContext_Init();
+    UnlockPlayerFieldControls();
+    gFieldCallback = FieldCB_WarpExitFadeFromBlack;
+    gFieldCallback2 = NULL;
+    gCoopDbgJoinEntry = 12;
+    DoMapLoadLoop(&gMain.state);
+    gCoopDbgJoinEntry = 13;
+    SetFieldVBlankCallback();
+    SetMainCallback1(CB1_Overworld);
+    SetMainCallback2(CB2_Overworld);
+    gCoopDbgJoinEntry = 3;
+}
+
 void CB2_NewGame(void)
 {
     FieldClearVBlankHBlankCallbacks();

@@ -1261,6 +1261,41 @@ bool8 IsCoopSessionEngaged(void)
     return gNetLinkActive && sCoopState != COOP_STATE_OFF;
 }
 
+// Whether this console is the joining player in a co-op session.
+//
+// Known before the game starts, because the wrapper writes the slot into the
+// mailbox at boot -- which is what lets Player 2's console skip the main menu
+// and the whole Birch intro rather than making somebody sit through it, and a
+// save file exist, for a character that is going to be replaced over the link
+// anyway.
+// How far Player 2's intro-free entry got. 1 = the menu task released it,
+// 2 = the new-game callback started, 3 = it finished and the overworld has it.
+// A value that stops at 2 is a hang inside the callback, which from outside
+// looks identical to the menu never releasing -- the last frame just stays on
+// screen either way.
+EWRAM_DATA u8 gCoopDbgJoinEntry = 0;
+
+// Silence every outgoing sync for a moment.
+//
+// Wiping a save is thousands of flag, var, Pokedex, bag and storage writes,
+// and every one of them now has a hook on it. Player 2 does that wipe with the
+// link already up -- their console has no save of its own, so starting means
+// initialising one from nothing while connected -- and the result is thousands
+// of pointless queue operations announcing a world that is about to be thrown
+// away and replaced by Player 1's.
+//
+// Pointless is the charitable reading; it also wedged the console outright.
+void Coop_SuppressSync(bool8 suppress)
+{
+    sApplyingRemote = suppress;
+    sApplyingBoxOp = suppress;
+}
+
+bool8 Coop_IsJoiningPlayer(void)
+{
+    return gNetLinkActive && !NetLink_IsMaster();
+}
+
 bool8 IsCoopSessionPaired(void)
 {
     return gNetLinkActive && NetLink_GetHostStatus() == NET_HOST_READY

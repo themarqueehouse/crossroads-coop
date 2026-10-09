@@ -1,5 +1,6 @@
 #include "global.h"
 #include "new_game.h"
+#include "coop.h"
 #include "config/coop.h"
 #include "random.h"
 #include "pokemon.h"
@@ -173,6 +174,7 @@ void NewGameInitData(void)
     ResetPokedex();
     ClearFrontierRecord();
     ClearSav1();
+    gCoopDbgJoinEntry = 20;
     ClearSav3();
     ClearAllMail();
     gSaveBlock2Ptr->specialSaveWarpFlags = 0;
@@ -201,10 +203,14 @@ void NewGameInitData(void)
     InitLotadSizeRecord();
     gPartiesCount[B_TRAINER_0] = 0;
     ZeroPlayerPartyMons();
+    gCoopDbgJoinEntry = 21;
     ResetPokemonStorageSystem();
+    gCoopDbgJoinEntry = 22;
     DeactivateAllRoamers();
     gSaveBlock1Ptr->registeredItem = ITEM_NONE;
+    gCoopDbgJoinEntry = 23;
     ClearBag();
+    gCoopDbgJoinEntry = 24;
     NewGameInitPCItems();
     ClearPokeblocks();
     ClearDecorationInventories();
@@ -213,9 +219,12 @@ void NewGameInitData(void)
     InitDewfordTrend();
     ResetFanClub();
     ResetLotteryCorner();
+    gCoopDbgJoinEntry = 25;
     WarpToTruck();
+    gCoopDbgJoinEntry = 26;
     RunScriptImmediately(EventScript_ResetAllMapFlagsFrlg);
     RunScriptImmediately(EventScript_ResetAllMapFlags);
+    gCoopDbgJoinEntry = 27;
     if (gSaveBlock2Ptr->playerRegion == REGION_KANTO)
         RunScriptImmediately(EventScript_SetFlagIsFrlg);
     StringCopy(gSaveBlock2Ptr->rivalName, rivalName);
@@ -234,6 +243,7 @@ void NewGameInitData(void)
     ResetItemFlags();
     ResetDexNav();
     ClearFollowerNPCData();
+    gCoopDbgJoinEntry = 28;
 }
 
 static void ResetMiniGamesRecords(void)

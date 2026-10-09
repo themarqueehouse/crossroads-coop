@@ -169,6 +169,7 @@ void CB2_Overworld(void);
 void SetMainCallback1(void (*cb)(void));
 void SetUnusedCallback(void *func);
 void CB2_NewGame(void);
+void CB2_CoopJoinNewGame(void);
 void CB2_WhiteOut(void);
 void CB2_LoadMap(void);
 void CB2_ReturnToFieldContestHall(void);

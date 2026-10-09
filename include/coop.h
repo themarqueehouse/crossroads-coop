@@ -315,6 +315,25 @@ struct CoopPlayer2 *GetCoopPlayer2(void);
  */
 bool8 IsCoopLinkActive(void);
 
+/**
+ * True when this console is the joining player (Player 2).
+ *
+ * Readable before the game starts: the wrapper writes the slot into the
+ * mailbox at boot. Player 2 has no save of their own -- their character lives
+ * inside Player 1's -- so their console skips the menu and the intro entirely.
+ */
+bool8 Coop_IsJoiningPlayer(void);
+
+/**
+ * Silence outgoing sync while this console rewrites its own world wholesale.
+ *
+ * For Player 2's intro-free start, which initialises a save from nothing with
+ * the link already up. Everything it writes is about to be replaced by
+ * Player 1's world anyway.
+ */
+void Coop_SuppressSync(bool8 suppress);
+extern u8 gCoopDbgJoinEntry;
+
 /** True once both players are present, whether or not the link is up yet. */
 bool8 IsCoopSessionPaired(void);
 

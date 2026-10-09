@@ -191,6 +191,7 @@ static void MainMenu_FormatSavegameText(void);
 static void HighlightSelectedMainMenuItem(enum PartyMenuType, u8, s16);
 static void Task_HandleMainMenuInput(u8);
 static void Task_CoopWaitForPartner(u8);
+static void Task_CoopJoinWithoutSave(u8);
 static void Task_HandleMainMenuAPressed(u8);
 static void Task_HandleMainMenuBPressed(u8);
 static void Task_NewGameBirchSpeech_Init(u8);
@@ -430,6 +431,7 @@ static const u16 sMainMenuTextPal[] = INCBIN_U16("graphics/interface/main_menu_t
 
 static const u8 sTextColor_Headers[] = {TEXT_DYNAMIC_COLOR_1, TEXT_DYNAMIC_COLOR_2, TEXT_DYNAMIC_COLOR_3};
 static const u8 sText_CoopWaitingForPartner[] = _("Waiting for your partner...");
+static const u8 sText_CoopJoining[] = _("Joining your partner's game...");
 static const u8 sTextColor_MenuInfo[] = {TEXT_DYNAMIC_COLOR_1, TEXT_COLOR_WHITE, TEXT_DYNAMIC_COLOR_3};
 
 static const struct BgTemplate sMainMenuBgTemplates[] = {
@@ -953,8 +955,63 @@ static bool8 HandleMainMenuInput(u8 taskId)
 
 static void Task_HandleMainMenuInput(u8 taskId)
 {
+    // Player 2 does not use this menu at all.
+    //
+    // Their character does not live on their phone -- it comes over the link
+    // out of Player 1's save -- so there is nothing here for them to choose
+    // between. Without this they need a save file of their own just to get a
+    // CONTINUE to press, and without one of those they sit through Birch, the
+    // naming screen and the boy/girl question every single session, for a
+    // character that is replaced the moment they connect.
+    //
+    // Nothing is shown and nothing is pressed: the moment the pair is up,
+    // their console starts itself.
+    if (Coop_IsJoiningPlayer())
+    {
+        FillWindowPixelBuffer(0, PIXEL_FILL(0xA));
+        AddTextPrinterParameterized3(0, FONT_NORMAL, 0, 1, sTextColor_Headers,
+                                     TEXT_SKIP_DRAW, sText_CoopJoining);
+        PutWindowTilemap(0);
+        CopyWindowToVram(0, COPYWIN_GFX);
+        DrawMainMenuWindowBorder(&sWindowTemplates_MainMenu[0], MAIN_MENU_BORDER_TILE);
+        gTasks[taskId].func = Task_CoopJoinWithoutSave;
+        return;
+    }
+
     if (HandleMainMenuInput(taskId))
         gTasks[taskId].func = Task_HighlightSelectedMainMenuItem;
+}
+
+// Start Player 2's game once Player 1 is there, with no save and no intro.
+//
+// A placeholder character is set up here only so the world has something to
+// draw before the real one arrives; the join overwrites the name, gender,
+// party and position a moment later. On the very first session there is
+// nothing stored to overwrite it with, and that is when Player 2 gets asked
+// who they are -- once, in the overworld, rather than every time.
+static void Task_CoopJoinWithoutSave(u8 taskId)
+{
+    if (gPaletteFade.active || !IsCoopSessionPaired())
+        return;
+
+    // The region, which the ordinary New Game path sets and this one skipped.
+    // NewGameInitData places the player according to it, so leaving it unset
+    // sends the map loader after a map that is not there and the console
+    // simply stops -- with the last frame still on screen, which looks exactly
+    // like a menu that never released.
+    //
+    // Hoenn regardless of what Player 1 picked. Player 2 is warped to their
+    // partner within a second or two of arriving, and the presentation follows
+    // whichever map they end up standing on.
+    gSaveBlock2Ptr->playerRegion = REGION_HOENN;
+    isFrlgInt = 0;
+
+    gCoopDbgJoinEntry = 1;
+    gPlttBufferUnfaded[0] = RGB_BLACK;
+    gPlttBufferFaded[0] = RGB_BLACK;
+    DestroyTask(taskId);
+    FreeAllWindowBuffers();
+    SetMainCallback2(CB2_CoopJoinNewGame);
 }
 
 // Sit on the main menu until the other console is there, then start.
