@@ -92,6 +92,10 @@
 // through it. A running count rather than a pulse, so a dropped frame catches
 // up on the next press instead of stranding the partner on a message box.
 #define LINKCMD_COOP_ADVANCE            0x3339
+// Co-op: which Pokemon is walking behind this player, so the partner can draw
+// it. Sent when it changes, not every frame -- its position is worked out from
+// the player's own, which is already arriving.
+#define LINKCMD_COOP_FOLLOWER           0x333A
 #define LINKCMD_SEND_HELD_KEYS          0xCAFE
 #define LINKCMD_SEND_BLOCK_REQ          0xCCCC
 #define LINKCMD_START_TRADE             0xCCDD

@@ -102,6 +102,11 @@ WANTED_SYMBOLS = {
     # same ROM address and a test comparing it cannot tell them apart.
     "sSceneAdvanceSent": "sceneAdvanceSentAddr",
     "sSceneAdvanceUsed": "sceneAdvanceUsedAddr",
+    # The partner's follower Pokemon: which one they say it is, and whether
+    # this console managed to put it on the map.
+    "sPeerFollowerSpecies": "peerFollowerSpeciesAddr",
+    "sPeerFollowerObjectId": "peerFollowerObjectIdAddr",
+    "gObjectEvents": "objectEventsAddr",
 }
 
 # Symbol -> the field names its entries carry, in order.
@@ -110,6 +115,10 @@ ARRAYS = {
         "sizeofSaveBlock1", "sizeofCoopPlayer2", "coopPlayer2",
         "playerName", "playerGender", "partyCount", "claimed",
         "pos", "location", "party",
+    ],
+    "gCoopObjectOffsets": [
+        "sizeofObjectEvent", "objLocalId", "objCurrentCoords", "objGraphicsId",
+        "coordsX", "coordsY", "objectEventsCount",
     ],
     "gCoopWorldOffsets": [
         "flags", "numFlagBytes", "dexSeen", "dexCaught", "numDexFlagBytes",

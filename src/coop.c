@@ -1479,6 +1479,11 @@ u8 GetCoopState(void)
 
 static void CoopSendPositionCB(void);
 static void DespawnPeer(void);
+// The partner's follower Pokemon. Defined down with the peer sprite it hangs
+// off, used up here by the session update and the send callback.
+static bool8 CoopSendFollowerMon(u16 *sendCmd);
+static void CheckOurFollower(void);
+static void ResetPeerFollower(void);
 
 // ---------------------------------------------------------------------------
 // Handing the link to a battle.
@@ -1557,6 +1562,7 @@ void Coop_Reset(void)
     sDeltaTail = 0;
     ResetGates();
     ResetScenes();
+    ResetPeerFollower();
     ResetBoxSync();
     CoopSync_Reset();
 }
@@ -1888,6 +1894,7 @@ void Coop_Update(void)
     }
 
     Coop_UpdateGate();
+    CheckOurFollower();
     Coop_UpdateFollow();
     Coop_UpdateBoxSync();
     UpdateGuestScene();
@@ -1968,6 +1975,9 @@ static void CoopSendPositionCB(void)
     // "Come with me" is small, rare and time-critical -- the partner cannot
     // act on it until the traveller has arrived, so a late one strands them.
     if (CoopSendFollow(gSendCmd))
+        return;
+
+    if (CoopSendFollowerMon(gSendCmd))
         return;
 
     // Changes before positions. A missed position costs one frame of smoothness
@@ -2119,15 +2129,265 @@ static void SpawnPeer(void)
     ObjectEventTurn(&gObjectEvents[id], gCoopPeer.facing);
 }
 
+// ---------------------------------------------------------------------------
+// The partner's follower Pokemon.
+//
+// Mirrored the same way the partner themselves is: a map object spawned under
+// a reserved local id, told where to be. What is NOT mirrored is its position.
+//
+// A follower does not need one. It occupies the tile its trainer just left, so
+// it can be driven entirely from the partner's own movement, which is already
+// arriving sixty times a second. Broadcasting a second set of coordinates
+// would double the busiest message in the protocol to say something both
+// consoles can already work out -- and the send queue is the scarce thing
+// here, as a session's worth of dropped gym badges established.
+//
+// So only the species travels, and only when it changes.
+// ---------------------------------------------------------------------------
+
+static EWRAM_DATA u8 sPeerFollowerObjectId = 0;
+
+// The tile the partner's follower is walking to: the one the partner was
+// standing on before their most recent step.
+//
+// Held rather than recomputed, and this is the whole subtlety. "Where were
+// they before this frame" is the partner's current tile for every frame they
+// are standing still, so a follower driven off that walks onto its trainer
+// and stands inside them -- which looks, from the outside, exactly like a
+// follower that is working, because one sprite is drawn over the other.
+static EWRAM_DATA s16 sPeerFollowerToX = 0;
+static EWRAM_DATA s16 sPeerFollowerToY = 0;
+static EWRAM_DATA u16 sPeerFollowerSpecies = SPECIES_NONE;
+static EWRAM_DATA u8 sPeerFollowerFlags = 0;
+
+// What we last told them about ours, so a change can be noticed.
+static EWRAM_DATA u16 sFollowerSentSpecies = SPECIES_NONE;
+static EWRAM_DATA u8 sFollowerSentFlags = 0;
+static EWRAM_DATA u8 sFollowerSendsLeft = 0;
+static EWRAM_DATA u8 sFollowerCheckTimer = 0;
+
+#define COOP_FOLLOWER_SHINY   (1 << 0)
+#define COOP_FOLLOWER_FEMALE  (1 << 1)
+
+// Repeats, because this is sent on change rather than every frame: a lost one
+// would leave the partner looking at the wrong Pokemon until the next swap.
+#define FOLLOWER_SENDS 4
+
+// Cheap, but not worth doing sixty times a second to answer a question whose
+// answer changes when the party leader does.
+#define FOLLOWER_CHECK_INTERVAL 30
+
+static struct ObjectEvent *GetPeerFollowerObject(void)
+{
+    struct ObjectEvent *obj;
+
+    if (sPeerFollowerObjectId >= OBJECT_EVENTS_COUNT)
+        return NULL;
+
+    obj = &gObjectEvents[sPeerFollowerObjectId];
+
+    // Same check the partner's own object needs: a map change resets every
+    // object event, so the slot we remember may be inactive or reused.
+    if (!obj->active || obj->localId != COOP_PEER_FOLLOWER_LOCAL_ID)
+    {
+        sPeerFollowerObjectId = OBJECT_EVENTS_COUNT;
+        return NULL;
+    }
+
+    return obj;
+}
+
+static void DespawnPeerFollower(void)
+{
+    if (GetPeerFollowerObject() != NULL)
+    {
+        RemoveObjectEventByLocalIdAndMap(COOP_PEER_FOLLOWER_LOCAL_ID,
+                                         gSaveBlock1Ptr->location.mapNum,
+                                         gSaveBlock1Ptr->location.mapGroup);
+    }
+    sPeerFollowerObjectId = OBJECT_EVENTS_COUNT;
+}
+
+// Whether the partner's follower can be drawn on the map we are both standing
+// on. The same rules the game applies to our own: a Pokemon with no overworld
+// sprite cannot be drawn at all, and one whose sprite is bigger than a tile
+// does not fit indoors.
+static bool8 PeerFollowerFits(void)
+{
+    const struct ObjectEventGraphicsInfo *info;
+
+    if (sPeerFollowerSpecies == SPECIES_NONE)
+        return FALSE;
+
+    info = SpeciesToGraphicsInfo(sPeerFollowerSpecies,
+                                 (sPeerFollowerFlags & COOP_FOLLOWER_SHINY) != 0,
+                                 (sPeerFollowerFlags & COOP_FOLLOWER_FEMALE) != 0);
+    if (info == NULL)
+        return FALSE;
+
+    if (gMapHeader.mapType == MAP_TYPE_INDOOR && info->oam->size > ST_OAM_SIZE_2)
+        return FALSE;
+
+    return TRUE;
+}
+
+static void SpawnPeerFollower(const struct ObjectEvent *peer)
+{
+    u16 gfxId = GetGraphicsIdForMon(sPeerFollowerSpecies,
+                                    (sPeerFollowerFlags & COOP_FOLLOWER_SHINY) != 0,
+                                    (sPeerFollowerFlags & COOP_FOLLOWER_FEMALE) != 0);
+    // On top of the partner, which is where the game puts a follower that has
+    // just appeared too. Their next step pushes it into the tile behind them.
+    u8 id = SpawnSpecialObjectEventParameterized(gfxId, MOVEMENT_TYPE_NONE,
+                                                 COOP_PEER_FOLLOWER_LOCAL_ID,
+                                                 peer->currentCoords.x,
+                                                 peer->currentCoords.y,
+                                                 peer->currentElevation);
+
+    sPeerFollowerObjectId = id < OBJECT_EVENTS_COUNT ? id : OBJECT_EVENTS_COUNT;
+}
+
+// Walk the partner's follower into the tile they have just left.
+//
+// Called with the tile the partner occupied before this frame's step. A
+// follower is always one tile behind its trainer, so that tile is exactly
+// where this one belongs, and stepping it there rather than placing it gets
+// the walk animation, the grass rustle and the reflections for nothing.
+static void StepPeerFollowerTo(void)
+{
+    struct ObjectEvent *mon = GetPeerFollowerObject();
+    s16 toX = sPeerFollowerToX;
+    s16 toY = sPeerFollowerToY;
+    s16 dx, dy;
+
+    if (mon == NULL)
+        return;
+
+    if (ObjectEventClearHeldMovementIfFinished(mon) == 0 && mon->heldMovementActive)
+        return;
+
+    dx = toX - mon->currentCoords.x;
+    dy = toY - mon->currentCoords.y;
+
+    if (dx == 0 && dy == 0)
+        return;
+
+    if ((dx == 0 && (dy == 1 || dy == -1)) || (dy == 0 && (dx == 1 || dx == -1)))
+    {
+        u8 dir = dx == 1 ? DIR_EAST : dx == -1 ? DIR_WEST
+               : dy == 1 ? DIR_SOUTH : DIR_NORTH;
+
+        ObjectEventSetHeldMovement(mon, GetWalkNormalMovementAction(dir));
+        return;
+    }
+
+    // Further than a step: the partner warped, hopped a ledge, or we missed
+    // frames. Snap, for the same reason their own sprite does.
+    MoveObjectEventToMapCoords(mon, toX, toY);
+}
+
+static void UpdatePeerFollower(struct ObjectEvent *peer)
+{
+    if (!PeerFollowerFits())
+    {
+        DespawnPeerFollower();
+        return;
+    }
+
+    if (GetPeerFollowerObject() == NULL)
+    {
+        SpawnPeerFollower(peer);
+        // Under them until they move, which is where the game puts a newly
+        // spawned follower of its own too.
+        sPeerFollowerToX = peer->currentCoords.x;
+        sPeerFollowerToY = peer->currentCoords.y;
+        return;
+    }
+
+    // Swap the sprite if they have changed who is at the front of their party.
+    ObjectEventSetGraphicsId(GetPeerFollowerObject(),
+        GetGraphicsIdForMon(sPeerFollowerSpecies,
+                            (sPeerFollowerFlags & COOP_FOLLOWER_SHINY) != 0,
+                            (sPeerFollowerFlags & COOP_FOLLOWER_FEMALE) != 0));
+
+    StepPeerFollowerTo();
+}
+
+// Tell them about ours, when it changes.
+static bool8 CoopSendFollowerMon(u16 *sendCmd)
+{
+    if (sFollowerSendsLeft == 0)
+        return FALSE;
+
+    sendCmd[0] = LINKCMD_COOP_FOLLOWER;
+    sendCmd[1] = sFollowerSentSpecies;
+    sendCmd[2] = sFollowerSentFlags;
+    sFollowerSendsLeft--;
+
+    return TRUE;
+}
+
+static void CheckOurFollower(void)
+{
+    u32 species = SPECIES_NONE;
+    bool32 shiny = FALSE;
+    bool32 female = FALSE;
+    u8 flags = 0;
+
+    if (++sFollowerCheckTimer < FOLLOWER_CHECK_INTERVAL)
+        return;
+
+    sFollowerCheckTimer = 0;
+
+    // The same question the game asks before drawing our own, so the partner
+    // is told about a follower exactly when there is one to see.
+    if (!GetFollowerInfo(&species, &shiny, &female))
+        species = SPECIES_NONE;
+
+    if (shiny)
+        flags |= COOP_FOLLOWER_SHINY;
+    if (female)
+        flags |= COOP_FOLLOWER_FEMALE;
+
+    if ((u16)species == sFollowerSentSpecies && flags == sFollowerSentFlags)
+        return;
+
+    sFollowerSentSpecies = species;
+    sFollowerSentFlags = flags;
+    sFollowerSendsLeft = FOLLOWER_SENDS;
+}
+
+void Coop_ReceiveFollowerMon(u8 playerId, const u16 *cmd)
+{
+    if (playerId == GetMultiplayerId())
+        return;
+
+    sPeerFollowerSpecies = cmd[1];
+    sPeerFollowerFlags = cmd[2] & 0xFF;
+}
+
+static void ResetPeerFollower(void)
+{
+    sPeerFollowerSpecies = SPECIES_NONE;
+    sPeerFollowerFlags = 0;
+    // Forget what we told them, so a reconnect says it again rather than
+    // leaving the partner with whatever the last session left on screen.
+    sFollowerSentSpecies = SPECIES_NONE;
+    sFollowerSentFlags = 0;
+    sFollowerSendsLeft = 0;
+    sFollowerCheckTimer = 0;
+}
+
 void Coop_UpdatePeerSprite(void)
 {
     struct ObjectEvent *peer;
-    s16 dx, dy;
+    s16 dx, dy, wasX, wasY;
 
     sFrameCounter++;
 
     if (!IsCoopLinkActive() || !PeerIsOnOurMap() || PeerHasGoneQuiet())
     {
+        DespawnPeerFollower();
         DespawnPeer();
         return;
     }
@@ -2139,6 +2399,11 @@ void Coop_UpdatePeerSprite(void)
         return;
     }
 
+    // Where they are before anything this frame moves them. This is the tile
+    // their follower walks into if they step.
+    wasX = peer->currentCoords.x;
+    wasY = peer->currentCoords.y;
+
     // Swap the sprite when they get on a bike, surf, and so on. Cheap to call
     // every frame -- it returns immediately when the id is unchanged.
     ObjectEventSetGraphicsId(peer,
@@ -2149,7 +2414,13 @@ void Coop_UpdatePeerSprite(void)
     // sprite stutters in place instead of sliding between tiles.
     if (ObjectEventClearHeldMovementIfFinished(peer) == 0
         && peer->heldMovementActive)
+    {
+        // Their follower is on its own clock -- it is a step behind by
+        // definition, so it is usually still walking when they have stopped,
+        // and would stand frozen half a tile out if this returned first.
+        UpdatePeerFollower(peer);
         return;
+    }
 
     dx = (s16)gCoopPeer.x - peer->currentCoords.x;
     dy = (s16)gCoopPeer.y - peer->currentCoords.y;
@@ -2158,6 +2429,9 @@ void Coop_UpdatePeerSprite(void)
     {
         if (peer->facingDirection != gCoopPeer.facing)
             ObjectEventTurn(peer, gCoopPeer.facing);
+        // Target deliberately untouched: they are standing still, so the tile
+        // behind them has not changed.
+        UpdatePeerFollower(peer);
         return;
     }
 
@@ -2169,7 +2443,12 @@ void Coop_UpdatePeerSprite(void)
         u8 dir = dx == 1 ? DIR_EAST : dx == -1 ? DIR_WEST
                : dy == 1 ? DIR_SOUTH : DIR_NORTH;
 
+        // They are leaving this tile, so it is the one their follower wants.
+        sPeerFollowerToX = wasX;
+        sPeerFollowerToY = wasY;
+
         ObjectEventSetHeldMovement(peer, GetWalkNormalMovementAction(dir));
+        UpdatePeerFollower(peer);
         return;
     }
 
@@ -2177,4 +2456,9 @@ void Coop_UpdatePeerSprite(void)
     // rather than trying to animate a path we never saw them take.
     MoveObjectEventToMapCoords(peer, gCoopPeer.x, gCoopPeer.y);
     ObjectEventTurn(peer, gCoopPeer.facing);
+    // Nothing was walked, so there is no trail to follow. Put it with them and
+    // let the next real step pull it into place behind.
+    sPeerFollowerToX = gCoopPeer.x;
+    sPeerFollowerToY = gCoopPeer.y;
+    UpdatePeerFollower(peer);
 }

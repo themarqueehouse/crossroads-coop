@@ -664,6 +664,9 @@ static void ProcessRecvCmds(u8 unused)
         case LINKCMD_COOP_ADVANCE:
             Coop_ReceiveSceneAdvance(i, gRecvCmds[i]);
             break;
+        case LINKCMD_COOP_FOLLOWER:
+            Coop_ReceiveFollowerMon(i, gRecvCmds[i]);
+            break;
         case LINKCMD_COOP_GATE:
             Coop_ReceiveGate(i, gRecvCmds[i]);
             break;

@@ -51,3 +51,19 @@ const unsigned gCoopWorldOffsets[] = {
     FLAG_ADVENTURE_STARTED,
     FLAG_SYS_POKEDEX_GET,
 };
+
+// Map object events, for checking what the partner's console actually drew.
+//
+// "The partner's follower is mirrored" is not a claim the mailbox can settle:
+// it can say an object was spawned, which is also true of an object spawned in
+// the wrong place, following nobody. These let the harness read where the
+// thing ended up.
+const unsigned gCoopObjectOffsets[] = {
+    sizeof(struct ObjectEvent),
+    offsetof(struct ObjectEvent, localId),
+    offsetof(struct ObjectEvent, currentCoords),
+    offsetof(struct ObjectEvent, graphicsId),
+    offsetof(struct Coords16, x),
+    offsetof(struct Coords16, y),
+    OBJECT_EVENTS_COUNT,
+};

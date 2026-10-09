@@ -161,6 +161,13 @@ void Coop_ReceiveDelta(u8 playerId, const u16 *cmd);
 // cannot collide with a real NPC's id on any map.
 #define COOP_PEER_LOCAL_ID 0xF0
 
+// And their follower Pokemon's. A second reserved id rather than reusing
+// OBJ_EVENT_ID_FOLLOWER: that one is this console's own follower, and the
+// game's follower machinery looks it up by that id to move it, feed it and
+// talk to it. Two objects answering to it would have the partner's Pokemon
+// trailing the wrong player.
+#define COOP_PEER_FOLLOWER_LOCAL_ID 0xF1
+
 // Sync gates: a point in a script neither player passes alone.
 //
 // Story doors and cutscenes use these. A player who arrives first waits on a
@@ -294,6 +301,9 @@ void Coop_SceneAdvanced(void);
 bool8 Coop_SceneTakeAdvance(void);
 
 void Coop_ReceiveSceneAdvance(u8 playerId, const u16 *cmd);
+
+/** Which Pokemon is walking behind the partner. */
+void Coop_ReceiveFollowerMon(u8 playerId, const u16 *cmd);
 
 /**
  * True while BOTH consoles are already inside the same mirrored script.
