@@ -241,6 +241,18 @@ bool8 ScriptContext_IsEnabled(void)
         return FALSE;
 }
 
+// Where the running script is, for the co-op harness's diagnostics.
+//
+// A console that has locked its own field controls reports nothing but
+// SCRIPT_BUSY and a black screen, and every script in the game looks like that
+// from outside. This hands back a ROM address the test rig can resolve against
+// the symbol table and name. The context itself is in IWRAM, which the rig
+// cannot reach.
+const u8 *ScriptContext_GetScriptPtr(void)
+{
+    return sGlobalScriptContext.scriptPtr;
+}
+
 // Re-initializes the global script context to zero.
 void ScriptContext_Init(void)
 {

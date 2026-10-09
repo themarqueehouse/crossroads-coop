@@ -46,6 +46,46 @@ static EWRAM_DATA u8 sBacklogTail = 0;
 // "some messages went missing" cannot be told apart from a fault further down
 // the transport, and the backlog would just get bigger on a hunch.
 EWRAM_DATA u16 gCoopDbgSendDrops = 0;
+
+// Position updates thrown out to make room for something that mattered.
+// A healthy session has a few; a steady climb means one console is
+// consistently outrunning the other and the backlog never really drains.
+EWRAM_DATA u16 gCoopDbgPosEvicted = 0;
+
+// Throw away the oldest queued position update, closing the gap so everything
+// else keeps the order it was queued in. FALSE if there was none to throw.
+static bool8 EvictOldestPosition(void)
+{
+    u8 at = sBacklogTail;
+    u8 found = 0xFF;
+
+    while (at != sBacklogHead)
+    {
+        if (sBacklog[at].cmd[0] == LINKCMD_COOP_POS)
+        {
+            found = at;
+            break;
+        }
+        at = (u8)((at + 1) % NET_SEND_BACKLOG);
+    }
+
+    if (found == 0xFF)
+        return FALSE;
+
+    while (TRUE)
+    {
+        u8 next = (u8)((found + 1) % NET_SEND_BACKLOG);
+
+        if (next == sBacklogHead)
+            break;
+
+        sBacklog[found] = sBacklog[next];
+        found = next;
+    }
+
+    sBacklogHead = found;
+    return TRUE;
+}
 EWRAM_DATA u8 gCoopDbgBacklogMax = 0;
 static EWRAM_DATA bool8 sNetReceivedNothing = FALSE;
 
@@ -246,9 +286,26 @@ static void NetEnqueueSendCmd(u16 *sendCmd)
 
     NetLink_DrainBacklog();
     head = gNetMailbox.outHead;
+    // Re-read, not just head. Reading the tail before the drain and the head
+    // after it compares two different moments, and the answer is always that
+    // the ring is fuller than it is.
+    tail = gNetMailbox.outTail;
 
     // Nothing to send is not worth a backlog slot, and the transport emits a
     // frame every link frame whether or not the game had anything to say.
+    //
+    // That last part is why this check has to be here and not only further
+    // down. An idle frame carries nothing -- ProcessRecvCmds skips any entry
+    // whose command word is zero -- but queued behind a backlog it still takes
+    // a slot, and the game produces one every single frame. So a backlog that
+    // became non-empty once could never empty again: for every slot the drain
+    // freed, the next idle frame took it back. It stayed full for the rest of
+    // the session, at about a second of latency, and everything the game
+    // actually wanted to say went in behind a wall of nothing -- or, once it
+    // was full, nowhere at all.
+    if (sendCmd[0] == 0 && sBacklogHead != sBacklogTail)
+        return;
+
     if (sBacklogHead != sBacklogTail || RingCount(head, tail) >= NET_RING_MASK)
     {
         // No room. Hold the command rather than drop it.
@@ -275,6 +332,27 @@ static void NetEnqueueSendCmd(u16 *sendCmd)
                 sBacklog[sBacklogHead].cmd[i] = sendCmd[i];
 
             sBacklogHead = next;
+        }
+        else if (sendCmd[0] != LINKCMD_COOP_POS && EvictOldestPosition())
+        {
+            // Full, but what is waiting in there is mostly where the player is
+            // standing, and this is not. Position updates are the one thing in
+            // the protocol that is safe to lose -- the next one corrects it a
+            // sixtieth of a second later. Everything else is a one-off: a gate
+            // announcement, a flag, a chunk of a transfer.
+            //
+            // Found the hard way. The two consoles do not run at exactly the
+            // same speed, and the faster one's backlog fills with its own
+            // position updates within a minute or two of play. After that the
+            // next thing it tries to say is thrown away -- which is why the
+            // joining player could announce arriving at a story gate four
+            // times over and the host heard none of them, and sat at the gate
+            // for ever with its partner standing right next to it.
+            for (i = 0; i < CMD_LENGTH; i++)
+                sBacklog[sBacklogHead].cmd[i] = sendCmd[i];
+
+            sBacklogHead = (u8)((sBacklogHead + 1) % NET_SEND_BACKLOG);
+            gCoopDbgPosEvicted++;
         }
         else
         {

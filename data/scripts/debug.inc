@@ -417,6 +417,33 @@ Debug_EventScript_Script_15::
 	release
 	end
 
+@ A CONVERSATION, ON DEMAND (R+Start, Scripts..., Script 16).
+@
+@ Several checks need one console to be mid-conversation while something
+@ happens on the other -- "your partner is busy" is a state the mirrored
+@ scenes and the gates both have to handle, and it is not a state a test can
+@ assert its way into.
+@
+@ It used to be staged by walking up to the television in the player's bedroom
+@ and pressing A, which worked for exactly as long as the opening left both
+@ players standing in that bedroom. Skipping the opening put them outside, in
+@ a town with nothing within reach to talk to, and the check could no longer
+@ set up the situation it was testing.
+@
+@ This is that conversation, reachable from anywhere: it locks the player and
+@ waits for a button, which is what talking to anything amounts to.
+Debug_EventScript_Script_16::
+	lock
+	faceplayer
+	msgbox Debug_Text_CoopBusy, MSGBOX_DEFAULT
+	release
+	end
+
+Debug_Text_CoopBusy:
+	.string "Standing here, mid-conversation,\n"
+	.string "so your partner's console has\l"
+	.string "something to wait for.$"
+
 Debug_CheckSaveBlock::
 	callnative CheckSaveBlock1Size
 	msgbox Debug_SaveBlock1Size, MSGBOX_DEFAULT

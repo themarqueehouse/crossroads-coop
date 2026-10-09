@@ -503,6 +503,12 @@ void Coop_EndWaitMessage(void)
 // It also means a cancelled trip costs nothing -- back out of the fly map and
 // the request simply expires, because the traveller never turns up anywhere
 // their partner is not.
+// How deep the transport's send backlog may get before position broadcasts
+// stop being queued. Eight is a seventh of the backlog: deep enough that an
+// ordinary hiccup does not interrupt the partner's walk, shallow enough that
+// there is always room for the things that cannot be re-sent.
+#define NET_POS_SKIP_DEPTH  8
+
 #define FOLLOW_SENDS        6     // repeats, so one dropped frame is not the end of it
 #define FOLLOW_WAIT_FRAMES  900   // give up if they never arrive anywhere
 
@@ -511,6 +517,18 @@ static EWRAM_DATA u8 sFollowSeq = 0;
 static EWRAM_DATA u8 sUsedPeerFollowSeq = 0;
 static EWRAM_DATA bool8 sFollowPending = FALSE;
 static EWRAM_DATA u16 sFollowWaited = 0;
+
+// Whether this pending follow is the one that places Player 2 on their very
+// first session, as opposed to a partner flying somewhere.
+//
+// The deadline above is right for a flight: the trip is over, and if the
+// partner spent fifteen seconds in a menu rather than following, the moment
+// has passed and dragging them across the region later would be worse than
+// not. It is wrong for the first placement, where Player 2 has nowhere else
+// to be -- their town is a guess made before the link said anything. Letting
+// that expire left the two in different regions for the whole session, and
+// all it took was Player 1 lingering in a menu.
+static EWRAM_DATA bool8 sFollowIsFirstPlacement = FALSE;
 
 void Coop_FollowMe(void)
 {
@@ -552,6 +570,7 @@ void Coop_ReceiveFollow(u8 playerId, const u16 *cmd)
     sUsedPeerFollowSeq = seq;
     sFollowPending = TRUE;
     sFollowWaited = 0;
+    sFollowIsFirstPlacement = FALSE;
 }
 
 // Go to them, once they are somewhere to go to.
@@ -560,7 +579,7 @@ static void Coop_UpdateFollow(void)
     if (!sFollowPending)
         return;
 
-    if (++sFollowWaited > FOLLOW_WAIT_FRAMES)
+    if (!sFollowIsFirstPlacement && ++sFollowWaited > FOLLOW_WAIT_FRAMES)
     {
         sFollowPending = FALSE;
         return;
@@ -584,6 +603,7 @@ static void Coop_UpdateFollow(void)
         return;
 
     sFollowPending = FALSE;
+    sFollowIsFirstPlacement = FALSE;
 
     // Out of camera space, the same conversion the saved record needs.
     SetWarpDestination(gCoopPeer.mapGroup, gCoopPeer.mapNum, WARP_ID_NONE,
@@ -603,12 +623,15 @@ static bool8 CoopSendGate(u16 *sendCmd)
     sendCmd[1] = sGateSendId;
     sendCmd[2] = sGateSendSeq;
     sGateSendsLeft--;
+    gCoopDbgGateSent++;
 
     return TRUE;
 }
 
 void Coop_ReceiveGate(u8 playerId, const u16 *cmd)
 {
+    gCoopDbgGateRecv++;
+
     if (playerId == GetMultiplayerId())
         return;
 
@@ -1294,6 +1317,18 @@ EWRAM_DATA u8 gCoopDbgJoinEntry = 0;
 // that dispatched to the wrong action look the same from outside.
 EWRAM_DATA u8 gCoopDbgMenuAction = 0;
 
+// Gate announcements written, and gate announcements taken off the wire. A
+// gate that never opens is either one console not telling or the other not
+// hearing, and from the gate state alone those look identical.
+EWRAM_DATA u16 gCoopDbgGateSent = 0;
+EWRAM_DATA u16 gCoopDbgGateRecv = 0;
+
+// Where the running script is, mirrored out of IWRAM once a frame so the test
+// rig can read it and resolve it to a name. A console stuck inside a script
+// reports SCRIPT_BUSY and a black screen and nothing else, and that describes
+// every script in the game equally well.
+EWRAM_DATA u32 gCoopDbgScriptPtr = 0;
+
 // Silence every outgoing sync for a moment.
 //
 // Wiping a save is thousands of flag, var, Pokedex, bag and storage writes,
@@ -1422,6 +1457,8 @@ static void EnterState(u8 state)
 static void PublishDiagnostics(void)
 {
     u8 flags = 0;
+
+    gCoopDbgScriptPtr = (u32)ScriptContext_GetScriptPtr();
 
     if (gLinkStatus & LINK_STAT_CONN_ESTABLISHED) flags |= COOP_DIAG_LINK_OPEN;
     if (gReceivedRemoteLinkPlayers)               flags |= COOP_DIAG_PLAYERS_RECEIVED;
@@ -1666,6 +1703,7 @@ void Coop_Update(void)
                         // Player 1 started the game in Pallet Town.
                         sFollowPending = TRUE;
                         sFollowWaited = 0;
+                        sFollowIsFirstPlacement = TRUE;
                     }
                     sGotPlayer2 = TRUE;
                 }
@@ -1814,6 +1852,21 @@ static void CoopSendPositionCB(void)
     // and the next one corrects it; a missed flag is a gym badge that never
     // arrives.
     if (CoopSendDelta(gSendCmd))
+        return;
+
+    // Not while the queue is backed up.
+    //
+    // The two consoles do not run at the same speed -- two phones never will --
+    // and the faster one queues more frames per second than the transport
+    // carries away. Positions are what fills that gap, sixty a second of them,
+    // and left alone they pack the backlog solid. Everything the session says
+    // after that has to fight for a slot, and some of it loses.
+    //
+    // Skipping them here is free in a way that dropping them later is not:
+    // the next update is a sixtieth of a second behind and carries the same
+    // information. The partner's sprite keeps the position it had until the
+    // queue drains, which it does within a few frames.
+    if (NetLink_BacklogDepth() >= NET_POS_SKIP_DEPTH)
         return;
 
     me = &gObjectEvents[gPlayerAvatar.objectEventId];

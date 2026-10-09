@@ -345,6 +345,9 @@ bool8 Coop_IsJoiningPlayer(void);
 void Coop_SuppressSync(bool8 suppress);
 extern u8 gCoopDbgJoinEntry;
 extern u8 gCoopDbgMenuAction;
+extern u32 gCoopDbgScriptPtr;
+extern u16 gCoopDbgGateSent;
+extern u16 gCoopDbgGateRecv;
 
 /** True once both players are present, whether or not the link is up yet. */
 bool8 IsCoopSessionPaired(void);

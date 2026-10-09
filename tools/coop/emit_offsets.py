@@ -85,6 +85,17 @@ WANTED_SYMBOLS = {
     "gCoopDbgStalls": "dbgStallsAddr",
     "gCoopDbgJoinEntry": "dbgJoinEntryAddr",
     "gCoopDbgMenuAction": "dbgMenuActionAddr",
+    # The running script, so a console that has locked itself can say what it
+    # locked itself in. "SCRIPT_BUSY and a black screen" is otherwise the whole
+    # diagnosis, and every script looks like that from outside.
+    #
+    # A mirror rather than the script context itself: that lives in IWRAM, and
+    # the harness addresses memory as one run of EWRAM outwards from the
+    # mailbox, so it cannot reach it.
+    "gCoopDbgScriptPtr": "dbgScriptPtrAddr",
+    "gCoopDbgGateSent": "dbgGateSentAddr",
+    "gCoopDbgGateRecv": "dbgGateRecvAddr",
+    "gCoopDbgPosEvicted": "dbgPosEvictedAddr",
 }
 
 # Symbol -> the field names its entries carry, in order.

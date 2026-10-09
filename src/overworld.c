@@ -1940,19 +1940,27 @@ static void Coop_WarpToStartTown(void)
     WarpIntoMap();
 }
 
-// Player 1 starting a fresh co-op game: a real new game, without the opening.
+// A fresh co-op game without the opening. Both consoles come through here.
 //
 // Everything CB2_NewGame does, except where it leaves you. The ordinary one
 // hands off to ExecuteTruckSequence -- waking in the back of the moving van,
 // the start of a story told to one person. Two players skipping that is the
-// whole point: they land in Littleroot together and get asked who they are
-// and which starter they want, there, in the world.
+// whole point: they land in their home town together and get asked who they
+// are and which starter they want, there, in the world.
 //
 // It matters that both consoles arrive at roughly the same moment. Player 2
 // enters as soon as the pair is up, and when Player 1 was still minutes deep
 // in Birch's speech the two were so far out of phase that Player 2 sat alone
 // in the link exchange, retrying every fifteen seconds against a console that
 // had not opened its link yet, for as long as the intro lasted.
+//
+// Player 2 used to have a leaner entry point of its own, on the reasoning that
+// a console with no save file has nothing for NewGameInitData to initialise --
+// its blocks have already been through Sav2_ClearSetDefault at boot. That was
+// true and still wrong: a half-built world is a world with a hundred ways to
+// be subtly unlike the partner's, and chasing them one at a time cost more
+// than the wipe does. Player 2's copy is replaced by Player 1's seconds later
+// in any case.
 void CB2_CoopNewGameSkipIntro(void)
 {
     gCoopDbgJoinEntry = 40;
@@ -1979,12 +1987,13 @@ void CB2_CoopNewGameSkipIntro(void)
     Coop_SuppressSync(FALSE);
 
     // A name, which the naming screen inside the opening would have asked for.
-    // Player 1 is asked properly once they are standing in the world; this is
-    // only so the link has something to carry in the meantime. Without it the
-    // console enters the player exchange nameless and the partner's console
-    // has nothing to show in its place.
-    if (gSaveBlock2Ptr->playerName[0] == EOS || gSaveBlock2Ptr->playerName[0] == 0)
-        StringCopy(gSaveBlock2Ptr->playerName, gText_CoopPlayerOneDefaultName);
+    // Each player is asked properly once they are standing in the world; this
+    // is only so the link has something to carry in the meantime. Without it
+    // the console enters the player exchange nameless and the partner's
+    // console has nothing to show in its place.
+    StringCopy(gSaveBlock2Ptr->playerName,
+               Coop_IsJoiningPlayer() ? gText_CoopPlayerTwoDefaultName
+                                      : gText_CoopPlayerOneDefaultName);
 
     gCoopDbgJoinEntry = 42;
 
@@ -2000,61 +2009,23 @@ void CB2_CoopNewGameSkipIntro(void)
     UnlockPlayerFieldControls();
     gFieldCallback = FieldCB_WarpExitFadeFromBlack;
     gFieldCallback2 = NULL;
+
+    // From the top. DoMapLoadLoop runs a state machine out of gMain.state and
+    // does not reset it, and the main menu these two paths come from has been
+    // using the same byte for its own sequencing -- so whatever step it left
+    // behind is the step the map load starts at. Land on a late one and the
+    // loop returns having skipped the work that draws the map and hands over
+    // the field callback: the overworld runs, the location is published, and
+    // the player sits behind locked controls on a black screen with no script
+    // to blame. The ordinary new game gets away with it only because
+    // gMain.state happens to be zero by the time it is reached, which is
+    // exactly the kind of luck that changes with timing -- it held when the
+    // partner joined late and did not when both consoles started together.
+    gMain.state = 0;
     DoMapLoadLoop(&gMain.state);
     SetFieldVBlankCallback();
     SetMainCallback1(CB1_Overworld);
     SetMainCallback2(CB2_Overworld);
-}
-
-void CB2_CoopJoinNewGame(void)
-{
-    gCoopDbgJoinEntry = 2;
-    FieldClearVBlankHBlankCallbacks();
-    StopMapMusic();
-
-    // Deliberately NOT NewGameInitData.
-    //
-    // There is nothing for it to initialise. A console with no save file has
-    // already had Sav2_ClearSetDefault run over it at boot, so the blocks are
-    // default and the party is empty -- NewGameInitData would be a second,
-    // much heavier wipe of state that is already clean. Running it here wedges
-    // the console outright: it never gets as far as ClearSav1, and the last
-    // frame stays on screen, which from outside is indistinguishable from a
-    // menu that never let go.
-    //
-    // Everything it would have set up is about to be replaced anyway. Player
-    // 2's world arrives from Player 1 and their character arrives with it.
-    // All this has to do is put them somewhere real to stand while that
-    // happens.
-    gSaveBlock2Ptr->playerRegion = REGION_HOENN;
-
-    // A trainer id and a name, which NewGameInitData would have provided and
-    // the naming screen would have filled in. Without them this console goes
-    // into the player exchange as id 0 with a blank name, and the exchange
-    // never completes -- both consoles sit in EXCHANGING for ever.
-    //
-    // Placeholders. The stored record replaces them a moment later, and on a
-    // first session Player 2 is asked who they are once.
-    SetTrainerId((Random() << 16) | GetGeneratedTrainerIdLower(),
-                 gSaveBlock2Ptr->playerTrainerId);
-    if (gSaveBlock2Ptr->playerName[0] == EOS)
-        StringCopy(gSaveBlock2Ptr->playerName, gText_CoopPlayerTwoDefaultName);
-
-    Coop_WarpToStartTown();
-
-    ResetInitialPlayerAvatarState();
-    PlayTimeCounter_Start();
-    ScriptContext_Init();
-    UnlockPlayerFieldControls();
-    gFieldCallback = FieldCB_WarpExitFadeFromBlack;
-    gFieldCallback2 = NULL;
-    gCoopDbgJoinEntry = 12;
-    DoMapLoadLoop(&gMain.state);
-    gCoopDbgJoinEntry = 13;
-    SetFieldVBlankCallback();
-    SetMainCallback1(CB1_Overworld);
-    SetMainCallback2(CB2_Overworld);
-    gCoopDbgJoinEntry = 3;
 }
 
 void CB2_NewGame(void)

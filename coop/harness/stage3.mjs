@@ -41,6 +41,7 @@ const SB1_LOCATION_MAPNUM = OFFSETS.sb1Location + OFFSETS.warpMapNum;
 // R + Start opens the debug menu (DEBUG_OVERWORLD_HELD_KEYS / _TRIGGER_EVENT),
 // then Scripts... is the sixth entry and Script 1 the first inside it.
 const SCRIPTS_MENU_INDEX = 5;
+const CONVERSATION_SCRIPT = 16;   // debug.inc: locks the player and waits
 
 // Whether this console is out of the player's hands: a script running, a
 // message waiting to be dismissed, a menu open.
@@ -64,11 +65,15 @@ async function freeUp(rig, which) {
 }
 
 // Get a console into a conversation, for staging "your partner is busy".
-async function openTelevision(rig, which) {
-  for (let i = 0; i < 8 && !(await isBusy(rig, which)); i++) {
-    await rig.tap(which, 'A', 8);
-    await rig.wait(25);
-  }
+//
+// Debug script 16, rather than walking up to something and pressing A. That
+// worked while the opening left both players standing in a bedroom next to a
+// television; now that they skip the opening and start outside, there is
+// nothing in reach to talk to and eight hopeful A presses found nothing.
+async function startConversation(rig, which) {
+  await runDebugScript(rig, which, CONVERSATION_SCRIPT);
+  for (let i = 0; i < 20 && !(await isBusy(rig, which)); i++)
+    await rig.wait(20);
   if (!(await isBusy(rig, which)))
     throw new Error(`core ${which}: could not get into a conversation`);
 }
@@ -252,7 +257,7 @@ async function main() {
     console.log('\n--- player 2 is mid-conversation when the scene starts ---');
     await freeUp(rig, 0);
     await freeUp(rig, 1);
-    await openTelevision(rig, 1);
+    await startConversation(rig, 1);
     t.check('player 2 is in a conversation', await isBusy(rig, 1));
 
     await rig.clearGateLog();

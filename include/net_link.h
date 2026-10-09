@@ -143,6 +143,7 @@ bool8 NetLink_IsMaster(void);
 u32 NetLink_GetSendQueueLength(void);
 bool8 NetLink_SendQueueWasFull(void);
 u8 NetLink_BacklogDepth(void);
+extern u16 gCoopDbgPosEvicted;
 void NetLink_DrainBacklog(void);
 u32 NetLink_GetRecvQueueLength(void);
 void NetLink_Reset(void);

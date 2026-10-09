@@ -994,15 +994,10 @@ static void Task_CoopJoinWithoutSave(u8 taskId)
     if (gPaletteFade.active || !IsCoopSessionPaired())
         return;
 
-    // The region, which the ordinary New Game path sets and this one skipped.
-    // NewGameInitData places the player according to it, so leaving it unset
-    // sends the map loader after a map that is not there and the console
-    // simply stops -- with the last frame still on screen, which looks exactly
-    // like a menu that never released.
-    //
-    // Hoenn regardless of what Player 1 picked. Player 2 is warped to their
-    // partner within a second or two of arriving, and the presentation follows
-    // whichever map they end up standing on.
+    // Hoenn, as a guess. Player 2 cannot know which region Player 1 chose --
+    // their console starts the moment the pair is up, which is before a byte
+    // has crossed the link -- so they start somewhere valid and adopt the real
+    // region when the world sync brings it, a second or two later.
     gSaveBlock2Ptr->playerRegion = REGION_HOENN;
     isFrlgInt = 0;
 
@@ -1011,7 +1006,7 @@ static void Task_CoopJoinWithoutSave(u8 taskId)
     gPlttBufferFaded[0] = RGB_BLACK;
     DestroyTask(taskId);
     FreeAllWindowBuffers();
-    SetMainCallback2(CB2_CoopJoinNewGame);
+    SetMainCallback2(CB2_CoopNewGameSkipIntro);
 }
 
 // Sit on the main menu until the other console is there, then start.
