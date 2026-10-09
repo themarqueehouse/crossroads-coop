@@ -98,21 +98,6 @@ static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum);
 // by symbol address. Both trainers turning up at level 0 is indistinguishable
 // from the outside whether the branch never ran, ran and made nothing, or ran
 // and had its work overwritten afterwards.
-EWRAM_DATA u8 gCoopDbgMadeParties = 0;
-EWRAM_DATA u8 gCoopDbgFoeA = 0;
-EWRAM_DATA u8 gCoopDbgFoeB = 0;
-EWRAM_DATA u8 gCoopDbgAfter = 0;
-EWRAM_DATA u8 gCoopDbgReached = 0;
-EWRAM_DATA u8 gCoopDbgCoopActive = 0;
-EWRAM_DATA u8 gCoopDbgIsDebug = 0;
-EWRAM_DATA u8 gCoopDbgPath = 0;
-EWRAM_DATA u8 gCoopDbgPreState = 0;
-EWRAM_DATA u16 gCoopDbgSpecies = 0;
-EWRAM_DATA u8 gCoopDbgPartySize = 0;
-EWRAM_DATA u16 gCoopDbgDataSpecies = 0;
-EWRAM_DATA u8 gCoopDbgDataLevel = 0;
-EWRAM_DATA u8 gCoopDbgPoolSize = 0;
-EWRAM_DATA u16 gCoopDbgSpeciesEarly = 0;
 static void BattleMainCB1(void);
 static void CB2_EndLinkBattle(void);
 static void EndLinkBattleInSteps(void);
@@ -497,10 +482,8 @@ const u8 *const gStatusConditionStringsTable[][2] =
 
 void CB2_InitBattle(void)
 {
-    gCoopDbgPath = 10;
     if (!gTestRunnerEnabled)
         MoveSaveBlocks_ResetHeap();
-    gCoopDbgPath = 11;
     AllocateBattleResources();
     AllocateBattleSpritesData();
     AllocateMonSpritesGfx();
@@ -518,7 +501,6 @@ void CB2_InitBattle(void)
         }
         else if (!(gBattleTypeFlags & BATTLE_TYPE_INGAME_PARTNER))
         {
-            gCoopDbgPath = 12;
             HandleLinkBattleSetup();
             SetMainCallback2(CB2_PreInitMultiBattle);
         }
@@ -540,7 +522,6 @@ static void CB2_InitBattleInternal(void)
 
     // First statement in the function, deliberately: it settles whether this
     // runs at all, separately from whether anything later in it does.
-    gCoopDbgPath = 20;
 
     SetHBlankCallback(NULL);
     SetVBlankCallback(NULL);
@@ -620,10 +601,6 @@ static void CB2_InitBattleInternal(void)
     else
         SetMainCallback2(CB2_HandleStartBattle);
 
-    gCoopDbgReached = 1;
-    gCoopDbgPath = 14;
-    gCoopDbgCoopActive = Coop_IsBattleActive();
-    gCoopDbgIsDebug = gIsDebugBattle;
 
     if (!DEBUG_OVERWORLD_MENU || (DEBUG_OVERWORLD_MENU && !gIsDebugBattle))
     {
@@ -641,7 +618,6 @@ static void CB2_InitBattleInternal(void)
         if (!(gBattleTypeFlags & (BATTLE_TYPE_LINK | BATTLE_TYPE_RECORDED))
             || Coop_IsBattleActive())
         {
-            gCoopDbgMadeParties = 1;
             if (Coop_BattleSplitsTeam())
             {
                 // One trainer's team across both slots. The filler named as
@@ -650,25 +626,13 @@ static void CB2_InitBattleInternal(void)
             }
             else
             {
-            gCoopDbgFoeA = CreateNPCTrainerParty(&gParties[B_TRAINER_1][0], TRAINER_BATTLE_PARAM.opponentA);
-            // Straight after generation, before anything else touches it.
-            gCoopDbgSpeciesEarly = GetMonData(&gParties[B_TRAINER_1][0], MON_DATA_SPECIES, NULL);
-            if ((gBattleTypeFlags & BATTLE_TYPE_TWO_OPPONENTS && !BATTLE_TWO_VS_ONE_OPPONENT)
-                || Coop_IsBattleActive())
-                gCoopDbgFoeB = CreateNPCTrainerParty(&gParties[B_TRAINER_3][0], TRAINER_BATTLE_PARAM.opponentB);
+                CreateNPCTrainerParty(&gParties[B_TRAINER_1][0], TRAINER_BATTLE_PARAM.opponentA);
+                if ((gBattleTypeFlags & BATTLE_TYPE_TWO_OPPONENTS && !BATTLE_TWO_VS_ONE_OPPONENT)
+                    || Coop_IsBattleActive())
+                    CreateNPCTrainerParty(&gParties[B_TRAINER_3][0], TRAINER_BATTLE_PARAM.opponentB);
             }
             SetWildMonHeldItem();
             CalculateEnemyPartyCount();
-            gCoopDbgAfter = gPartiesCount[B_TRAINER_1];
-            // What actually landed in the party, as opposed to what the
-            // generator claimed to have made.
-            gCoopDbgSpecies = GetMonData(&gParties[B_TRAINER_1][0], MON_DATA_SPECIES, NULL);
-            gCoopDbgPartySize = GetTrainerStructFromId(TRAINER_BATTLE_PARAM.opponentA)->partySize;
-            // What the trainer's data says it should have, as opposed to what
-            // came out: tells a bad trainer table from a bad generator.
-            gCoopDbgDataSpecies = GetTrainerStructFromId(TRAINER_BATTLE_PARAM.opponentA)->party[0].species;
-            gCoopDbgDataLevel = GetTrainerStructFromId(TRAINER_BATTLE_PARAM.opponentA)->party[0].lvl;
-            gCoopDbgPoolSize = GetTrainerStructFromId(TRAINER_BATTLE_PARAM.opponentA)->poolSize;
         }
     }
 
@@ -1554,7 +1518,6 @@ static void CB2_PreInitMultiBattle(void)
         }
         else if (!gReceivedRemoteLinkPlayers)
         {
-            gCoopDbgPath = 13;
             gBattleTypeFlags = *savedBattleTypeFlags;
             gMain.savedCallback = *savedCallback;
             SetMainCallback2(CB2_InitBattleInternal);

@@ -149,31 +149,9 @@ static void TrySetLinkErrorBuffer(void);
 //   2 = the link players stopped matching the ones saved at the lobby
 //   3 = gLinkStatus carried an error bit
 EWRAM_DATA u8 gCoopLinkErrorSite = 0;
-EWRAM_DATA u32 gCoopDbgLinkStatus = 0;
-EWRAM_DATA u8 gCoopDbgHasCallback = 0;
-EWRAM_DATA u8 gCoopDbgRecvPlayers = 0;
 EWRAM_DATA u8 gCoopDbgRecvQueue = 0;
 EWRAM_DATA u32 gCoopLinkErrorStatus = 0;
 
-// The link standby handshake, watched from outside.
-//
-// Co-op battles stop dead on "Link standby..." partway through a fight: both
-// consoles print it, the health bars stop changing, and nothing moves again.
-// Both printing it means both are waiting for the other, so the question is
-// only whether the readiness announcement is sent and whether it arrives --
-// and neither gReadyToExitStandby nor gLinkCallback can be read by the test
-// rig, because both live in IWRAM and the rig addresses EWRAM from the mailbox
-// outwards. Mirrored here, where it can see them.
-//
-//   gCoopDbgLinkCb      0 none, 1 LinkCB_Standby, 2 LinkCB_StandbyForAll,
-//                       3 something else
-//   gCoopDbgExitStandby bit 0 = player 0 ready, bit 1 = player 1 ready
-//   gCoopDbgSentStandby how many times this console enqueued the announcement
-//   gCoopDbgRecvStandby how many arrived, from anyone
-EWRAM_DATA u8 gCoopDbgLinkCb = 0;
-EWRAM_DATA u8 gCoopDbgExitStandby = 0;
-EWRAM_DATA u16 gCoopDbgSentStandby = 0;
-EWRAM_DATA u16 gCoopDbgRecvStandby = 0;
 
 // Flow-control state. Stall above a quarter of the backlog -- early enough to
 // catch the drift before it becomes a loss, late enough that an ordinary burst
@@ -1867,28 +1845,10 @@ bool8 HandleLinkConnection(void)
 
         sCoopStallFrames = 0;
 
-        // Sampled either side of NetLinkMain1: it consumes gSendCmd (and
-        // zeroes it) and fills gRecvCmds, so neither is readable afterwards
-        // from where the test looks.
-        if (gSendCmd[0] == LINKCMD_READY_EXIT_STANDBY)
-            gCoopDbgSentStandby++;
-
         gLinkStatus = NetLinkMain1(&gShouldAdvanceLinkState, gSendCmd, gRecvCmds);
-
-        {
-            u8 i;
-            for (i = 0; i < MAX_LINK_PLAYERS; i++)
-                if (gRecvCmds[i][0] == LINKCMD_READY_EXIT_STANDBY)
-                    gCoopDbgRecvStandby++;
-        }
 
         LinkMain2(&gMain.heldKeys);
 
-        gCoopDbgLinkCb = (gLinkCallback == NULL) ? 0
-                       : (gLinkCallback == LinkCB_Standby) ? 1
-                       : (gLinkCallback == LinkCB_StandbyForAll) ? 2 : 3;
-        gCoopDbgExitStandby = (gReadyToExitStandby[0] ? 1 : 0)
-                            | (gReadyToExitStandby[1] ? 2 : 0);
 
 
         // Mirror the link's state somewhere the test rig can see it.
@@ -1897,9 +1857,6 @@ bool8 HandleLinkConnection(void)
         // the mailbox. Published here rather than from the co-op session's own
         // diagnostics because the session stands down for a battle, and a
         // battle is exactly when this needs watching.
-        gCoopDbgLinkStatus = gLinkStatus;
-        gCoopDbgHasCallback = (gLinkCallback != NULL);
-        gCoopDbgRecvPlayers = gReceivedRemoteLinkPlayers;
         gCoopDbgRecvQueue = GetLinkRecvQueueLength();
         if ((gLinkStatus & LINK_STAT_RECEIVED_NOTHING) && IsSendingKeysOverCable() == TRUE)
             return TRUE;

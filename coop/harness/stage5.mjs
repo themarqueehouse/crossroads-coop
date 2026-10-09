@@ -103,11 +103,19 @@ async function main() {
     // time, and every reading taken then described a battle that had not been
     // built yet: no opponents, an init function that "never ran". All true at
     // the moment asked, all meaningless.
+    // Readiness is read from the battle itself -- the opponents existing --
+    // rather than from a breadcrumb planted in the entry path. That breadcrumb
+    // was scaffolding from chasing a generation bug and is gone; the party
+    // counts are what this goes on to check anyway.
+    const opponentsReady = async (w) => {
+      const c = await rig.readAt(w, OFFSETS.partiesCountAddr, 4);
+      return c[1] > 0 && c[3] > 0;
+    };
+
     let setUp = false;
     for (let i = 0; i < 20 && !setUp; i++) {
       await rig.wait(60);
-      setUp = (await rig.u8(0, OFFSETS.dbgPathAddr)) === 14
-           && (await rig.u8(1, OFFSETS.dbgPathAddr)) === 14;
+      setUp = (await opponentsReady(0)) && (await opponentsReady(1));
     }
     t.check('the battle finished setting up on both consoles', setUp,
             'still in the entry sequence after 1200 frames');
@@ -130,34 +138,6 @@ async function main() {
       t.check('the opponents have Pokemon at all', c0[1] > 0 && c0[3] > 0,
               'generation produced empty parties');
     }
-    for (const w of [0, 1]) {
-      t.note(`p${w + 1} generation`,
-        `branch ran=${await rig.u8(w, OFFSETS.dbgMadeAddr)} ` +
-        `foeA made=${await rig.u8(w, OFFSETS.dbgFoeAAddr)} ` +
-        `foeB made=${await rig.u8(w, OFFSETS.dbgFoeBAddr)} ` +
-        `count right after=${await rig.u8(w, OFFSETS.dbgAfterAddr)} ` +
-        `species[0] early=${await rig.u16(w, OFFSETS.dbgSpeciesEarlyAddr)} ` +
-        `late=${await rig.u16(w, OFFSETS.dbgSpeciesAddr)} ` +
-        `trainer partySize=${await rig.u8(w, OFFSETS.dbgPartySizeAddr)} ` +
-        `data.species=${await rig.u16(w, OFFSETS.dbgDataSpeciesAddr)} ` +
-        `data.lvl=${await rig.u8(w, OFFSETS.dbgDataLevelAddr)} ` +
-        `poolSize=${await rig.u8(w, OFFSETS.dbgPoolSizeAddr)}`);
-      t.note(`p${w + 1} init`,
-        `reached CB2_InitBattleInternal=${await rig.u8(w, OFFSETS.dbgReachedAddr)} ` +
-        `coopActive=${await rig.u8(w, OFFSETS.dbgCoopActiveAddr)} ` +
-        `isDebugBattle=${await rig.u8(w, OFFSETS.dbgIsDebugAddr)} ` +
-        `path=${await rig.u8(w, OFFSETS.dbgPathAddr)} ` +
-        `multiuseState=${await rig.u8(w, OFFSETS.battleCommAddr)}`);
-      t.note(`p${w + 1} link`,
-        `status=0x${(await rig.u32(w, OFFSETS.dbgLinkStatusAddr)).toString(16)} ` +
-        `callbackInstalled=${await rig.u8(w, OFFSETS.dbgHasCallbackAddr)} ` +
-        `recvPlayers=${await rig.u8(w, OFFSETS.dbgRecvPlayersAddr)} ` +
-        `recvQueue=${await rig.u8(w, OFFSETS.dbgRecvQueueAddr)}`);
-      const pf = await rig.readAt(w, OFFSETS.paletteFadeAddr, 16);
-      t.note(`p${w + 1} paletteFade`,
-             pf.map((b) => b.toString(16).padStart(2, '0')).join(' '));
-    }
-
     // Mash. In a double battle A walks FIGHT -> move -> target, and a level 50
     // starter against two bug catchers does not need the moves chosen well.
     // B as well as A, so a mistaken menu does not park us in a submenu for ever.
@@ -232,19 +212,11 @@ async function main() {
             console.log(`      wedged at round ${round}: exec=0x${ex[0].toString(16)}` +
                         ` / 0x${ex[1].toString(16)}`);
             for (const w of [0, 1]) {
-              const cmds = await rig.readAt(w, OFFSETS.dbgBattlerCmdAddr, 4);
-              console.log(`        p${w + 1} pending cmd per battler = ` +
-                `[${[...cmds].join(', ')}]  sendQueued=` +
-                `${await rig.u8(w, OFFSETS.dbgSendPendingAddr)}`);
-              const sent = await rig.readAt(w, OFFSETS.dbgDoneSentAddr, 8);
-              const recv = await rig.readAt(w, OFFSETS.dbgDoneRecvAddr, 8);
-              const pair = (b) => [b[0] | (b[1] << 8), b[2] | (b[3] << 8)];
-              console.log(`        p${w + 1} done msgs  sent[p0,p1]=` +
-                `${pair(sent)}  recv[p0,p1]=${pair(recv)}`);
               console.log(`        p${w + 1} transport  drops=` +
                 `${await rig.u16(w, OFFSETS.dbgSendDropsAddr)}  backlogMax=` +
                 `${await rig.u8(w, OFFSETS.dbgBacklogMaxAddr)}  recvQueue=` +
-                `${await rig.u8(w, OFFSETS.dbgRecvQueueAddr)}`);
+                `${await rig.u8(w, OFFSETS.dbgRecvQueueAddr)}  stalls=` +
+                `${await rig.u16(w, OFFSETS.dbgStallsAddr)}`);
             }
             await rig.shot('/tmp/claude-0/stage5-wedged');
           }
@@ -274,6 +246,20 @@ async function main() {
                                             : `after ~${endedAt} rounds of input`);
     t.check('the battle never wedged', stuckFor < 4,
             `gBattleControllerExecFlags stopped changing at ${lastExec}`);
+
+    // The transport must not lose a single command during a battle. One lost
+    // message is a permanent hang: it is the acknowledgement that clears a
+    // battler's bit, and nothing ever retries it. This is the check that would
+    // catch the flow control regressing, long before a fight happens to wedge.
+    const drops = [await rig.u16(0, OFFSETS.dbgSendDropsAddr),
+                   await rig.u16(1, OFFSETS.dbgSendDropsAddr)];
+    t.note('transport', `drops p1=${drops[0]} p2=${drops[1]}  ` +
+      `backlogMax p1=${await rig.u8(0, OFFSETS.dbgBacklogMaxAddr)} ` +
+      `p2=${await rig.u8(1, OFFSETS.dbgBacklogMaxAddr)}  ` +
+      `stalls p1=${await rig.u16(0, OFFSETS.dbgStallsAddr)} ` +
+      `p2=${await rig.u16(1, OFFSETS.dbgStallsAddr)}`);
+    t.check('the transport lost nothing', drops[0] === 0 && drops[1] === 0,
+            `p1 dropped ${drops[0]}, p2 dropped ${drops[1]}`);
 
     await rig.shot('/tmp/claude-0/stage5-after-battle');
 

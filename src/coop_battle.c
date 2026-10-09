@@ -277,9 +277,6 @@ void Coop_StartBattle(u16 opponentA, u16 opponentB, bool8 splitTeam)
         ReducePlayerPartyToSelectedMons();
         sReducedParty = TRUE;
     }
-    // Breadcrumb triangulation: this function certainly runs, so if the rig
-    // reads 0 here the problem is the reading, not the running.
-    gCoopDbgReached = 7;
     CreateTask(Task_CoopBattleStart, 0);
 }
 

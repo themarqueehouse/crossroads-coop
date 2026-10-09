@@ -169,12 +169,20 @@ async function main() {
     // sequence -- link teardown, rebuild, player exchange, party preview --
     // runs about 480 frames after that before the opponents exist, and a fixed
     // wait shorter than the sum reports an empty battle with great confidence.
+    // Readiness is read from the battle itself -- the opponents existing --
+    // rather than from a breadcrumb planted in the entry path. The breadcrumb
+    // was scaffolding from chasing a generation bug and has been removed; the
+    // party counts are the thing the test goes on to check anyway.
+    const opponentsReady = async (w) => {
+      const c = await rig.readAt(w, OFFSETS.partiesCountAddr, 4);
+      return c[1] > 0 && c[3] > 0;
+    };
+
     let setUp = false;
     for (let i = 0; i < 30 && !setUp; i++) {
       await rig.tap('both', 'A', 8);
       await rig.wait(60);
-      setUp = (await rig.u8(0, OFFSETS.dbgPathAddr)) === 14
-           && (await rig.u8(1, OFFSETS.dbgPathAddr)) === 14;
+      setUp = (await opponentsReady(0)) && (await opponentsReady(1));
     }
     t.check('the battle set up on both consoles', setUp,
             'still in the entry sequence after 1500 frames');

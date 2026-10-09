@@ -55,15 +55,6 @@ static u32 ReturnAnimIdForBattler(bool32 isPlayerSide, u32 specificBattler);
 static void LaunchKOAnimation(enum BattlerId battlerId, u16 animId, bool32 isFront);
 static void AnimateMonAfterKnockout(enum BattlerId battler);
 
-// B_COMM_CONTROLLER_IS_DONE accounting, indexed by the player id stamped on
-// the message. The stall leaves exec bit 5 set -- battler 1 still owed an
-// acknowledgement from player 1 -- with every controller idle and nothing
-// queued to send, which means the message WAS sent and did not take effect.
-// Either it never arrived, or it arrived carrying the wrong player id and
-// cleared somebody else's bit. These two counters tell those apart.
-EWRAM_DATA u16 gCoopDbgDoneSent[MAX_LINK_PLAYERS] = {0};
-EWRAM_DATA u16 gCoopDbgDoneRecv[MAX_LINK_PLAYERS] = {0};
-
 bool32 IsAiVsAiBattle(void)
 {
     return (B_FLAG_AI_VS_AI_BATTLE && FlagGet(B_FLAG_AI_VS_AI_BATTLE));
@@ -605,9 +596,6 @@ void PrepareBufferDataTransferLink(enum BattlerId battler, u32 bufferId, u16 siz
     s32 alignedSize;
     s32 i;
 
-    if (bufferId == B_COMM_CONTROLLER_IS_DONE && data[0] < MAX_LINK_PLAYERS)
-        gCoopDbgDoneSent[data[0]]++;
-
     alignedSize = size - size % 4 + 4;
     if (gTasks[sLinkSendTaskId].tCurrentBlock_End + alignedSize + LINK_BUFF_DATA + 1 > BATTLE_BUFFER_LINK_SIZE)
     {
@@ -778,31 +766,11 @@ void TryReceiveLinkBattleData(void)
     }
 }
 
-// What each battler's controller is sitting on, for the test rig.
-//
-// A co-op battle stalls with gBattleControllerExecFlags stuck at bit 4 --
-// battler 0 still owed an acknowledgement from player 1 -- while the screen
-// shows a stale action menu on one console and "Link standby..." on the other.
-// Whether that console's controller is mid-command or has finished and failed
-// to announce it is the whole question, and bufferA lives two pointer hops
-// away inside gBattleResources where the rig cannot follow. Flattened here.
-EWRAM_DATA u8 gCoopDbgBattlerCmd[MAX_BATTLERS_COUNT] = {0};
-EWRAM_DATA u8 gCoopDbgSendPending = 0;
-
 static void Task_HandleCopyReceivedLinkBuffersData(u8 taskId)
 {
     u16 blockSize;
     enum BattlerId battler;
     u8 playerId;
-
-    {
-        u32 dbg;
-        for (dbg = 0; dbg < MAX_BATTLERS_COUNT; dbg++)
-            gCoopDbgBattlerCmd[dbg] = gBattleResources->bufferA[dbg][0];
-        gCoopDbgSendPending =
-            (gTasks[sLinkSendTaskId].tCurrentBlock_Start
-             != gTasks[sLinkSendTaskId].tCurrentBlock_End);
-    }
 
     #define BYTE_TO_RECEIVE(offset) \
         gLinkBattleRecvBuffer[gTasks[taskId].tCurrentBlock_Start + offset]
@@ -840,8 +808,6 @@ static void Task_HandleCopyReceivedLinkBuffersData(u8 taskId)
             break;
         case B_COMM_CONTROLLER_IS_DONE:
             playerId = BYTE_TO_RECEIVE(LINK_BUFF_DATA);
-            if (playerId < MAX_LINK_PLAYERS)
-                gCoopDbgDoneRecv[playerId]++;
             MarkBattleControllerIdleForPlayer(battler, playerId);
             break;
         }
