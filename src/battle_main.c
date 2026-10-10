@@ -1,4 +1,5 @@
 #include "global.h"
+#include "coop.h"
 #include "battle.h"
 #include "battle_anim.h"
 #include "battle_ai_main.h"
@@ -3057,6 +3058,9 @@ void BeginBattleIntro(void)
 
 static void BattleMainCB1(void)
 {
+    // For the test rig: see the note by gCoopDbgInBattle in src/coop.c.
+    gCoopDbgInBattle = 1;
+
     gBattleMainFunc();
     for (enum BattlerId battler = 0; battler < gBattlersCount; battler++)
         gBattlerControllerFuncs[battler](battler);

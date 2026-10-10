@@ -1,6 +1,7 @@
 #include "global.h"
 #include "coop.h"
 #include "random.h"
+#include "constants/script_commands.h"
 #include "fieldmap.h"
 #include "palette.h"
 #include "money.h"
@@ -1817,8 +1818,22 @@ static void PublishDiagnostics(void)
     gNetMailbox.peerObjectId = sPeerObjectId;
 }
 
+// Whether a battle is running, somewhere the test rig can see it.
+//
+// gMain.inBattle is the honest answer and lives in IWRAM, which the rig
+// cannot reach -- it addresses EWRAM outwards from the mailbox. Everything
+// else that looks like an answer is sticky: gBattleTypeFlags and
+// gBattlersCount both survive the battle they described, and the mailbox's
+// own BATTLE flag means "the co-op session stood down", which a co-op battle
+// does and a wild battle does not. Three separate checks in the suite have
+// been wrong about a battle for one of those reasons.
+EWRAM_DATA u8 gCoopDbgInBattle = 0;
+
 void Coop_Update(void)
 {
+    // The overworld is running, so no battle is.
+    gCoopDbgInBattle = 0;
+
     // A battle owns the link while it runs, so the session layer stands down
     // rather than competing for it. Checked before everything, including the
     // dormancy check below -- that one calls Coop_Reset, which would tear down
@@ -2950,4 +2965,50 @@ u16 Coop_MaybeWildLegendary(u16 species)
     }
 
     return species;
+}
+
+// Step over a mirrored scene's opening, without running it.
+//
+// The trainer-sight system finds out whether an approaching trainer has a
+// battle in it by RUNNING their script until something asks for an effect,
+// then looking at where it stopped. For an ordinary trainer the script opens
+// with the battle command and that is the end of it. For one of ours it opens
+// with coopscene, and coopscene asks for exactly the effects that scan allows
+// -- so merely walking into such a trainer's line of sight executed it:
+// the scene was broadcast to the partner, the scan stopped on the gate rather
+// than on a battle, and the approach went ahead with nothing to run. The
+// trainer walked up and no fight happened.
+//
+// Ninety-five trainers in the game have both a line of sight and a mirrored
+// script, which is most of the gyms. So the scan is given a pointer past the
+// opening instead, and the approach still runs the script from the top, where
+// the scene does belong.
+//
+// Widths come from the macros in asm/macros/event.inc. Anything not listed
+// ends the opening, which is the point: the next thing is the real script.
+const u8 *Coop_SkipScenePrologue(const u8 *script)
+{
+    u8 i;
+
+    if (script == NULL)
+        return NULL;
+
+    for (i = 0; i < 8; i++)
+    {
+        switch (*script)
+        {
+        case SCR_OP_COOPSCENE:      script += 7; break;  // op, gate, resume
+        case SCR_OP_COOPSCENEWAIT:  script += 3; break;  // op, gate
+        case SCR_OP_COOPGATE:       script += 3; break;
+        case SCR_OP_COOPREADYGATE:  script += 3; break;
+        case SCR_OP_COOPNEXTBATTLE: script += 4; break;  // op, partner, split
+        case SCR_OP_COOPBATTLEREADY: script += 1; break;
+        case SCR_OP_COOPNEEDPARTNER: script += 1; break;
+        case SCR_OP_COOPFOLLOWME:   script += 1; break;
+        default:
+            return script;
+        }
+    }
+
+    return script;
 }

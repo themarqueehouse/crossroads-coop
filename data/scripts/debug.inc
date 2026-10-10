@@ -1217,3 +1217,17 @@ Debug_EventScript_Script_24::
 	setflag FLAG_KANTO_BADGE08_GET
 	release
 	end
+
+@ INTO A GYM TRAINER'S LINE OF SIGHT (R+Start, Scripts..., Script 25).
+@
+@ Josh in Rustboro Gym faces down from 5,13 with a two-tile line, and his
+@ script is one of the ninety-five that open with coopscene. This drops both
+@ players three tiles below him, so one step up is into the line -- and
+@ whether a battle follows is the whole question.
+Debug_EventScript_Script_25::
+	setflag FLAG_BADGE01_GET
+	coopfollowme
+	warp MAP_RUSTBORO_CITY_GYM, 5, 16
+	waitstate
+	release
+	end

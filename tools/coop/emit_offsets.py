@@ -133,6 +133,7 @@ WANTED_SYMBOLS = {
     "gCoopDbgBattleBail": "dbgBattleBailAddr",
     "gCoopDbgBattlePlayers": "dbgBattlePlayersAddr",
     "gCoopDbgBattleCb": "dbgBattleCbAddr",
+    "gCoopDbgInBattle": "dbgInBattleAddr",
     # Counts the times SetCloseLinkCallback was asked to close a link and
     # found another callback already installed -- in which case it does
     # nothing at all, silently, and whoever was waiting for the close waits

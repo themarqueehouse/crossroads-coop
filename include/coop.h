@@ -439,6 +439,16 @@ bool8 IsCoopSessionEngaged(void);
  */
 u16 Coop_MaybeWildLegendary(u16 species);
 
+/**
+ * Step over a mirrored scene's opening without running it.
+ *
+ * For the trainer-sight scan, which finds a trainer's battle by running their
+ * script -- and which must not run the broadcast. See the note in src/coop.c.
+ */
+const u8 *Coop_SkipScenePrologue(const u8 *script);
+
+extern u8 gCoopDbgInBattle;
+
 void Coop_SuspendForBattle(void);
 void Coop_ResumeAfterBattle(void);
 bool8 Coop_IsSuspendedForBattle(void);

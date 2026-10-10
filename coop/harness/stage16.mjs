@@ -41,17 +41,8 @@ const isBusy = async (rig, w) =>
 // of this reported that talking to Celebi had done nothing while a Celebi was
 // on screen at level 50. An opponent with hit points is the battle itself
 // saying it exists.
-const inBattle = async (rig, w) => {
-  const { partiesAddr, sizeofPokemon, monMaxHp, partySize } = OFFSETS;
-  const enemy = partiesAddr + partySize * sizeofPokemon;   // B_TRAINER_1
-  return (await rig.u16(w, enemy + monMaxHp)) > 0;
-};
-
-// Clear the last battle's leftovers, so the check above is about this one.
-const forgetLastBattle = async (rig, w) => {
-  const { partiesAddr, sizeofPokemon, monMaxHp, partySize } = OFFSETS;
-  await rig.writeAt(w, partiesAddr + partySize * sizeofPokemon + monMaxHp, [0, 0]);
-};
+const inBattle = async (rig, w) =>
+  (await rig.u8(w, OFFSETS.dbgInBattleAddr)) !== 0;
 
 // Every object event on the map, as the console has them: local id, where it
 // is, and what it is drawn as. OBJ_EVENT_MON (1 << 14) marks a species sprite.
@@ -200,7 +191,6 @@ async function main() {
     // Walk into it rather than guessing a facing: the warp lands the player
     // directly below, so north and A is the whole interaction.
     console.log('\n--- talking to it ---');
-    await forgetLastBattle(rig, 0);
     // The warp lands the player on the tile directly below it, so one press
     // north to face it and A to talk.
     await rig.tap(0, 'Up', 8);
@@ -257,7 +247,6 @@ async function main() {
     await rig.wait(180);
 
     console.log('\n--- Route 103, where nobody challenged anybody ---');
-    await forgetLastBattle(rig, 0);
     await runDebugScriptOn(rig, 0, 23);
     await rig.wait(300);
 
@@ -300,6 +289,44 @@ async function main() {
             'walked into two trainers\' line of sight and neither reacted');
     t.check('and it turns into a battle', await inBattle(rig, 0),
             'the introduction ran but no battle started');
+
+    // ------------------------------- a gym trainer who sees both of you
+    //
+    // Ninety-five trainers in the game have a line of sight AND a mirrored
+    // script. The sight system works out whether a trainer has a battle in
+    // them by running their script, and a mirrored script opens with the
+    // broadcast -- so walking into one of their lines executed the broadcast,
+    // found a gate where it wanted a battle, and let the trainer walk up to
+    // do nothing. This is most of the gyms in the game.
+    console.log('\n--- a gym trainer with a line of sight ---');
+    for (let i = 0; i < 20 && (await inBattle(rig, 0)); i++) {
+      await rig.tap(0, 'Down', 8);
+      await rig.wait(16);
+      await rig.tap(0, 'Right', 8);
+      await rig.wait(16);
+      await rig.tap(0, 'A', 8);
+      await rig.wait(60);
+      await rig.tap(0, 'A', 8);
+      await rig.wait(60);
+    }
+    await runDebugScriptOn(rig, 0, 25);
+    await rig.wait(300);
+
+    for (let i = 0; i < 4 && !(await isBusy(rig, 0)); i++) {
+      await rig.tap(0, 'Up', 10);
+      await rig.wait(120);
+    }
+    await rig.wait(240);
+    await rig.shot('/tmp/claude-0/stage16-gym');
+    const sawUs = await isBusy(rig, 0);
+    for (let i = 0; i < 10 && !(await inBattle(rig, 0)); i++) {
+      await rig.tap(0, 'A', 8);
+      await rig.wait(90);
+    }
+    t.check('the gym trainer notices you', sawUs,
+            'walked into a two-tile line of sight and nothing happened');
+    t.check('and the mirrored fight actually starts', await inBattle(rig, 0),
+            'the trainer came over and no battle followed -- the scan ate the scene');
 
     t.summary();
   } finally {
