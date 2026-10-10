@@ -104,14 +104,23 @@
       "y": -3,
       "target_local_id": "LOCALID_PALLET_FAT_MAN",
       "target_map": "MAP_PALLET_TOWN"
+    },
+    {
+      "graphics_id": "OBJ_EVENT_GFX_SPECIES(BRUTE_BONNET)",
+      "x": 12,
+      "y": 25,
+      "elevation": 1,
+      "movement_type": "MOVEMENT_TYPE_LOOK_AROUND",
+      "movement_range_x": 1,
+      "movement_range_y": 1,
+      "trainer_type": "TRAINER_TYPE_NONE",
+      "trainer_sight_or_berry_tree_id": "0",
+      "script": "Legendary_EventScript_Brute_Bonnet",
+      "flag": "FLAG_LEGENDARY_BRUTE_BONNET"
     }
   ],
-  "warp_events": [
-
-  ],
-  "coord_events": [
-
-  ],
+  "warp_events": [],
+  "coord_events": [],
   "bg_events": [
     {
       "type": "hidden_item",

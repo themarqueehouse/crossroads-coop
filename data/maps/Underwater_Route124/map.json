@@ -24,7 +24,21 @@
       "direction": "emerge"
     }
   ],
-  "object_events": [],
+  "object_events": [
+    {
+      "graphics_id": "OBJ_EVENT_GFX_SPECIES(DEOXYS_ATTACK)",
+      "x": 44,
+      "y": 37,
+      "elevation": 3,
+      "movement_type": "MOVEMENT_TYPE_LOOK_AROUND",
+      "movement_range_x": 1,
+      "movement_range_y": 1,
+      "trainer_type": "TRAINER_TYPE_NONE",
+      "trainer_sight_or_berry_tree_id": "0",
+      "script": "Legendary_EventScript_Deoxys_Attack",
+      "flag": "FLAG_LEGENDARY_DEOXYS_ATTACK"
+    }
+  ],
   "warp_events": [],
   "coord_events": [],
   "bg_events": [

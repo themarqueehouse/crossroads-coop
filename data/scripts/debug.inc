@@ -1155,3 +1155,18 @@ Debug_EventScript_Script_21::
 	givemon SPECIES_ZIGZAGOON, 5
 	release
 	end
+
+@ TO PETALBURG WOODS, WHERE CELEBI IS (R+Start, Scripts..., Script 22).
+@
+@ For checking the scattered legendaries actually turn up. One of the 108 is
+@ standing in the woods; this drops you next to it with a team that can see
+@ what happens when you talk to it.
+Debug_EventScript_Script_22::
+	setvar VAR_PETALBURG_WOODS_STATE, 2
+	@ Bring the partner: the point is that both of them see it.
+	coopfollowme
+	@ Directly below Celebi, so facing north is facing it.
+	warp MAP_PETALBURG_WOODS, 24, 26
+	waitstate
+	release
+	end

@@ -96,6 +96,19 @@
       "trainer_sight_or_berry_tree_id": "4",
       "script": "Route21_South_EventScript_Roland",
       "flag": "0"
+    },
+    {
+      "graphics_id": "OBJ_EVENT_GFX_SPECIES(BLACEPHALON)",
+      "x": 12,
+      "y": 25,
+      "elevation": 1,
+      "movement_type": "MOVEMENT_TYPE_LOOK_AROUND",
+      "movement_range_x": 1,
+      "movement_range_y": 1,
+      "trainer_type": "TRAINER_TYPE_NONE",
+      "trainer_sight_or_berry_tree_id": "0",
+      "script": "Legendary_EventScript_Blacephalon",
+      "flag": "FLAG_LEGENDARY_BLACEPHALON"
     }
   ],
   "warp_events": [],

@@ -260,6 +260,19 @@
       "trainer_sight_or_berry_tree_id": "0",
       "script": "SixIsland_RuinValley_EventScript_ItemSunStone",
       "flag": "FLAG_HIDE_SIX_ISLAND_RUIN_VALLEY_SUN_STONE"
+    },
+    {
+      "graphics_id": "OBJ_EVENT_GFX_SPECIES(TORNADUS_INCARNATE)",
+      "x": 21,
+      "y": 19,
+      "elevation": 1,
+      "movement_type": "MOVEMENT_TYPE_LOOK_AROUND",
+      "movement_range_x": 1,
+      "movement_range_y": 1,
+      "trainer_type": "TRAINER_TYPE_NONE",
+      "trainer_sight_or_berry_tree_id": "0",
+      "script": "Legendary_EventScript_Tornadus_Incarnate",
+      "flag": "FLAG_LEGENDARY_TORNADUS_INCARNATE"
     }
   ],
   "warp_events": [
@@ -271,9 +284,7 @@
       "dest_warp_id": "0"
     }
   ],
-  "coord_events": [
-
-  ],
+  "coord_events": [],
   "bg_events": [
     {
       "type": "sign",

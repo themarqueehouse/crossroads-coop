@@ -1045,6 +1045,7 @@ gStdScripts_End::
 	.include "data/scripts/pkmn_center_nurse_frlg.inc"
 
 	.include "data/scripts/coop.inc"
+	.include "data/scripts/legendaries.inc"
 	.include "data/scripts/std_msgbox.inc"
 	.include "data/scripts/trainer_battle.inc"
 	.include "data/scripts/new_game.inc"

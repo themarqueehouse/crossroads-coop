@@ -29,6 +29,19 @@
       "trainer_sight_or_berry_tree_id": "0",
       "script": "SafariZone_Center_EventScript_ItemNugget",
       "flag": "FLAG_HIDE_SAFARI_ZONE_CENTER_NUGGET"
+    },
+    {
+      "graphics_id": "OBJ_EVENT_GFX_SPECIES(GREAT_TUSK)",
+      "x": 25,
+      "y": 18,
+      "elevation": 1,
+      "movement_type": "MOVEMENT_TYPE_LOOK_AROUND",
+      "movement_range_x": 1,
+      "movement_range_y": 1,
+      "trainer_type": "TRAINER_TYPE_NONE",
+      "trainer_sight_or_berry_tree_id": "0",
+      "script": "Legendary_EventScript_Great_Tusk",
+      "flag": "FLAG_LEGENDARY_GREAT_TUSK"
     }
   ],
   "warp_events": [
@@ -124,9 +137,7 @@
       "dest_warp_id": "1"
     }
   ],
-  "coord_events": [
-
-  ],
+  "coord_events": [],
   "bg_events": [
     {
       "type": "sign",

@@ -52,6 +52,19 @@
       "trainer_sight_or_berry_tree_id": "0",
       "script": "SeafoamIslands_B2F_EventScript_ItemBigPearl",
       "flag": "FLAG_HIDE_SEAFOAM_ISLANDS_B2F_BIG_PEARL"
+    },
+    {
+      "graphics_id": "OBJ_EVENT_GFX_SPECIES(XERNEAS_ACTIVE)",
+      "x": 20,
+      "y": 12,
+      "elevation": 4,
+      "movement_type": "MOVEMENT_TYPE_LOOK_AROUND",
+      "movement_range_x": 1,
+      "movement_range_y": 1,
+      "trainer_type": "TRAINER_TYPE_NONE",
+      "trainer_sight_or_berry_tree_id": "0",
+      "script": "Legendary_EventScript_Xerneas_Active",
+      "flag": "FLAG_LEGENDARY_XERNEAS_ACTIVE"
     }
   ],
   "warp_events": [
