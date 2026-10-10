@@ -52,6 +52,7 @@ CinnabarIsland_OnFrame::
 	.2byte 0
 
 CinnabarIsland_EventScript_ExitPokeCenterForOneIsland::
+	coopscene GATE_SCENE_CINNABARISLAND_EVENTSCRIPT_EXITPOKECENTERFORONEISLAND
 	lockall
 	clearflag FLAG_DONT_TRANSITION_MUSIC
 	savebgm MUS_DUMMY
@@ -63,6 +64,7 @@ CinnabarIsland_EventScript_ExitPokeCenterForOneIsland::
 	end
 
 CinnabarIsland_EventScript_ReturnFromSeviiIslands::
+	coopscene GATE_SCENE_CINNABARISLAND_EVENTSCRIPT_RETURNFROMSEVIIISLANDS
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	msgbox CinnabarIsland_Text_IfYouHaveTriPassYouCanGoAgain
@@ -86,6 +88,7 @@ CinnabarIsland_Movement_BillExit::
 	step_end
 
 CinnabarIsland_EventScript_BillScene::
+	coopscene GATE_SCENE_CINNABARISLAND_EVENTSCRIPT_BILLSCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	call_if_unset FLAG_TEMP_2, CinnabarIsland_EventScript_BillFacePlayer1

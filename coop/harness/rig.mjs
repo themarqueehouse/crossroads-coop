@@ -67,92 +67,108 @@ const NUDGE = [null, 'A', 'A', 'A', 'Start', null, 'A', 'Start'];
 // name rather than spelling one out a key at a time.
 const CONTEXT_WAITING = 1;   // script.c: a menu or a prompt owns the script
 
-export async function answerFirstRunPrompt(rig, w, region = 0, starter = 0,
-                                           girl = false, letter = 0) {
+// Answer the opening questions: a name and a gender.
+//
+// The starter is no longer asked here. It moved to Birch's bag on Route 101,
+// where the story asks anyway and where the scene is already shared -- having
+// it at spawn meant Birch still had one to give and asked a second time.
+export async function answerFirstRunPrompt(rig, w, girl = false, letter = 0) {
   const status = () => rig.u8(w, OFFSETS.dbgScriptStatusAddr);
+  const naming = () => rig.u8(w, OFFSETS.firstRunNamingAddr);
+  const running = () => rig.u8(w, OFFSETS.firstRunRunningAddr);
 
-  // Wait for the next menu to actually be on screen.
+  const until = async (read, want, what) => {
+    for (let i = 0; i < 80; i++) {
+      if ((await read()) === want) return;
+      await rig.wait(10);
+    }
+    throw new Error(`core ${w}: ${what}`);
+  };
+
+  // Wait for a menu to be on screen before pressing at it.
   //
   // Driving this by fixed waits does not work and fails quietly when it
   // doesn't: a press sent a few frames before a menu opens goes to whatever
-  // was there instead, and every press after it is one step out. The symptom
-  // was both players coming out of the gender question as girls -- the Down
-  // meant for "Girl" had landed on the message box before it, and the A
-  // meant for the menu had opened it.
-  //
-  // The script is WAITING for exactly as long as a menu or the naming screen
-  // has it, and RUNNING in between, so the edge between the two is the thing
-  // to wait for rather than a number of frames.
-  const untilNextMenu = async () => {
+  // was there instead, and every press after it is one step out. The script
+  // is WAITING for exactly as long as a menu has it, so the edge between
+  // RUNNING and WAITING is the thing to wait for.
+  const untilMenu = async () => {
     for (let i = 0; i < 80 && (await status()) === CONTEXT_WAITING; i++)
       await rig.wait(10);
     for (let i = 0; i < 80; i++) {
       if ((await status()) === CONTEXT_WAITING) return;
       await rig.wait(10);
     }
-    throw new Error(`core ${w}: the next first-run menu never opened`);
-  };
-
-  const pick = async (n) => {
-    for (let i = 0; i < n; i++) { await rig.tap(w, 'Down', 6); await rig.wait(16); }
-    await rig.tap(w, 'A', 8);
-    await rig.wait(30);
-  };
-
-  const naming = () => rig.u8(w, OFFSETS.firstRunNamingAddr);
-  const until = async (want, what) => {
-    for (let i = 0; i < 80; i++) {
-      if ((await naming()) === want) return;
-      await rig.wait(10);
-    }
-    throw new Error(`core ${w}: ${what}`);
+    throw new Error(`core ${w}: the gender menu never opened`);
   };
 
   await rig.tap(w, 'A', 8);     // the welcome box
-  await until(1, 'the naming screen never opened');
+  await until(naming, 1, 'the naming screen never opened');
 
-  // Type a letter, then confirm.
-  //
   // A name has to be entered: the screen will not leave on an empty field.
-  // One letter is enough, and it has to differ between the two consoles --
-  // stage 1's whole point is telling Player 1's stored record from Player
-  // 2's, and when both players are called the same thing it cannot. The
-  // keyboard opens on A, so this is A for core 0 and B for core 1.
+  // One letter is enough, and it differs per console -- stage 1's whole point
+  // is telling Player 1's stored record from Player 2's, and when both are
+  // called the same thing it cannot. The keyboard opens on A, so this is A
+  // for core 0 and B for core 1.
   for (let i = 0; i < letter; i++) { await rig.tap(w, 'Right', 6); await rig.wait(16); }
-  await rig.tap(w, 'A', 8);     // types it
+  await rig.tap(w, 'A', 8);
   await rig.wait(30);
 
-  // START moves the cursor to OK; it does not press it. Both, in that order,
-  // and then wait for the screen to say it has gone rather than assuming the
-  // press took.
+  // START moves the cursor to OK; it does not press it.
   for (let i = 0; i < 6 && (await naming()) === 1; i++) {
     await rig.tap(w, 'Start', 8);
     await rig.wait(24);
     await rig.tap(w, 'A', 8);
     await rig.wait(40);
   }
-  await until(0, 'the naming screen would not close');
+  await until(naming, 0, 'the naming screen would not close');
 
-  await untilNextMenu();
-  await pick(girl ? 1 : 0);     // Boy / Girl
-
-  await untilNextMenu();
-  await pick(region);           // whose starters
-
-  await untilNextMenu();
-  await pick(starter);          // which of its three
+  await untilMenu();
+  for (let i = 0; i < (girl ? 1 : 0); i++) { await rig.tap(w, 'Down', 6); await rig.wait(16); }
+  await rig.tap(w, 'A', 8);
+  await rig.wait(40);
 
   // Press on until the prompt reports itself finished rather than a fixed
-  // number of times: the closing message is two pages today and a counted
-  // run that is one short leaves the console standing in a message box with
-  // its controls locked, which nothing later can recover from.
-  for (let i = 0; i < 25; i++) {
-    if ((await rig.u8(w, OFFSETS.firstRunRunningAddr)) === 0)
-      return;
+  // number of times: a counted run that is one short leaves the console in a
+  // message box with its controls locked, which nothing later recovers from.
+  for (let i = 0; i < 20; i++) {
+    if ((await running()) === 0) return;
     await rig.tap(w, 'A', 8);
     await rig.wait(40);
   }
   throw new Error(`core ${w}: the first-run prompt would not finish`);
+}
+
+
+// Run one of the debug menu's numbered scripts. Shared by the rig's own setup
+// and by stages that need a fixture; the menu path is the same either way.
+const SCRIPTS_MENU_INDEX = 5;
+
+async function runDebugScriptOn(rig, w, slot) {
+  for (let i = 0; i < 16; i++) {
+    const mb = await rig.mailbox(w);
+    if (!mb.flags.includes('SCRIPT_BUSY')) break;
+    await rig.tap(w, 'B', 6);
+    await rig.wait(20);
+  }
+  await rig.hold(w, 'R');
+  await rig.wait(6);
+  await rig.tap(w, 'Start', 8);
+  await rig.wait(20);
+  await rig.letGo(w, 'R');
+  await rig.wait(20);
+  for (let i = 0; i < SCRIPTS_MENU_INDEX; i++) { await rig.tap(w, 'Down', 6); await rig.wait(8); }
+  await rig.tap(w, 'A', 8);
+  await rig.wait(25);
+  for (let i = 1; i < slot; i++) { await rig.tap(w, 'Down', 6); await rig.wait(8); }
+  await rig.tap(w, 'A', 8);
+  await rig.wait(40);
+  for (let i = 0; i < 12; i++) {
+    const mb = await rig.mailbox(w);
+    if (!mb.flags.includes('SCRIPT_BUSY')) return;
+    await rig.tap(w, 'B', 6);
+    await rig.wait(20);
+  }
 }
 
 export async function startRig({ rom, port, introLoops = 300, settle = 1200,
@@ -328,7 +344,7 @@ export async function startRig({ rom, port, introLoops = 300, settle = 1200,
       if (!asking)
         throw new Error(`core ${w}: the first-run prompt never appeared`);
 
-      await answerFirstRunPrompt(api, w, 2, 2, false, w);
+      await answerFirstRunPrompt(api, w, false, w);
 
       if ((await api.u8(w, OFFSETS.firstRunRunningAddr)) !== 0)
         throw new Error(`core ${w}: still in the first-run prompt after answering`);
@@ -341,6 +357,17 @@ export async function startRig({ rom, port, introLoops = 300, settle = 1200,
     // So it lands a moment after the last answer, and a test that starts
     // measuring before it does sees the two on different maps -- which is
     // true, briefly, and not what it was looking at.
+    // Put the story past its opening.
+    //
+    // A fresh co-op game drops both players into a town whose own story is
+    // still trying to happen around them -- Oak stopping you at the edge of
+    // Pallet Town, Birch's twin sending you to Route 101, mum and the running
+    // shoes. All of those are mirrored scenes now, which is right in play and
+    // means a stage measuring something else spends its run being interrupted
+    // by one. Debug script 19 sets the flags and vars that mark the opening
+    // done; they are shared, so one console is enough.
+    await runDebugScriptOn(api, 0, 19);
+
     // PEER_SAME_MAP rather than two matching map numbers. The numbers match
     // the instant the warp lands, but each console learns where the other is
     // from their position broadcast, so for a moment afterwards they are

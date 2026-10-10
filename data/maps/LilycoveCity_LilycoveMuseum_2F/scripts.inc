@@ -61,6 +61,7 @@ LilycoveCity_LilycoveMuseum_2F_OnFrame:
 	.2byte 0
 
 LilycoveCity_LilycoveMuseum_2F_EventScript_ShowExhibitHall::
+	coopscene GATE_SCENE_LILYCOVECITY_LILYCOVEMUSEUM_2F_EVENTSCRIPT_SHOWEXHIBITHALL
 	lockall
 	applymovement LOCALID_MUSEUM_2F_CURATOR, Common_Movement_FacePlayer
 	applymovement LOCALID_PLAYER, LilycoveCity_LilycoveMuseum_2F_Movement_PlayerWalkInPlaceLeft

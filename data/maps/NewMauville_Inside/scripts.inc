@@ -141,6 +141,7 @@ NewMauville_Inside_EventScript_SetBarrierStateGreenButton::
 	return
 
 NewMauville_Inside_EventScript_RedButton::
+	coopscene GATE_SCENE_NEWMAUVILLE_INSIDE_EVENTSCRIPT_REDBUTTON
 	lockall
 	msgbox NewMauville_Inside_Text_SteppedOnSwitchGeneratorStopped, MSGBOX_DEFAULT
 	call NewMauville_Inside_EventScript_SetGeneratorOffMetatiles

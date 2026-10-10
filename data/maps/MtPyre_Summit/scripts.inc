@@ -12,18 +12,21 @@ MtPyre_Summit_EventScript_SetArchieMaxiePositions::
 	end
 
 MtPyre_Summit_EventScript_TeamAquaTrigger0::
+	coopscene GATE_SCENE_MTPYRE_SUMMIT_EVENTSCRIPT_TEAMAQUATRIGGER0
 	lockall
 	setvar VAR_0x8008, 0
 	goto MtPyre_Summit_EventScript_TeamAquaExits
 	end
 
 MtPyre_Summit_EventScript_TeamAquaTrigger1::
+	coopscene GATE_SCENE_MTPYRE_SUMMIT_EVENTSCRIPT_TEAMAQUATRIGGER1
 	lockall
 	setvar VAR_0x8008, 1
 	goto MtPyre_Summit_EventScript_TeamAquaExits
 	end
 
 MtPyre_Summit_EventScript_TeamAquaTrigger2::
+	coopscene GATE_SCENE_MTPYRE_SUMMIT_EVENTSCRIPT_TEAMAQUATRIGGER2
 	lockall
 	setvar VAR_0x8008, 2
 	goto MtPyre_Summit_EventScript_TeamAquaExits
@@ -178,18 +181,21 @@ MtPyre_Summit_EventScript_OldLadyAfterOrbsReturned::
 	end
 
 MtPyre_Summit_EventScript_ArchieMaxieTrigger0::
+	coopscene GATE_SCENE_MTPYRE_SUMMIT_EVENTSCRIPT_ARCHIEMAXIETRIGGER0
 	lockall
 	setvar VAR_0x8008, 0
 	goto MtPyre_Summit_EventScript_ArchieMaxieReturnOrbs
 	end
 
 MtPyre_Summit_EventScript_ArchieMaxieTrigger1::
+	coopscene GATE_SCENE_MTPYRE_SUMMIT_EVENTSCRIPT_ARCHIEMAXIETRIGGER1
 	lockall
 	setvar VAR_0x8008, 1
 	goto MtPyre_Summit_EventScript_ArchieMaxieReturnOrbs
 	end
 
 MtPyre_Summit_EventScript_ArchieMaxieTrigger2::
+	coopscene GATE_SCENE_MTPYRE_SUMMIT_EVENTSCRIPT_ARCHIEMAXIETRIGGER2
 	lockall
 	setvar VAR_0x8008, 2
 	goto MtPyre_Summit_EventScript_ArchieMaxieReturnOrbs

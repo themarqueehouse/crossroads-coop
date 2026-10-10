@@ -89,6 +89,21 @@ struct CoopWorldState
     // link -- so they start in Hoenn and adopt this. Left out, the two phones
     // sat in different regions wearing different skins for the whole session.
     u8 playerRegion;
+
+    // Player 1's gender -- not as an appearance, but as the story's.
+    //
+    // Three quarters of the story's branches ask checkplayergender, and they
+    // ask it to decide things there is only one of: which house is yours,
+    // which of the two rivals you have, which of them is standing on Route
+    // 103 waiting to battle. Answered per player, a boy and a girl get
+    // different houses and different rivals, and the same scene becomes two
+    // different scenes -- which is also a deadlock, because each player sits
+    // at the sync gate of a scene the other is never going to reach.
+    //
+    // So the story has one gender and it is Player 1's. Each player still
+    // looks like whoever they said they were; it is only the world's idea of
+    // the protagonist that is shared.
+    u8 storyGender;
 }; // about 1.6 KB
 
 // Live changes, broadcast as they happen.
@@ -314,6 +329,9 @@ void Coop_CancelFirstRun(void);
 bool8 Coop_FirstRunIsPending(void);
 bool8 Coop_FirstRunIsRunning(void);
 bool8 Coop_FirstRunNamingScreenIsUp(void);
+
+/** The gender the STORY uses for both players: Player 1's. */
+u8 Coop_StoryGender(void);
 
 /**
  * True while BOTH consoles are already inside the same mirrored script.

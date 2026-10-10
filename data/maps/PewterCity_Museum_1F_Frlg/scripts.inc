@@ -32,6 +32,7 @@ PewterCity_Museum_1F_EventScript_ExplainAmber::
 	end
 
 PewterCity_Museum_1F_EventScript_EntranceTriggerLeft::
+	coopscene GATE_SCENE_PEWTERCITY_MUSEUM_1F_EVENTSCRIPT_ENTRANCETRIGGERLEFT
 	lockall
 	setvar VAR_TEMP_1, 0
 	applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterRight
@@ -40,6 +41,7 @@ PewterCity_Museum_1F_EventScript_EntranceTriggerLeft::
 	end
 
 PewterCity_Museum_1F_EventScript_EntranceTriggerMid::
+	coopscene GATE_SCENE_PEWTERCITY_MUSEUM_1F_EVENTSCRIPT_ENTRANCETRIGGERMID
 	lockall
 	setvar VAR_TEMP_1, 1
 	applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterRight
@@ -48,6 +50,7 @@ PewterCity_Museum_1F_EventScript_EntranceTriggerMid::
 	end
 
 PewterCity_Museum_1F_EventScript_EntranceTriggerRight::
+	coopscene GATE_SCENE_PEWTERCITY_MUSEUM_1F_EVENTSCRIPT_ENTRANCETRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_1, 2
 	applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterRight

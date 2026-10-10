@@ -219,6 +219,7 @@ Route110_TrickHouseEnd_EventScript_TrickMasterFaceAwayEast::
 	return
 
 Route110_TrickHouseEnd_EventScript_TrickMasterExitTrigger::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEEND_EVENTSCRIPT_TRICKMASTEREXITTRIGGER
 	lockall
 	turnobject LOCALID_TRICK_MASTER_END, DIR_WEST
 	playse SE_PIN

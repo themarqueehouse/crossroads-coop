@@ -203,6 +203,7 @@ LittlerootTown_Movement_PlayerStepOffTruck:
 	step_end
 
 LittlerootTown_EventScript_BeginDexUpgradeScene::
+	coopscene GATE_SCENE_LITTLEROOTTOWN_EVENTSCRIPT_BEGINDEXUPGRADESCENE
 	lockall
 	playse SE_PIN
 	applymovement LOCALID_LITTLEROOT_BIRCH, Common_Movement_ExclamationMark
@@ -373,6 +374,7 @@ LittlerootTown_Movement_TwinReturnRight:
 	step_end
 
 LittlerootTown_EventScript_GoSaveBirchTrigger::
+	coopscene GATE_STORY_GO_SAVE_BIRCH
 	lockall
 	applymovement LOCALID_LITTLEROOT_TWIN, Common_Movement_WalkInPlaceFasterRight
 	waitmovement 0
@@ -428,6 +430,7 @@ LittlerootTown_EventScript_PlayersHouseSignFemale::
 	return
 
 LittlerootTown_EventScript_GiveRunningShoesTrigger0::
+	coopscene GATE_STORY_RUNNING_SHOES
 	lockall
 	setvar VAR_0x8008, 0
 	setobjectxy LOCALID_LITTLEROOT_MOM, 10, 9
@@ -435,6 +438,7 @@ LittlerootTown_EventScript_GiveRunningShoesTrigger0::
 	end
 
 LittlerootTown_EventScript_GiveRunningShoesTrigger1::
+	coopscene GATE_STORY_RUNNING_SHOES
 	lockall
 	setvar VAR_0x8008, 1
 	setobjectxy LOCALID_LITTLEROOT_MOM, 11, 9
@@ -442,24 +446,28 @@ LittlerootTown_EventScript_GiveRunningShoesTrigger1::
 	end
 
 LittlerootTown_EventScript_GiveRunningShoesTrigger2::
+	coopscene GATE_STORY_RUNNING_SHOES
 	lockall
 	setvar VAR_0x8008, 2
 	goto LittlerootTown_EventScript_GiveRunningShoesTrigger
 	end
 
 LittlerootTown_EventScript_GiveRunningShoesTrigger3::
+	coopscene GATE_STORY_RUNNING_SHOES
 	lockall
 	setvar VAR_0x8008, 3
 	goto LittlerootTown_EventScript_GiveRunningShoesTrigger
 	end
 
 LittlerootTown_EventScript_GiveRunningShoesTrigger4::
+	coopscene GATE_STORY_RUNNING_SHOES
 	lockall
 	setvar VAR_0x8008, 4
 	goto LittlerootTown_EventScript_GiveRunningShoesTrigger
 	end
 
 LittlerootTown_EventScript_GiveRunningShoesTrigger5::
+	coopscene GATE_STORY_RUNNING_SHOES
 	lockall
 	setvar VAR_0x8008, 5
 	goto LittlerootTown_EventScript_GiveRunningShoesTrigger

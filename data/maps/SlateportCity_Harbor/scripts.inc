@@ -21,24 +21,28 @@ SlateportCity_Harbor_EventScript_ReadyAquaEscapeScene::
 	return
 
 SlateportCity_Harbor_EventScript_AquaEscapeTrigger0::
+	coopscene GATE_SCENE_SLATEPORTCITY_HARBOR_EVENTSCRIPT_AQUAESCAPETRIGGER0
 	lockall
 	setvar VAR_0x8008, 0
 	goto SlateportCity_Harbor_EventScript_AquaEscapeScene
 	end
 
 SlateportCity_Harbor_EventScript_AquaEscapeTrigger1::
+	coopscene GATE_SCENE_SLATEPORTCITY_HARBOR_EVENTSCRIPT_AQUAESCAPETRIGGER1
 	lockall
 	setvar VAR_0x8008, 1
 	goto SlateportCity_Harbor_EventScript_AquaEscapeScene
 	end
 
 SlateportCity_Harbor_EventScript_AquaEscapeTrigger2::
+	coopscene GATE_SCENE_SLATEPORTCITY_HARBOR_EVENTSCRIPT_AQUAESCAPETRIGGER2
 	lockall
 	setvar VAR_0x8008, 2
 	goto SlateportCity_Harbor_EventScript_AquaEscapeScene
 	end
 
 SlateportCity_Harbor_EventScript_AquaEscapeTrigger3::
+	coopscene GATE_SCENE_SLATEPORTCITY_HARBOR_EVENTSCRIPT_AQUAESCAPETRIGGER3
 	lockall
 	setvar VAR_0x8008, 3
 	applymovement LOCALID_PLAYER, SlateportCity_Harbor_Movement_PlayerWalkUp

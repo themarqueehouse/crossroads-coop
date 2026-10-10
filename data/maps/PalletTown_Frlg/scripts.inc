@@ -40,6 +40,7 @@ PalletTown_OnFrame::
 
 @ Oak approaches player after exiting their house post Elite Four to check if they should receieve the National Dex
 PalletTown_EventScript_OakRatingScene::
+	coopscene GATE_SCENE_PALLETTOWN_EVENTSCRIPT_OAKRATINGSCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	setobjectxyperm LOCALID_PALLET_PROF_OAK, 14, 14
@@ -167,12 +168,14 @@ PalletTown_Movement_PlayerWalkToLabFromHouse::
 	step_end
 
 PalletTown_EventScript_OakTriggerLeft::
+	coopscene GATE_SCENE_PALLETTOWN_EVENTSCRIPT_OAKTRIGGERLEFT
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto PalletTown_EventScript_OakTrigger
 	end
 
 PalletTown_EventScript_OakTriggerRight::
+	coopscene GATE_SCENE_PALLETTOWN_EVENTSCRIPT_OAKTRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto PalletTown_EventScript_OakTrigger
@@ -417,6 +420,7 @@ PalletTown_EventScript_TrainerTips::
 	end
 
 PalletTown_EventScript_SignLadyTrigger::
+	coopscene GATE_SCENE_PALLETTOWN_EVENTSCRIPT_SIGNLADYTRIGGER
 	lockall
 	applymovement LOCALID_PALLET_SIGN_LADY, Common_Movement_WalkInPlaceFasterRight
 	applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterLeft

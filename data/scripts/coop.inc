@@ -46,6 +46,14 @@ CoopText_TestStillTogether:
 @ many to put on one screen, so it is region first and then its three.
 @ ---------------------------------------------------------------------------
 
+@ Who you are. Asked once, on each console, the first time you play.
+@
+@ The starter is NOT asked here any more. It used to be, and that put the
+@ choice in a strange place -- standing in your home town before anything has
+@ happened -- and worse, it meant Birch still had a starter to give you when
+@ you reached his bag on Route 101 and asked you to choose a second time. The
+@ story has its own moment for this and it is already a shared scene, so the
+@ choice lives there now. See CoopEventScript_ChooseStarter.
 CoopEventScript_FirstRun::
 	lockall
 	msgbox CoopText_FirstRunWelcome, MSGBOX_DEFAULT
@@ -54,21 +62,34 @@ CoopEventScript_FirstRunName:
 	special CoopDoPlayerNamingScreen
 	waitstate
 
-	@ No message box in front of the menus below. "Boy / Girl" and a list of
-	@ regions say what they are, and a box before each one is a press that
-	@ does nothing but give the player somewhere else to be out of step.
+	@ No message box in front of the menu. "Boy / Girl" says what it is, and
+	@ a box before it is a press that does nothing but give the player
+	@ somewhere else to be out of step.
 	dynmultipush CoopText_Boy, 0
 	dynmultipush CoopText_Girl, 1
 	dynmultistack 0, 0, TRUE, 2, FALSE, 0, NULL
 	switch VAR_RESULT
 	case 1, CoopEventScript_FirstRunGirl
 	callnative Coop_SetGenderMale
-	goto CoopEventScript_FirstRunRegion
+	goto CoopEventScript_FirstRunDone
 
 CoopEventScript_FirstRunGirl:
 	callnative Coop_SetGenderFemale
 
-CoopEventScript_FirstRunRegion:
+CoopEventScript_FirstRunDone:
+	msgbox CoopText_FirstRunReady, MSGBOX_DEFAULT
+	callnative Coop_FirstRunDone
+	releaseall
+	end
+
+@ The starter, from every region, at Birch's bag on Route 101.
+@
+@ Called from the middle of that scene in place of the game's own
+@ ChooseStarter, which offers the three Hoenn ones. The scene is mirrored, so
+@ both players are standing here and both choose; a gate afterwards holds
+@ whoever picks first until the other has, so the rest of the scene runs for
+@ the two of them together.
+CoopEventScript_ChooseStarter::
 	dynmultipush CoopText_Kanto,  0
 	dynmultipush CoopText_Johto,  1
 	dynmultipush CoopText_Hoenn,  2
@@ -91,7 +112,7 @@ CoopEventScript_FirstRunRegion:
 	case 8, CoopEventScript_StartersPaldea
 	@ B out of the region menu and you are asked again. There is no way on
 	@ from here without a Pokemon.
-	goto CoopEventScript_FirstRunRegion
+	goto CoopEventScript_ChooseStarter
 
 CoopEventScript_StartersKanto:
 	setvar VAR_TEMP_B, SPECIES_BULBASAUR
@@ -185,7 +206,7 @@ CoopEventScript_PickStarter:
 	case 0, CoopEventScript_TakeFirst
 	case 1, CoopEventScript_TakeSecond
 	case 2, CoopEventScript_TakeThird
-	goto CoopEventScript_FirstRunRegion
+	goto CoopEventScript_ChooseStarter
 
 CoopEventScript_TakeFirst:
 	copyvar VAR_TEMP_E, VAR_TEMP_B
@@ -207,10 +228,12 @@ CoopEventScript_TakeThird:
 @ with the player locked, one line short of finishing.
 CoopEventScript_GiveStarter:
 	callnative Coop_GiveChosenStarter
-	msgbox CoopText_FirstRunDone, MSGBOX_DEFAULT
-	callnative Coop_FirstRunDone
-	releaseall
-	end
+	msgbox CoopText_StarterChosen, MSGBOX_DEFAULT
+	@ Whoever chose first waits here. Without it the faster player walks on
+	@ into the rest of Birch's scene while their partner is still reading a
+	@ list of regions, and the two spend the next conversation a beat apart.
+	coopgate GATE_STORY_STARTERS_PICKED
+	return
 
 CoopText_FirstRunWelcome:
 	.string "Before you set off - who are you,\n"
@@ -223,8 +246,12 @@ CoopText_FirstRunPickRegion:
 	.string "Every region sent a starter.\n"
 	.string "Which one's?$"
 
-CoopText_FirstRunDone:
+CoopText_FirstRunReady:
 	.string "Then you're ready.\p"
+	.string "Your partner is out here too -\n"
+	.string "go and find out what's going on.$"
+
+CoopText_StarterChosen:
 	.string "Your partner is picking theirs -\n"
 	.string "you might end up with the same one.$"
 

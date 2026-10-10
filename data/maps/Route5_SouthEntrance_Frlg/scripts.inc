@@ -6,18 +6,21 @@ Route5_SouthEntrance_EventScript_Guard::
 	end
 
 Route5_SouthEntrance_EventScript_GuardTriggerLeft::
+	coopscene GATE_SCENE_ROUTE5_SOUTHENTRANCE_EVENTSCRIPT_GUARDTRIGGERLEFT
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto Route5_SouthEntrance_EventScript_GuardTrigger
 	end
 
 Route5_SouthEntrance_EventScript_GuardTriggerMid::
+	coopscene GATE_SCENE_ROUTE5_SOUTHENTRANCE_EVENTSCRIPT_GUARDTRIGGERMID
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto Route5_SouthEntrance_EventScript_GuardTrigger
 	end
 
 Route5_SouthEntrance_EventScript_GuardTriggerRight::
+	coopscene GATE_SCENE_ROUTE5_SOUTHENTRANCE_EVENTSCRIPT_GUARDTRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_1, 2
 	goto Route5_SouthEntrance_EventScript_GuardTrigger

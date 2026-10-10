@@ -22,6 +22,7 @@ Route114_FossilManiacsTunnel_EventScript_CloseDesertUnderpass::
 	return
 
 Route114_FossilManiacsTunnel_EventScript_ManiacMentionCaveIn::
+	coopscene GATE_SCENE_ROUTE114_FOSSILMANIACSTUNNEL_EVENTSCRIPT_MANIACMENTIONCAVEIN
 	lockall
 	applymovement LOCALID_FOSSIL_MANIAC, Common_Movement_WalkInPlaceFasterUp
 	applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterDown

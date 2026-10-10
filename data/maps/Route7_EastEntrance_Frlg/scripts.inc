@@ -6,18 +6,21 @@ Route7_EastEntrance_EventScript_Guard::
 	end
 
 Route7_EastEntrance_EventScript_GuardTriggerTop::
+	coopscene GATE_SCENE_ROUTE7_EASTENTRANCE_EVENTSCRIPT_GUARDTRIGGERTOP
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto Route7_EastEntrance_EventScript_GuardTrigger
 	end
 
 Route7_EastEntrance_EventScript_GuardTriggerMid::
+	coopscene GATE_SCENE_ROUTE7_EASTENTRANCE_EVENTSCRIPT_GUARDTRIGGERMID
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto Route7_EastEntrance_EventScript_GuardTrigger
 	end
 
 Route7_EastEntrance_EventScript_GuardTriggerBottom::
+	coopscene GATE_SCENE_ROUTE7_EASTENTRANCE_EVENTSCRIPT_GUARDTRIGGERBOTTOM
 	lockall
 	setvar VAR_TEMP_1, 2
 	goto Route7_EastEntrance_EventScript_GuardTrigger

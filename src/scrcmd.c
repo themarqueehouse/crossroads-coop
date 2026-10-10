@@ -2948,7 +2948,11 @@ bool8 ScrCmd_checkplayergender(struct ScriptContext *ctx)
 {
     Script_RequestEffects(SCREFF_V1);
 
-    gSpecialVar_Result = gSaveBlock2Ptr->playerGender;
+    // The story's gender, which in co-op is Player 1's for both players.
+    // Seventy-odd story branches ask this, and they ask it to pick between
+    // things there is only one of -- your house, your rival. See
+    // Coop_StoryGender.
+    gSpecialVar_Result = Coop_StoryGender();
     return FALSE;
 }
 

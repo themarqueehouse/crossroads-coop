@@ -184,6 +184,7 @@ SSTidalCorridor_EventScript_TrainerNotDefeated::
 	return
 
 SSTidalCorridor_EventScript_ScottScene::
+	coopscene GATE_SCENE_SSTIDALCORRIDOR_EVENTSCRIPT_SCOTTSCENE
 	lockall
 	applymovement LOCALID_SS_TIDAL_SCOTT, SSTidalCorridor_Movement_ScottApproachPlayer
 	waitmovement 0

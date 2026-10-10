@@ -29,6 +29,7 @@ RustboroCity_OnFrame:
 	.2byte 0
 
 RustboroCity_EventScript_ScientistAddMatchCall::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_SCIENTISTADDMATCHCALL
 	lockall
 	setvar VAR_ROUTE104_STATE, 1
 	applymovement LOCALID_PLAYER, RustboroCity_Movement_PlayerWalkDown
@@ -242,6 +243,7 @@ RustboroCity_EventScript_Man2::
 	end
 
 RustboroCity_EventScript_StolenGoodsTrigger0::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_STOLENGOODSTRIGGER0
 	lockall
 	setobjectxyperm LOCALID_RUSTBORO_DEVON_EMPLOYEE, 14, 21
 	setobjectmovementtype LOCALID_RUSTBORO_DEVON_EMPLOYEE, MOVEMENT_TYPE_FACE_RIGHT
@@ -250,6 +252,7 @@ RustboroCity_EventScript_StolenGoodsTrigger0::
 	end
 
 RustboroCity_EventScript_StolenGoodsTrigger1::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_STOLENGOODSTRIGGER1
 	lockall
 	setobjectxyperm LOCALID_RUSTBORO_DEVON_EMPLOYEE, 14, 21
 	setobjectmovementtype LOCALID_RUSTBORO_DEVON_EMPLOYEE, MOVEMENT_TYPE_FACE_RIGHT
@@ -258,6 +261,7 @@ RustboroCity_EventScript_StolenGoodsTrigger1::
 	end
 
 RustboroCity_EventScript_StolenGoodsTrigger2::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_STOLENGOODSTRIGGER2
 	lockall
 	setobjectxyperm LOCALID_RUSTBORO_DEVON_EMPLOYEE, 14, 21
 	setobjectmovementtype LOCALID_RUSTBORO_DEVON_EMPLOYEE, MOVEMENT_TYPE_FACE_RIGHT
@@ -266,6 +270,7 @@ RustboroCity_EventScript_StolenGoodsTrigger2::
 	end
 
 RustboroCity_EventScript_StolenGoodsTrigger3::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_STOLENGOODSTRIGGER3
 	lockall
 	setobjectxyperm LOCALID_RUSTBORO_DEVON_EMPLOYEE, 14, 21
 	setobjectmovementtype LOCALID_RUSTBORO_DEVON_EMPLOYEE, MOVEMENT_TYPE_FACE_RIGHT
@@ -274,6 +279,7 @@ RustboroCity_EventScript_StolenGoodsTrigger3::
 	end
 
 RustboroCity_EventScript_StolenGoodsTrigger4::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_STOLENGOODSTRIGGER4
 	lockall
 	setobjectxyperm LOCALID_RUSTBORO_DEVON_EMPLOYEE, 14, 21
 	setobjectmovementtype LOCALID_RUSTBORO_DEVON_EMPLOYEE, MOVEMENT_TYPE_FACE_RIGHT
@@ -472,24 +478,28 @@ RustboroCity_EventScript_ReturnGoodsSpokeToEmployee::
 	end
 
 RustboroCity_EventScript_HelpGetGoodsTrigger0::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_HELPGETGOODSTRIGGER0
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto RustboroCity_EventScript_EmployeeAskToGetGoods
 	end
 
 RustboroCity_EventScript_HelpGetGoodsTrigger1::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_HELPGETGOODSTRIGGER1
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto RustboroCity_EventScript_EmployeeAskToGetGoods
 	end
 
 RustboroCity_EventScript_HelpGetGoodsTrigger2::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_HELPGETGOODSTRIGGER2
 	lockall
 	setvar VAR_TEMP_1, 2
 	goto RustboroCity_EventScript_EmployeeAskToGetGoods
 	end
 
 RustboroCity_EventScript_HelpGetGoodsTrigger3::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_HELPGETGOODSTRIGGER3
 	lockall
 	setvar VAR_TEMP_1, 3
 	goto RustboroCity_EventScript_EmployeeAskToGetGoods
@@ -563,24 +573,28 @@ RustboroCity_Movement_EmployeeApproachPlayerDown:
 	step_end
 
 RustboroCity_EventScript_ReturnGoodsTrigger0::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_RETURNGOODSTRIGGER0
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto RustboroCity_EventScript_ReturnGoods
 	end
 
 RustboroCity_EventScript_ReturnGoodsTrigger1::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_RETURNGOODSTRIGGER1
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto RustboroCity_EventScript_ReturnGoods
 	end
 
 RustboroCity_EventScript_ReturnGoodsTrigger2::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_RETURNGOODSTRIGGER2
 	lockall
 	setvar VAR_TEMP_1, 2
 	goto RustboroCity_EventScript_ReturnGoods
 	end
 
 RustboroCity_EventScript_ReturnGoodsTrigger3::
+	coopscene GATE_SCENE_RUSTBOROCITY_EVENTSCRIPT_RETURNGOODSTRIGGER3
 	lockall
 	setvar VAR_TEMP_1, 3
 	goto RustboroCity_EventScript_ReturnGoods

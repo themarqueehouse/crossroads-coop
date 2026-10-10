@@ -1021,6 +1021,30 @@ static void Task_CoopWaitForPartner(u8 taskId)
     if (gPaletteFade.active)
         return;
 
+    // Still asking whether we are Player 2, because the answer can arrive
+    // after the question was first asked.
+    //
+    // Whether this console is the joining player comes from the relay, and
+    // the relay answers when it answers. Press A on the menu in the second
+    // before it does and the ordinary path is taken -- so Player 2 ends up
+    // sat at "Waiting for your partner" instead of joining, and the pair only
+    // get going because the other player presses New Game too. Which they
+    // should never have to: that is the whole point of the joining path.
+    //
+    // Checked here rather than only in the input task because this is where a
+    // console that pressed too early ends up, and nothing there looked again.
+    if (Coop_IsJoiningPlayer())
+    {
+        FillWindowPixelBuffer(0, PIXEL_FILL(0xA));
+        AddTextPrinterParameterized3(0, FONT_NORMAL, 0, 1, sTextColor_Headers,
+                                     TEXT_SKIP_DRAW, sText_CoopJoining);
+        PutWindowTilemap(0);
+        CopyWindowToVram(0, COPYWIN_GFX);
+        DrawMainMenuWindowBorder(&sWindowTemplates_MainMenu[0], MAIN_MENU_BORDER_TILE);
+        gTasks[taskId].func = Task_CoopJoinWithoutSave;
+        return;
+    }
+
     if (!gTasks[taskId].tCoopFadedBack)
     {
         if (!IsCoopSessionPaired())

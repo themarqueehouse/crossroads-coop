@@ -82,6 +82,7 @@ MtEmber_Exterior_EventScript_BattleGrunt2::
 	end
 
 MtEmber_Exterior_EventScript_RocketPasswordScene::
+	coopscene GATE_SCENE_MTEMBER_EXTERIOR_EVENTSCRIPT_ROCKETPASSWORDSCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	msgbox MtEmber_Exterior_Text_PunchedThroughAtLast

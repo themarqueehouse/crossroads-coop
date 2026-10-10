@@ -17,6 +17,9 @@ Route101_EventScript_HideMapNamePopup::
 	end
 
 Route101_EventScript_StartBirchRescue::
+	@ Shared. This is the first thing that happens in the game, and without
+	@ this each player watched their own private copy of it.
+	coopscene GATE_STORY_BIRCH_RESCUE
 	lockall
 	playbgm MUS_HELP, TRUE
 	msgbox Route101_Text_HelpMe, MSGBOX_DEFAULT
@@ -231,8 +234,10 @@ Route101_EventScript_BirchsBag::
 	setobjectxy LOCALID_PLAYER, 6, 13
 	applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterLeft
 	waitmovement 0
-	special ChooseStarter
-	waitstate
+	@ Every region's starters, not the three Hoenn ones, and both players
+	@ choose. See CoopEventScript_ChooseStarter -- it ends with a gate, so
+	@ neither of them walks on until the other has picked.
+	call CoopEventScript_ChooseStarter
 	applymovement LOCALID_ROUTE101_BIRCH, Route101_Movement_BirchApproachPlayer
 	waitmovement 0
 	msgbox Route101_Text_YouSavedMe, MSGBOX_DEFAULT

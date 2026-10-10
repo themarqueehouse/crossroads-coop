@@ -2,6 +2,7 @@ PokemonTower_6F_Frlg_MapScripts::
 	.byte 0
 
 PokemonTower_6F_EventScript_MarowakGhost::
+	coopscene GATE_SCENE_POKEMONTOWER_6F_EVENTSCRIPT_MAROWAKGHOST
 	lockall
 	textcolor NPC_TEXT_COLOR_MON
 	msgbox PokemonTower_6F_Text_BeGoneIntruders

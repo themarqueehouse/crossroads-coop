@@ -6,12 +6,14 @@ PokemonTower_2F_EventScript_Channeler::
 	end
 
 PokemonTower_2F_EventScript_RivalTriggerRight::
+	coopscene GATE_SCENE_POKEMONTOWER_2F_EVENTSCRIPT_RIVALTRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto PokemonTower_2F_EventScript_Rival
 	end
 
 PokemonTower_2F_EventScript_RivalTriggerDown::
+	coopscene GATE_SCENE_POKEMONTOWER_2F_EVENTSCRIPT_RIVALTRIGGERDOWN
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto PokemonTower_2F_EventScript_Rival

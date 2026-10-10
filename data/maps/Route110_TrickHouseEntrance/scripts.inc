@@ -197,6 +197,7 @@ Route110_TrickHouseEntrance_OnFrame:
 	.2byte 0
 
 Route110_TrickHouseEntrance_EventScript_BeginChallenge::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEENTRANCE_EVENTSCRIPT_BEGINCHALLENGE
 	lockall
 	delay 20
 	call_if_eq VAR_TRICK_HOUSE_LEVEL, 0, Route110_TrickHouseEntrance_EventScript_MeetTrickMaster
@@ -660,6 +661,7 @@ Route110_TrickHousePuzzle_EventScript_FoundScroll::
 	end
 
 Route110_TrickHouseEntrance_EventScript_TrickMasterHiding::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEENTRANCE_EVENTSCRIPT_TRICKMASTERHIDING
 	lockall
 	msgbox Route110_TrickHouseEntrance_Text_YoureBeingWatched, MSGBOX_DEFAULT
 	releaseall

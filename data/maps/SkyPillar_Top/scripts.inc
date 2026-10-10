@@ -86,6 +86,7 @@ SkyPillar_Top_EventScript_RanFromRayquaza2::
 	end
 
 SkyPillar_Top_EventScript_AwakenRayquaza::
+	coopscene GATE_SCENE_SKYPILLAR_TOP_EVENTSCRIPT_AWAKENRAYQUAZA
 	lockall
 	fadeoutbgm 1
 	applymovement LOCALID_PLAYER, Common_Movement_FaceUp

@@ -138,7 +138,7 @@ async function main() {
     // cannot here, because they do not exist until the pair is up and the
     // pair coming up is what this stage is about.
     console.log('\n--- answering the opening questions ---');
-    for (const w of [0, 1]) await answerFirstRunPrompt(rig, w, 2, 2, false, w);
+    for (const w of [0, 1]) await answerFirstRunPrompt(rig, w, false, w);
 
     // And in the same world as Player 1.
     //

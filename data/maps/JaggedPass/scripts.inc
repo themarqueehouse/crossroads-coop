@@ -37,6 +37,7 @@ JaggedPass_EventScript_ConcealHideoutEntrance::
 	end
 
 JaggedPass_EventScript_OpenMagmaHideout::
+	coopscene GATE_SCENE_JAGGEDPASS_EVENTSCRIPT_OPENMAGMAHIDEOUT
 	lockall
 	setvar VAR_0x8004, 1  @ vertical pan
 	setvar VAR_0x8005, 1  @ horizontal pan

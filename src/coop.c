@@ -37,6 +37,13 @@ static EWRAM_DATA u8 sCoopState = 0;
 // Defined with the sprite code below; declared here so the diagnostics can
 // report whether the partner is currently spawned.
 static EWRAM_DATA u8 sPeerObjectId;
+
+// Player 1's gender, as the story sees it, on a console that is not Player 1.
+// Arrives with the world sync; until it does there is nothing to go on and
+// this console answers for itself. Up here rather than beside its accessor
+// because ApplyWorldState, much earlier in the file, is what fills it.
+static EWRAM_DATA u8 sStoryGender = 0;
+static EWRAM_DATA bool8 sKnowStoryGender = FALSE;
 // Cleared with the rest of the session state, so a reconnect re-sends.
 // Where the join handshake has got to. Both consoles run the same enum through
 // different branches, which is why the names describe the step rather than the
@@ -120,7 +127,18 @@ static EWRAM_DATA u16 sStateTimer = 0;
 
 bool8 Coop_IsPartnerObject(const struct ObjectEvent *obj)
 {
-    return obj != NULL && obj->active && obj->localId == COOP_PEER_LOCAL_ID;
+    if (obj == NULL || !obj->active)
+        return FALSE;
+
+    // Their Pokemon counts too.
+    //
+    // It was added after this test and not added to it, so for one build the
+    // partner was walk-through and the creature trailing them was a wall --
+    // which is worse than both being solid, because it is a wall that follows
+    // your partner around and you cannot see why you are stuck. It also
+    // blocks a trainer's line of sight, so trainers stopped noticing anybody.
+    return obj->localId == COOP_PEER_LOCAL_ID
+        || obj->localId == COOP_PEER_FOLLOWER_LOCAL_ID;
 }
 
 struct CoopPlayer2 *GetCoopPlayer2(void)
@@ -712,6 +730,7 @@ static EWRAM_DATA u16 sSceneSendLocalId = 0;
 
 // Received, waiting for a frame where starting it is safe.
 static EWRAM_DATA const u8 *sPendingScene = NULL;
+static EWRAM_DATA u16 sPendingSceneGate = 0;
 static EWRAM_DATA u16 sPendingSceneFrames = 0;
 static EWRAM_DATA u16 sPendingSceneLocalId = 0;
 
@@ -799,6 +818,21 @@ bool8 Coop_BroadcastScene(const u8 *resume, u16 gateId)
         sSceneSendSeq = 1;
     sSceneSendLocalId = gSpecialVar_LastTalked;
     sInHostScene = TRUE;
+
+    // If the partner pushed US this same scene a moment ago, it is moot: we
+    // are about to play it ourselves, and running theirs afterwards would
+    // play the same conversation twice. That is the both-of-us-talked-to-them
+    // -at-once case, which is not an edge -- two players walking up to the
+    // same person from different sides is just what happens.
+    //
+    // Only the same scene, though. Dropping whatever happened to be waiting
+    // cost stage 3 a check the moment the start town gained trigger tiles of
+    // its own: a player standing on one broadcast it, and in doing so threw
+    // away the scene their partner had sent them and was waiting at a gate
+    // for.
+    if (sPendingScene != NULL && sPendingSceneGate == gateId)
+        sPendingScene = NULL;
+
     return TRUE;
 }
 
@@ -844,6 +878,23 @@ void Coop_ReceiveScene(u8 playerId, const u16 *cmd)
     if (cmd[6] == sUsedPeerSceneSeq)
         return;
 
+    // We are already playing THIS scene, having started it ourselves.
+    //
+    // Which is what happens when we both walked up to the same person and
+    // both talked to them: they sent it to us and we sent it to them, and
+    // both of us are already in it. Taking it as well would run the
+    // conversation a second time the moment the first one ended. The sequence
+    // number is marked used so the repeats behind it are quiet too.
+    //
+    // Matched on the gate rather than just "are we hosting anything". A
+    // different scene arriving while we are busy is not a duplicate -- it is
+    // the partner's scene, and it should wait its turn like any other.
+    if (sInHostScene && sSceneSendGate == cmd[1])
+    {
+        sUsedPeerSceneSeq = cmd[6];
+        return;
+    }
+
     off = cmd[2] | ((u32)cmd[3] << 16);
 
     // A script pointer arriving over a wire gets checked before it is jumped
@@ -855,6 +906,7 @@ void Coop_ReceiveScene(u8 playerId, const u16 *cmd)
 
     sUsedPeerSceneSeq = cmd[6];
     sPendingScene = (const u8 *)(ROM_BASE + off);
+    sPendingSceneGate = cmd[1];
     sPendingSceneFrames = 0;
     sPendingSceneLocalId = cmd[5];
 }
@@ -1295,6 +1347,7 @@ static void GatherWorldState(struct CoopWorldState *out)
 
     out->money = GetMoney(&gSaveBlock1Ptr->money);
     out->playerRegion = gSaveBlock2Ptr->playerRegion;
+    out->storyGender = gSaveBlock2Ptr->playerGender;
 }
 
 // Bring this console up to date with the shared world.
@@ -1366,6 +1419,12 @@ static void ApplyWorldState(const struct CoopWorldState *in)
         gSaveBlock2Ptr->playerRegion = in->playerRegion;
         SetInitialGame();
     }
+
+    // Whose story this is. Not applied to our own character, which stays
+    // whoever this player said they were -- only to the branches that decide
+    // which house and which rival the pair of them share.
+    sStoryGender = in->storyGender <= FEMALE ? in->storyGender : MALE;
+    sKnowStoryGender = TRUE;
 }
 
 // Take over the character Player 1 handed back.
@@ -2548,6 +2607,19 @@ void Coop_UpdatePeerSprite(void)
 // and are copied wholesale to Player 2 on join, so Player 1 finishing their
 // setup would have told Player 2 it was already done.
 // ---------------------------------------------------------------------------
+
+// Whose house, whose rival, whose story.
+//
+// Player 1's, for both players. See struct CoopWorldState for why: the
+// alternative is two rivals, two houses, and a sync gate each player waits at
+// for a partner who is standing at a different one.
+u8 Coop_StoryGender(void)
+{
+    if (!IsCoopLinkActive() || NetLink_IsMaster() || !sKnowStoryGender)
+        return gSaveBlock2Ptr->playerGender;
+
+    return sStoryGender;
+}
 
 static EWRAM_DATA bool8 sFirstRunPending = FALSE;
 

@@ -10,6 +10,7 @@ LilycoveCity_PokemonTrainerFanClub_OnFrame:
 	.2byte 0
 
 LilycoveCity_PokemonTrainerFanClub_EventScript_MeetFirstFans::
+	coopscene GATE_SCENE_LILYCOVECITY_POKEMONTRAINERFANCLUB_EVENTSCRIPT_MEETFIRSTFANS
 	lockall
 	applymovement LOCALID_TRAINER_FAN_CLUB_LASS, Common_Movement_WalkInPlaceFasterDown
 	waitmovement 0

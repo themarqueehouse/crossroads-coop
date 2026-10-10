@@ -16,6 +16,7 @@ FiveIsland_LostCave_Room10_OnFrame::
 	.2byte 0
 
 FiveIsland_LostCave_Room10_EventScript_FindSelphyScene::
+	coopscene GATE_SCENE_FIVEISLAND_LOSTCAVE_ROOM10_EVENTSCRIPT_FINDSELPHYSCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_FEMALE
 	applymovement LOCALID_LOST_CAVE_SELPHY, FiveIsland_LostCave_Room10_Movement_SelphyWander

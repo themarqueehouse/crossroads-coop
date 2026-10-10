@@ -12,6 +12,7 @@ MtMoon_B2F_EventScript_ShowFossils::
 	return
 
 MtMoon_B2F_EventScript_MiguelTrigger::
+	coopscene GATE_SCENE_MTMOON_B2F_EVENTSCRIPT_MIGUELTRIGGER
 	lockall
 	applymovement LOCALID_MIGUEL, Common_Movement_WalkInPlaceFasterRight
 	waitmovement 0

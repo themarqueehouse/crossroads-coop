@@ -14,6 +14,7 @@ Route121_EventScript_SafariZoneSign::
 	end
 
 Route121_EventScript_AquaGruntsMoveOut::
+	coopscene GATE_SCENE_ROUTE121_EVENTSCRIPT_AQUAGRUNTSMOVEOUT
 	lockall
 	playbgm MUS_ENCOUNTER_AQUA, FALSE
 	applymovement LOCALID_ROUTE121_GRUNT_2, Common_Movement_WalkInPlaceRight

@@ -18,6 +18,7 @@ VictoryRoad_1F_EventScript_SetEntranceWallyPos2::
 	return
 
 VictoryRoad_1F_EventScript_WallyBattleTrigger1::
+	coopscene GATE_SCENE_VICTORYROAD_1F_EVENTSCRIPT_WALLYBATTLETRIGGER1
 	lockall
 	setvar VAR_0x8008, 1
 	addobject LOCALID_VICTORY_ROAD_ENTRANCE_WALLY
@@ -27,6 +28,7 @@ VictoryRoad_1F_EventScript_WallyBattleTrigger1::
 	end
 
 VictoryRoad_1F_EventScript_WallyBattleTrigger2::
+	coopscene GATE_SCENE_VICTORYROAD_1F_EVENTSCRIPT_WALLYBATTLETRIGGER2
 	lockall
 	setvar VAR_0x8008, 2
 	addobject LOCALID_VICTORY_ROAD_ENTRANCE_WALLY

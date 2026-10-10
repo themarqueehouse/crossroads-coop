@@ -23,12 +23,14 @@ Route24_EventScript_RocketPostBattle::
 	end
 
 Route24_EventScript_RocketTriggerLeft::
+	coopscene GATE_SCENE_ROUTE24_EVENTSCRIPT_ROCKETTRIGGERLEFT
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto Route24_EventScript_RocketTrigger
 	end
 
 Route24_EventScript_RocketTriggerRight::
+	coopscene GATE_SCENE_ROUTE24_EVENTSCRIPT_ROCKETTRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto Route24_EventScript_RocketTrigger

@@ -10,8 +10,9 @@
 //      to summon it
 //   2. each player answers for themselves -- it is NOT a mirrored scene, so
 //      one player's menu must not move when the other presses
-//   3. they come out of it with a Pokemon each
-//   4. duplicates are allowed: picking what your partner picked is fine
+//   3. neither is handed a Pokemon -- the starter belongs to Birch's scene on
+//      Route 101, and giving one here is what made him ask a second time
+//   4. the gender each of them picked is recorded, and the partner is told
 //   5. it does not come back once answered
 //
 //   node coop/harness/stage14.mjs path/to/rom.gba
@@ -28,8 +29,8 @@ const partyCount = (rig, w) => rig.u8(w, OFFSETS.partiesCountAddr);
 
 const scriptAt = (rig, w) => rig.u32(w, OFFSETS.dbgScriptPtrAddr);
 
-const answer = (rig, w, { region = 0, starter = 0, girl = false } = {}) =>
-  answerFirstRunPrompt(rig, w, region, starter, girl);
+const answer = (rig, w, { girl = false, letter = 0 } = {}) =>
+  answerFirstRunPrompt(rig, w, girl, letter);
 
 const MALE = 0, FEMALE = 1;
 const myGender = (rig, w) =>
@@ -73,40 +74,39 @@ async function main() {
     // and come out the other side with a Pokemon it never chose.
     console.log('\n--- player 1 answers; player 2 is not touched ---');
     const p2Before = await scriptAt(rig, 1);
-    await answer(rig, 0, { region: 2, starter: 2 });   // Hoenn, Mudkip
+    await answer(rig, 0, { letter: 0 });
 
     t.note('after p1 answered',
            `p1 party=${await partyCount(rig, 0)} busy=${await isBusy(rig, 0)}  ` +
            `p2 party=${await partyCount(rig, 1)} busy=${await isBusy(rig, 1)}`);
 
-    t.check('player 1 has a Pokemon', (await partyCount(rig, 0)) === 1,
-            `party of ${await partyCount(rig, 0)}`);
-    t.check('and is back in the world', !(await isBusy(rig, 0)),
+    t.check('player 1 is back in the world', !(await isBusy(rig, 0)),
             'player 1 is still stuck in the prompts');
+
+    // No Pokemon from this prompt, deliberately.
+    //
+    // It used to hand one over, and that is what made Birch ask again at his
+    // bag on Route 101 -- he still had a starter to give and no idea anybody
+    // had already been given one. The choice lives in that scene now, so
+    // coming out of these questions with a Pokemon is the regression.
+    t.check('and was not handed a Pokemon', (await partyCount(rig, 0)) === 0,
+            `party of ${await partyCount(rig, 0)} before Birch has given anybody one`);
 
     t.check('player 2 was not dragged through it',
             (await partyCount(rig, 1)) === 0,
-            'player 2 came out with a Pokemon it never chose');
+            'player 2 came out of a prompt it never answered');
     t.check('player 2 is still being asked', await inPrompt(rig, 1),
             'player 2\'s prompt vanished along with player 1\'s');
 
     // --- 3 & 4: player 2 answers, picking the same one ------------------
-    console.log('\n--- player 2 answers, picking the same starter, as a girl ---');
-    await answer(rig, 1, { region: 2, starter: 2, girl: true });
+    console.log('\n--- player 2 answers, as a girl ---');
+    await answer(rig, 1, { girl: true, letter: 1 });
     await rig.wait(120);
     await rig.shot('/tmp/claude-0/stage14-done');
 
-    t.note('after p2 answered',
-           `p1 party=${await partyCount(rig, 0)}  p2 party=${await partyCount(rig, 1)}`);
-
-    t.check('player 2 has a Pokemon too', (await partyCount(rig, 1)) === 1,
-            `party of ${await partyCount(rig, 1)}`);
     t.check('both are back in the world',
             !(await isBusy(rig, 0)) && !(await isBusy(rig, 1)),
             `p1=${await isBusy(rig, 0)} p2=${await isBusy(rig, 1)}`);
-    t.check('and player 1 did not lose theirs to the shared world',
-            (await partyCount(rig, 0)) === 1,
-            `player 1 now has ${await partyCount(rig, 0)}`);
 
     // --- girl ------------------------------------------------------------
     //

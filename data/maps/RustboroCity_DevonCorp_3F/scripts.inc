@@ -26,6 +26,7 @@ RustboroCity_DevonCorp_3F_OnFrame:
 	.2byte 0
 
 RustboroCity_DevonCorp_3F_EventScript_MeetPresident::
+	coopscene GATE_SCENE_RUSTBOROCITY_DEVONCORP_3F_EVENTSCRIPT_MEETPRESIDENT
 	lockall
 	msgbox RustboroCity_DevonCorp_3F_Text_ThisIs3rdFloorWaitHere, MSGBOX_DEFAULT
 	closemessage

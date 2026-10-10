@@ -140,6 +140,7 @@ Route116_EventScript_Briney::
 	end
 
 Route116_EventScript_BrineyTrigger::
+	coopscene GATE_SCENE_ROUTE116_EVENTSCRIPT_BRINEYTRIGGER
 	lockall
 	applymovement LOCALID_ROUTE116_BRINEY, Common_Movement_WalkInPlaceFasterRight
 	applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterLeft

@@ -11,6 +11,7 @@ FourIsland_IcefallCave_Back_EventScript_HideLorelei::
 	return
 
 FourIsland_IcefallCave_Back_EventScript_LoreleiRocketsScene::
+	coopscene GATE_SCENE_FOURISLAND_ICEFALLCAVE_BACK_EVENTSCRIPT_LORELEIROCKETSSCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_FEMALE
 	msgbox FourIsland_IcefallCave_Back_Text_LoreleiKeepHandsOffMons

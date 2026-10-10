@@ -74,6 +74,7 @@ PetalburgCity_Gym_OnFrame:
 	.2byte 0
 
 PetalburgCity_Gym_EventScript_ReturnFromWallyTutorial::
+	coopscene GATE_SCENE_PETALBURGCITY_GYM_EVENTSCRIPT_RETURNFROMWALLYTUTORIAL
 	lockall
 	msgbox PetalburgCity_Gym_Text_DadSoDidItWorkOut, MSGBOX_DEFAULT
 	msgbox PetalburgCity_Gym_Text_WallyThankYouBye, MSGBOX_DEFAULT

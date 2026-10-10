@@ -197,6 +197,7 @@ PalletTown_ProfessorOaksLab_Movement_OakBringDexesToDeskSouth::
 	step_end
 
 PalletTown_ProfessorOaksLab_ChooseStarterScene::
+	coopscene GATE_SCENE_PALLETTOWN_PROFESSOROAKSLAB_CHOOSESTARTERSCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	applymovement LOCALID_OAKS_LAB_PROF_OAK, PalletTown_ProfessorOaksLab_Movement_OakEnter
@@ -252,6 +253,7 @@ PalletTown_ProfessorOaksLab_Movement_RivalReact::
 	step_end
 
 PalletTown_ProfessorOaksLab_EventScript_LeaveStarterSceneTrigger::
+	coopscene GATE_SCENE_PALLETTOWN_PROFESSOROAKSLAB_EVENTSCRIPT_LEAVESTARTERSCENETRIGGER
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	applymovement LOCALID_OAKS_LAB_PROF_OAK, Common_Movement_FaceDown
@@ -268,18 +270,21 @@ PalletTown_ProfessorOaksLab_Movement_PlayerWalkUp::
 	step_end
 
 PalletTown_ProfessorOaksLab_EventScript_RivalBattleTriggerLeft::
+	coopscene GATE_SCENE_PALLETTOWN_PROFESSOROAKSLAB_EVENTSCRIPT_RIVALBATTLETRIGGERLEFT
 	lockall
 	setvar VAR_TEMP_2, 1
 	goto PalletTown_ProfessorOaksLab_EventScript_RivalBattle
 	end
 
 PalletTown_ProfessorOaksLab_EventScript_RivalBattleTriggerMid::
+	coopscene GATE_SCENE_PALLETTOWN_PROFESSOROAKSLAB_EVENTSCRIPT_RIVALBATTLETRIGGERMID
 	lockall
 	setvar VAR_TEMP_2, 2
 	goto PalletTown_ProfessorOaksLab_EventScript_RivalBattle
 	end
 
 PalletTown_ProfessorOaksLab_EventScript_RivalBattleTriggerRight::
+	coopscene GATE_SCENE_PALLETTOWN_PROFESSOROAKSLAB_EVENTSCRIPT_RIVALBATTLETRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_2, 3
 	goto PalletTown_ProfessorOaksLab_EventScript_RivalBattle

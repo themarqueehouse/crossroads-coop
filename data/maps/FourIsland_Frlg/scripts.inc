@@ -24,6 +24,7 @@ FourIsland_OnFrame::
 	.2byte 0
 
 FourIsland_EventScript_RivalScene::
+	coopscene GATE_SCENE_FOURISLAND_EVENTSCRIPT_RIVALSCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	applymovement LOCALID_FOUR_ISLAND_RIVAL, Common_Movement_WalkInPlaceFasterDown

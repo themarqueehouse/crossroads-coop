@@ -44,12 +44,14 @@ SilphCo_11F_EventScript_Secretary::
 	end
 
 SilphCo_11F_EventScript_GiovanniTriggerLeft::
+	coopscene GATE_SCENE_SILPHCO_11F_EVENTSCRIPT_GIOVANNITRIGGERLEFT
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto SilphCo_11F_EventScript_BattleGiovanni
 	end
 
 SilphCo_11F_EventScript_GiovanniTriggerRight::
+	coopscene GATE_SCENE_SILPHCO_11F_EVENTSCRIPT_GIOVANNITRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto SilphCo_11F_EventScript_BattleGiovanni

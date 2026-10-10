@@ -198,6 +198,7 @@ ViridianCity_Movement_WalkDown::
 	step_end
 
 ViridianCity_EventScript_TutorialTriggerLeft::
+	coopscene GATE_SCENE_VIRIDIANCITY_EVENTSCRIPT_TUTORIALTRIGGERLEFT
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	applymovement LOCALID_TUTORIAL_MAN, Common_Movement_WalkInPlaceFasterLeft
@@ -209,6 +210,7 @@ ViridianCity_EventScript_TutorialTriggerLeft::
 	end
 
 ViridianCity_EventScript_TutorialTriggerRight::
+	coopscene GATE_SCENE_VIRIDIANCITY_EVENTSCRIPT_TUTORIALTRIGGERRIGHT
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	applymovement LOCALID_TUTORIAL_MAN, Common_Movement_WalkInPlaceFasterRight

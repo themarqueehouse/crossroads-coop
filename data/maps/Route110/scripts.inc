@@ -298,6 +298,7 @@ Route110_EventScript_Alyssa::
 	end
 
 Route110_EventScript_CyclingChallengeEnd::
+	coopscene GATE_SCENE_ROUTE110_EVENTSCRIPT_CYCLINGCHALLENGEEND
 	lockall
 	applymovement LOCALID_CHALLENGE_BIKER, Common_Movement_WalkInPlaceFasterRight
 	waitmovement 0
@@ -583,21 +584,25 @@ Route110_Movement_RivalExit3:
 	step_end
 
 Route110_EventScript_BirchScene1::
+	coopscene GATE_SCENE_ROUTE110_EVENTSCRIPT_BIRCHSCENE1
 	lockall
 	setvar VAR_0x8008, 1
 	goto Route110_EventScript_BirchScene
 
 Route110_EventScript_BirchScene2::
+	coopscene GATE_SCENE_ROUTE110_EVENTSCRIPT_BIRCHSCENE2
 	lockall
 	setvar VAR_0x8008, 2
 	goto Route110_EventScript_BirchScene
 
 Route110_EventScript_BirchScene3::
+	coopscene GATE_SCENE_ROUTE110_EVENTSCRIPT_BIRCHSCENE3
 	lockall
 	setvar VAR_0x8008, 3
 	goto Route110_EventScript_BirchScene
 
 Route110_EventScript_BirchScene4::
+	coopscene GATE_SCENE_ROUTE110_EVENTSCRIPT_BIRCHSCENE4
 	lockall
 	setvar VAR_0x8008, 4
 	goto Route110_EventScript_BirchScene

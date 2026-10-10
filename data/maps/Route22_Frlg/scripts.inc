@@ -2,12 +2,14 @@ Route22_Frlg_MapScripts::
 	.byte 0
 
 Route22_EventScript_EarlyRivalTriggerTop::
+	coopscene GATE_SCENE_ROUTE22_EVENTSCRIPT_EARLYRIVALTRIGGERTOP
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto Route22_EventScript_EarlyRival
 	end
 
 Route22_EventScript_EarlyRivalTriggerMid::
+	coopscene GATE_SCENE_ROUTE22_EVENTSCRIPT_EARLYRIVALTRIGGERMID
 	lockall
 	setvar VAR_TEMP_1, 1
 	setobjectxyperm LOCALID_ROUTE22_RIVAL, 25, 5
@@ -15,6 +17,7 @@ Route22_EventScript_EarlyRivalTriggerMid::
 	end
 
 Route22_EventScript_EarlyRivalTriggerBottom::
+	coopscene GATE_SCENE_ROUTE22_EVENTSCRIPT_EARLYRIVALTRIGGERBOTTOM
 	lockall
 	setvar VAR_TEMP_1, 2
 	setobjectxyperm LOCALID_ROUTE22_RIVAL, 25, 5
@@ -159,12 +162,14 @@ Route22_Movement_PlayerFaceRival::
 	step_end
 
 Route22_EventScript_LateRivalTriggerTop::
+	coopscene GATE_SCENE_ROUTE22_EVENTSCRIPT_LATERIVALTRIGGERTOP
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto Route22_EventScript_LateRival
 	end
 
 Route22_EventScript_LateRivalTriggerMid::
+	coopscene GATE_SCENE_ROUTE22_EVENTSCRIPT_LATERIVALTRIGGERMID
 	lockall
 	setvar VAR_TEMP_1, 1
 	setobjectxyperm LOCALID_ROUTE22_RIVAL, 25, 5
@@ -172,6 +177,7 @@ Route22_EventScript_LateRivalTriggerMid::
 	end
 
 Route22_EventScript_LateRivalTriggerBottom::
+	coopscene GATE_SCENE_ROUTE22_EVENTSCRIPT_LATERIVALTRIGGERBOTTOM
 	lockall
 	setvar VAR_TEMP_1, 2
 	setobjectxyperm LOCALID_ROUTE22_RIVAL, 25, 5

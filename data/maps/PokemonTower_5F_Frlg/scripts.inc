@@ -6,6 +6,7 @@ PokemonTower_5F_EventScript_Channeler::
 	end
 
 PokemonTower_5F_EventScript_PurifiedZone::
+	coopscene GATE_SCENE_POKEMONTOWER_5F_EVENTSCRIPT_PURIFIEDZONE
 	lockall
 	fadescreen FADE_TO_WHITE
 	special HealPlayerParty

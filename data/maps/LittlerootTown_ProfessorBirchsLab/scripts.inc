@@ -105,6 +105,11 @@ LittlerootTown_ProfessorBirchsLab_OnFrame:
 @ The starter is technically given prior to this on Route 101 by special ChooseStarter
 @ This is just where the game tells you its yours and lets you nickname it
 LittlerootTown_ProfessorBirchsLab_EventScript_GiveStarterEvent::
+	coopscene GATE_SCENE_LITTLEROOTTOWN_PROFESSORBIRCHSLAB_EVENTSCRIPT_GIVESTARTEREVENT
+	@ Shared. The var this trigger watches is shared too, so without this the
+	@ first player through it moves the story on and the second is left in a
+	@ lab with nothing left to trigger.
+	coopscene GATE_STORY_LAB_STARTER
 	lockall
 	specialvar VAR_RESULT, GetStarterPokemonVoid
 	bufferspeciesname STR_VAR_1, VAR_RESULT
@@ -143,6 +148,7 @@ LittlerootTown_ProfessorBirchsLab_EventScript_DeclineSeeingRival::
 	end
 
 LittlerootTown_ProfessorBirchsLab_EventScript_GivePokedexEvent::
+	coopscene GATE_STORY_LAB_POKEDEX
 	lockall
 	applymovement LOCALID_PLAYER, LittlerootTown_ProfessorBirchsLab_Movement_PlayerEnterLabForPokedex
 	waitmovement 0
@@ -160,6 +166,7 @@ LittlerootTown_ProfessorBirchsLab_Movement_PlayerEnterLabForPokedex:
 	step_end
 
 LittlerootTown_ProfessorBirchsLab_EventScript_UpgradeToNationalDex::
+	coopscene GATE_SCENE_LITTLEROOTTOWN_PROFESSORBIRCHSLAB_EVENTSCRIPT_UPGRADETONATIONALDEX
 	lockall
 	delay 30
 	msgbox LittlerootTown_ProfessorBirchsLab_Text_OtherRegionsUpgradeToNational, MSGBOX_DEFAULT
@@ -249,6 +256,7 @@ LittlerootTown_ProfessorBirchsLab_Movement_BirchReturnPokedex:
 	step_end
 
 LittlerootTown_ProfessorBirchsLab_EventScript_ChooseJohtoStarter::
+	coopscene GATE_SCENE_LITTLEROOTTOWN_PROFESSORBIRCHSLAB_EVENTSCRIPT_CHOOSEJOHTOSTARTER
 	lockall
 	applymovement LOCALID_PLAYER, LittlerootTown_ProfessorBirchsLab_Movement_PlayerEnterLabForJohtoStarter
 	waitmovement 0

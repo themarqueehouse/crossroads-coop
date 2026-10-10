@@ -16,6 +16,7 @@ FiveIsland_ResortGorgeous_OnFrame::
 	.2byte 0
 
 FiveIsland_ResortGorgeous_EventScript_SelphyReturnHomeScene::
+	coopscene GATE_SCENE_FIVEISLAND_RESORTGORGEOUS_EVENTSCRIPT_SELPHYRETURNHOMESCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_FEMALE
 	msgbox FiveIsland_ResortGorgeous_Text_SelphyThanksYouMayGoNow

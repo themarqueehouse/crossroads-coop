@@ -32,6 +32,7 @@ TwoIsland_JoyfulGameCorner_OnFrame::
 	.2byte 0
 
 TwoIsland_JoyfulGameCorner_EventScript_FoundLostelleScene::
+	coopscene GATE_SCENE_TWOISLAND_JOYFULGAMECORNER_EVENTSCRIPT_FOUNDLOSTELLESCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	msgbox TwoIsland_JoyfulGameCorner_Text_YouRescuedLostelle
@@ -46,6 +47,7 @@ TwoIsland_JoyfulGameCorner_EventScript_FoundLostelleScene::
 	end
 
 TwoIsland_JoyfulGameCorner_EventScript_HelpFindLostelleScene::
+	coopscene GATE_SCENE_TWOISLAND_JOYFULGAMECORNER_EVENTSCRIPT_HELPFINDLOSTELLESCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	applymovement LOCALID_JOYFUL_GAME_CORNER_DADDY, TwoIsland_JoyfulGameCorner_Movement_DaddyPacing

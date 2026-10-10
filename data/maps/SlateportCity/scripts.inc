@@ -51,6 +51,7 @@ SlateportCity_OnFrame:
 	.2byte 0
 
 SlateportCity_EventScript_ScottScene::
+	coopscene GATE_SCENE_SLATEPORTCITY_EVENTSCRIPT_SCOTTSCENE
 	lockall
 	addobject LOCALID_SLATEPORT_SCOTT
 	applymovement LOCALID_PLAYER, SlateportCity_Movement_PlayerFaceScott
@@ -863,6 +864,7 @@ SlateportCity_EventScript_NotEnoughBerryPowder::
 	end
 
 SlateportCity_EventScript_ScottBattleTentScene::
+	coopscene GATE_SCENE_SLATEPORTCITY_EVENTSCRIPT_SCOTTBATTLETENTSCENE
 	lockall
 	applymovement LOCALID_PLAYER, Common_Movement_FaceUp
 	waitmovement 0

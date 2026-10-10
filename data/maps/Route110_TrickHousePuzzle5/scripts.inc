@@ -68,126 +68,147 @@ Route110_TrickHousePuzzle5_EventScript_Mechadoll5::
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll1Trigger0::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL1TRIGGER0
 	lockall
 	setvar VAR_TEMP_9, 0
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll1Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll1Trigger1::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL1TRIGGER1
 	lockall
 	setvar VAR_TEMP_9, 1
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll1Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll1Trigger2::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL1TRIGGER2
 	lockall
 	setvar VAR_TEMP_9, 2
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll1Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll1Trigger3::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL1TRIGGER3
 	lockall
 	setvar VAR_TEMP_9, 3
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll1Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll1Trigger4::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL1TRIGGER4
 	lockall
 	setvar VAR_TEMP_9, 4
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll1Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll2Trigger0::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL2TRIGGER0
 	lockall
 	setvar VAR_TEMP_9, 0
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll2Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll2Trigger1::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL2TRIGGER1
 	lockall
 	setvar VAR_TEMP_9, 1
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll2Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll2Trigger2::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL2TRIGGER2
 	lockall
 	setvar VAR_TEMP_9, 2
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll2Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll2Trigger3::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL2TRIGGER3
 	lockall
 	setvar VAR_TEMP_9, 3
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll2Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll2Trigger4::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL2TRIGGER4
 	lockall
 	setvar VAR_TEMP_9, 4
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll2Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll2Trigger5::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL2TRIGGER5
 	lockall
 	setvar VAR_TEMP_9, 5
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll2Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll3Trigger0::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL3TRIGGER0
 	lockall
 	setvar VAR_TEMP_9, 0
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll3Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll3Trigger1::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL3TRIGGER1
 	lockall
 	setvar VAR_TEMP_9, 1
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll3Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll3Trigger2::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL3TRIGGER2
 	lockall
 	setvar VAR_TEMP_9, 2
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll3Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll3Trigger3::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL3TRIGGER3
 	lockall
 	setvar VAR_TEMP_9, 3
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll3Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll3Trigger4::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL3TRIGGER4
 	lockall
 	setvar VAR_TEMP_9, 4
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll3Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll4Trigger0::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL4TRIGGER0
 	lockall
 	setvar VAR_TEMP_9, 0
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll4Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll4Trigger1::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL4TRIGGER1
 	lockall
 	setvar VAR_TEMP_9, 1
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll4Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll4Trigger2::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL4TRIGGER2
 	lockall
 	setvar VAR_TEMP_9, 2
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll4Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll4Trigger3::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL4TRIGGER3
 	lockall
 	setvar VAR_TEMP_9, 3
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll4Activate
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll4Trigger4::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL4TRIGGER4
 	lockall
 	setvar VAR_TEMP_9, 4
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll4Activate
@@ -201,6 +222,7 @@ Route110_TrickHousePuzzle5_EventScript_Mechadoll4Trigger5::
 	end
 
 Route110_TrickHousePuzzle5_EventScript_Mechadoll5Trigger0::
+	coopscene GATE_SCENE_ROUTE110_TRICKHOUSEPUZZLE5_EVENTSCRIPT_MECHADOLL5TRIGGER0
 	lockall
 	setvar VAR_TEMP_9, 0
 	goto Route110_TrickHousePuzzle5_EventScript_Mechadoll5Activate

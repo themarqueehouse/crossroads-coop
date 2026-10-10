@@ -48,6 +48,7 @@ RusturfTunnel_EventScript_AlreadySpokenTo::
 	end
 
 RusturfTunnel_EventScript_ClearTunnelScene::
+	coopscene GATE_SCENE_RUSTURFTUNNEL_EVENTSCRIPT_CLEARTUNNELSCENE
 	lockall
 	call_if_eq VAR_TEMP_1, 1, RusturfTunnel_EventScript_FaceWandasBoyfriend1
 	call_if_eq VAR_TEMP_1, 2, RusturfTunnel_EventScript_FaceWandasBoyfriend2
@@ -267,6 +268,7 @@ RusturfTunnel_EventScript_TunnelBlockagePos3::
 	end
 
 RusturfTunnel_EventScript_AquaGruntBackUp::
+	coopscene GATE_SCENE_RUSTURFTUNNEL_EVENTSCRIPT_AQUAGRUNTBACKUP
 	lockall
 	setflag FLAG_SAFE_FOLLOWER_MOVEMENT
 	msgbox RusturfTunnel_Text_ComeAndGetSome, MSGBOX_DEFAULT

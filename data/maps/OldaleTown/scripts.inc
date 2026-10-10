@@ -224,6 +224,7 @@ OldaleTown_EventScript_Rival::
 	end
 
 OldaleTown_EventScript_RivalTrigger1::
+	coopscene GATE_STORY_OLDALE_RIVAL
 	lockall
 	applymovement LOCALID_OLDALE_RIVAL, OldaleTown_Movement_RivalApproachPlayer1
 	waitmovement 0
@@ -234,6 +235,7 @@ OldaleTown_EventScript_RivalTrigger1::
 	end
 
 OldaleTown_EventScript_RivalTrigger2::
+	coopscene GATE_STORY_OLDALE_RIVAL
 	lockall
 	applymovement LOCALID_OLDALE_RIVAL, OldaleTown_Movement_RivalApproachPlayer2
 	waitmovement 0
@@ -244,6 +246,7 @@ OldaleTown_EventScript_RivalTrigger2::
 	end
 
 OldaleTown_EventScript_RivalTrigger3::
+	coopscene GATE_STORY_OLDALE_RIVAL
 	lockall
 	applymovement LOCALID_OLDALE_RIVAL, OldaleTown_Movement_RivalApproachPlayer3
 	waitmovement 0

@@ -17,6 +17,7 @@ ViridianCity_Mart_OnFrame::
 	.2byte 0
 
 ViridianCity_Mart_EventScript_ParcelScene::
+	coopscene GATE_SCENE_VIRIDIANCITY_MART_EVENTSCRIPT_PARCELSCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	applymovement LOCALID_VIRIDIAN_MART_CLERK, Common_Movement_WalkInPlaceFasterDown

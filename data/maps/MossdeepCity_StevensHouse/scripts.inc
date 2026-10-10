@@ -26,6 +26,7 @@ MossdeepCity_StevensHouse_OnFrame:
 	.2byte 0
 
 MossdeepCity_StevensHouse_EventScript_StevenGivesDive::
+	coopscene GATE_SCENE_MOSSDEEPCITY_STEVENSHOUSE_EVENTSCRIPT_STEVENGIVESDIVE
 	lockall
 	applymovement LOCALID_STEVENS_HOUSE_STEVEN, Common_Movement_WalkInPlaceFasterLeft
 	waitmovement 0

@@ -18,6 +18,7 @@ SixIsland_PokemonCenter_1F_OnFrame::
 	.2byte 0
 
 SixIsland_PokemonCenter_1F_EventScript_RivalScene::
+	coopscene GATE_SCENE_SIXISLAND_POKEMONCENTER_1F_EVENTSCRIPT_RIVALSCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	applymovement LOCALID_SIX_ISLAND_RIVAL, Common_Movement_WalkInPlaceFasterDown

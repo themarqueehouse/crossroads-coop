@@ -12,6 +12,7 @@ OneIsland_OnFrame::
 	.2byte 0
 
 OneIsland_EventScript_EnterOneIslandFirstTime::
+	coopscene GATE_SCENE_ONEISLAND_EVENTSCRIPT_ENTERONEISLANDFIRSTTIME
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	applymovement LOCALID_PLAYER, OneIsland_Movement_PlayerExitHarbor

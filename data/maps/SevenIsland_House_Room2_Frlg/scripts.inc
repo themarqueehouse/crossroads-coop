@@ -12,6 +12,7 @@ SevenIsland_House_Room2_OnFrame::
 	.2byte 0
 
 SevenIsland_House_Room2_EventScript_BattleVisitingTrainer::
+	coopscene GATE_SCENE_SEVENISLAND_HOUSE_ROOM2_EVENTSCRIPT_BATTLEVISITINGTRAINER
 	lockall
 	applymovement LOCALID_PLAYER, SevenIsland_House_Room2_Movement_PlayerEnterRoom
 	waitmovement 0

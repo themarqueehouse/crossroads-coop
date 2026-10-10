@@ -2,18 +2,21 @@ SSAnne_2F_Corridor_Frlg_MapScripts::
 	.byte 0
 
 SSAnne_2F_Corridor_EventScript_RivalTriggerLeft::
+	coopscene GATE_SCENE_SSANNE_2F_CORRIDOR_EVENTSCRIPT_RIVALTRIGGERLEFT
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto SSAnne_2F_Corridor_EventScript_RivalTrigger
 	end
 
 SSAnne_2F_Corridor_EventScript_RivalTriggerMid::
+	coopscene GATE_SCENE_SSANNE_2F_CORRIDOR_EVENTSCRIPT_RIVALTRIGGERMID
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto SSAnne_2F_Corridor_EventScript_RivalTrigger
 	end
 
 SSAnne_2F_Corridor_EventScript_RivalTriggerRight::
+	coopscene GATE_SCENE_SSANNE_2F_CORRIDOR_EVENTSCRIPT_RIVALTRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_1, 2
 	goto SSAnne_2F_Corridor_EventScript_RivalTrigger

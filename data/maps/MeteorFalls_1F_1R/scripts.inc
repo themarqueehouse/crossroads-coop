@@ -14,6 +14,7 @@ MeteorFalls_1F_1R_EventScript_OpenStevensCave::
 	return
 
 MeteorFalls_1F_1R_EventScript_MagmaStealsMeteoriteScene::
+	coopscene GATE_SCENE_METEORFALLS_1F_1R_EVENTSCRIPT_MAGMASTEALSMETEORITESCENE
 	lockall
 	playbgm MUS_ENCOUNTER_MAGMA, FALSE
 	applymovement LOCALID_PLAYER, Common_Movement_FaceDown

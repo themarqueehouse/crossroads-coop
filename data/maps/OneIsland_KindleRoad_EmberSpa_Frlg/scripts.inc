@@ -42,6 +42,7 @@ OneIsland_KindleRoad_EmberSpa_EventScript_AlreadyGotHM06::
 	end
 
 OneIsland_KindleRoad_EmberSpa_EventScript_SpaHeal::
+	coopscene GATE_SCENE_ONEISLAND_KINDLEROAD_EMBERSPA_EVENTSCRIPT_SPAHEAL
 	lockall
 	fadescreen FADE_TO_WHITE
 	special HealPlayerParty

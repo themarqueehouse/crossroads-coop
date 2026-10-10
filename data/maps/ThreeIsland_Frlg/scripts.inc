@@ -133,6 +133,7 @@ ThreeIsland_EventScript_AntiBiker2BikersGone::
 	end
 
 ThreeIsland_EventScript_BikerBossIntroTrigger::
+	coopscene GATE_SCENE_THREEISLAND_EVENTSCRIPT_BIKERBOSSINTROTRIGGER
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	applymovement LOCALID_THREE_ISLAND_ANTIBIKER1, ThreeIsland_Movement_SpeakRight
@@ -163,30 +164,35 @@ ThreeIsland_Movement_SpeakRight::
 	step_end
 
 ThreeIsland_EventScript_BattleBikersTriggerLeft::
+	coopscene GATE_SCENE_THREEISLAND_EVENTSCRIPT_BATTLEBIKERSTRIGGERLEFT
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto ThreeIsland_EventScript_BattleBikersScene
 	end
 
 ThreeIsland_EventScript_BattleBikersTriggerMidLeft::
+	coopscene GATE_SCENE_THREEISLAND_EVENTSCRIPT_BATTLEBIKERSTRIGGERMIDLEFT
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto ThreeIsland_EventScript_BattleBikersScene
 	end
 
 ThreeIsland_EventScript_BattleBikersTriggerMid::
+	coopscene GATE_SCENE_THREEISLAND_EVENTSCRIPT_BATTLEBIKERSTRIGGERMID
 	lockall
 	setvar VAR_TEMP_1, 2
 	goto ThreeIsland_EventScript_BattleBikersScene
 	end
 
 ThreeIsland_EventScript_BattleBikersTriggerMidRight::
+	coopscene GATE_SCENE_THREEISLAND_EVENTSCRIPT_BATTLEBIKERSTRIGGERMIDRIGHT
 	lockall
 	setvar VAR_TEMP_1, 3
 	goto ThreeIsland_EventScript_BattleBikersScene
 	end
 
 ThreeIsland_EventScript_BattleBikersTriggerRight::
+	coopscene GATE_SCENE_THREEISLAND_EVENTSCRIPT_BATTLEBIKERSTRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_1, 4
 	goto ThreeIsland_EventScript_BattleBikersScene

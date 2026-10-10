@@ -254,18 +254,21 @@ PewterCity_Movement_GymGuideExit::
 	step_end
 
 PewterCity_EventScript_GymGuideTriggerTop::
+	coopscene GATE_SCENE_PEWTERCITY_EVENTSCRIPT_GYMGUIDETRIGGERTOP
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto PewterCity_EventScript_GymGuideTrigger
 	end
 
 PewterCity_EventScript_GymGuideTriggerMid::
+	coopscene GATE_SCENE_PEWTERCITY_EVENTSCRIPT_GYMGUIDETRIGGERMID
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto PewterCity_EventScript_GymGuideTrigger
 	end
 
 PewterCity_EventScript_GymGuideTriggerBottom::
+	coopscene GATE_SCENE_PEWTERCITY_EVENTSCRIPT_GYMGUIDETRIGGERBOTTOM
 	lockall
 	setvar VAR_TEMP_1, 2
 	goto PewterCity_EventScript_GymGuideTrigger
@@ -273,6 +276,7 @@ PewterCity_EventScript_GymGuideTriggerBottom::
 
 @ This trigger is inaccessible and its corresponding movement script isnt linked
 PewterCity_EventScript_GymGuideTriggerRight::
+	coopscene GATE_SCENE_PEWTERCITY_EVENTSCRIPT_GYMGUIDETRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_1, 3
 	goto PewterCity_EventScript_GymGuideTrigger
@@ -660,6 +664,7 @@ PewterCity_EventScript_RunningShoesAide::
 	end
 
 PewterCity_EventScript_RunningShoesAideTriggerTop::
+	coopscene GATE_SCENE_PEWTERCITY_EVENTSCRIPT_RUNNINGSHOESAIDETRIGGERTOP
 	lockall
 	setvar VAR_TEMP_1, 1
 	call PewterCity_EventScript_AideGiveRunningShoes
@@ -667,6 +672,7 @@ PewterCity_EventScript_RunningShoesAideTriggerTop::
 	end
 
 PewterCity_EventScript_RunningShoesAideTriggerMid::
+	coopscene GATE_SCENE_PEWTERCITY_EVENTSCRIPT_RUNNINGSHOESAIDETRIGGERMID
 	lockall
 	setvar VAR_TEMP_1, 2
 	call PewterCity_EventScript_AideGiveRunningShoes
@@ -674,6 +680,7 @@ PewterCity_EventScript_RunningShoesAideTriggerMid::
 	end
 
 PewterCity_EventScript_RunningShoesAideTriggerBottom::
+	coopscene GATE_SCENE_PEWTERCITY_EVENTSCRIPT_RUNNINGSHOESAIDETRIGGERBOTTOM
 	lockall
 	setvar VAR_TEMP_1, 3
 	call PewterCity_EventScript_AideGiveRunningShoes

@@ -21,6 +21,7 @@ NewMauville_Entrance_OnTransition:
 	end
 
 NewMauville_Entrance_EventScript_Door::
+	coopscene GATE_SCENE_NEWMAUVILLE_ENTRANCE_EVENTSCRIPT_DOOR
 	lockall
 	applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterUp
 	waitmovement 0

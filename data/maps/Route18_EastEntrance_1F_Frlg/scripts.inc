@@ -16,30 +16,35 @@ Route18_EastEntrance_1F_EventScript_Guard::
 	end
 
 Route18_EastEntrance_1F_EventScript_NeedBikeTriggerTop::
+	coopscene GATE_SCENE_ROUTE18_EASTENTRANCE_1F_EVENTSCRIPT_NEEDBIKETRIGGERTOP
 	lockall
 	setvar VAR_0x8008, 0
 	goto Route18_EastEntrance_1F_EventScript_NeedBikeTrigger
 	end
 
 Route18_EastEntrance_1F_EventScript_NeedBikeTriggerMidTop::
+	coopscene GATE_SCENE_ROUTE18_EASTENTRANCE_1F_EVENTSCRIPT_NEEDBIKETRIGGERMIDTOP
 	lockall
 	setvar VAR_0x8008, 1
 	goto Route18_EastEntrance_1F_EventScript_NeedBikeTrigger
 	end
 
 Route18_EastEntrance_1F_EventScript_NeedBikeTriggerMid::
+	coopscene GATE_SCENE_ROUTE18_EASTENTRANCE_1F_EVENTSCRIPT_NEEDBIKETRIGGERMID
 	lockall
 	setvar VAR_0x8008, 2
 	goto Route18_EastEntrance_1F_EventScript_NeedBikeTrigger
 	end
 
 Route18_EastEntrance_1F_EventScript_NeedBikeTriggerMidBottom::
+	coopscene GATE_SCENE_ROUTE18_EASTENTRANCE_1F_EVENTSCRIPT_NEEDBIKETRIGGERMIDBOTTOM
 	lockall
 	setvar VAR_0x8008, 3
 	goto Route18_EastEntrance_1F_EventScript_NeedBikeTrigger
 	end
 
 Route18_EastEntrance_1F_EventScript_NeedBikeTriggerBottom::
+	coopscene GATE_SCENE_ROUTE18_EASTENTRANCE_1F_EVENTSCRIPT_NEEDBIKETRIGGERBOTTOM
 	lockall
 	setvar VAR_0x8008, 4
 	goto Route18_EastEntrance_1F_EventScript_NeedBikeTrigger

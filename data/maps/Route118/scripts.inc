@@ -61,6 +61,7 @@ Route118_EventScript_RouteSign119::
 	end
 
 Route118_EventScript_StevenTrigger0::
+	coopscene GATE_SCENE_ROUTE118_EVENTSCRIPT_STEVENTRIGGER0
 	lockall
 	setvar VAR_0x8008, 0
 	applymovement LOCALID_PLAYER, Common_Movement_FaceUp
@@ -71,6 +72,7 @@ Route118_EventScript_StevenTrigger0::
 	end
 
 Route118_EventScript_StevenTrigger1::
+	coopscene GATE_SCENE_ROUTE118_EVENTSCRIPT_STEVENTRIGGER1
 	lockall
 	setvar VAR_0x8008, 1
 	applymovement LOCALID_PLAYER, Common_Movement_FaceUp
@@ -79,6 +81,7 @@ Route118_EventScript_StevenTrigger1::
 	end
 
 Route118_EventScript_StevenTrigger2::
+	coopscene GATE_SCENE_ROUTE118_EVENTSCRIPT_STEVENTRIGGER2
 	lockall
 	setvar VAR_0x8008, 2
 	applymovement LOCALID_PLAYER, Common_Movement_FaceUp

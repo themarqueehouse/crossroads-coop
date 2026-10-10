@@ -6,18 +6,21 @@ Route6_NorthEntrance_EventScript_Guard::
 	end
 
 Route6_NorthEntrance_EventScript_GuardTriggerLeft::
+	coopscene GATE_SCENE_ROUTE6_NORTHENTRANCE_EVENTSCRIPT_GUARDTRIGGERLEFT
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto Route6_NorthEntrance_EventScript_GuardTrigger
 	end
 
 Route6_NorthEntrance_EventScript_GuardTriggerMid::
+	coopscene GATE_SCENE_ROUTE6_NORTHENTRANCE_EVENTSCRIPT_GUARDTRIGGERMID
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto Route6_NorthEntrance_EventScript_GuardTrigger
 	end
 
 Route6_NorthEntrance_EventScript_GuardTriggerRight::
+	coopscene GATE_SCENE_ROUTE6_NORTHENTRANCE_EVENTSCRIPT_GUARDTRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_1, 2
 	goto Route6_NorthEntrance_EventScript_GuardTrigger

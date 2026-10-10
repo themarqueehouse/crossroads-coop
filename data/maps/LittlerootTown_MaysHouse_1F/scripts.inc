@@ -77,6 +77,7 @@ LittlerootTown_MaysHouse_1F_EventScript_EnterHouseMovingIn::
 	end
 
 LittlerootTown_MaysHouse_1F_EventScript_PetalburgGymReport::
+	coopscene GATE_STORY_GYM_REPORT
 	lockall
 	setvar VAR_0x8004, FEMALE
 	setvar VAR_0x8005, LOCALID_PLAYERS_HOUSE_1F_MOM
@@ -84,6 +85,7 @@ LittlerootTown_MaysHouse_1F_EventScript_PetalburgGymReport::
 	end
 
 LittlerootTown_MaysHouse_1F_EventScript_YoureNewNeighbor::
+	coopscene GATE_STORY_NEW_NEIGHBOUR
 	lockall
 	playse SE_PIN
 	applymovement LOCALID_RIVALS_HOUSE_1F_MOM, Common_Movement_ExclamationMark
@@ -153,18 +155,21 @@ LittlerootTown_MaysHouse_1F_EventScript_GoSeeRoom::
 	end
 
 LittlerootTown_MaysHouse_1F_EventScript_MeetRival0::
+	coopscene GATE_STORY_MEET_RIVAL
 	lockall
 	setvar VAR_0x8008, 0
 	goto LittlerootTown_MaysHouse_1F_EventScript_MeetRival
 	end
 
 LittlerootTown_MaysHouse_1F_EventScript_MeetRival1::
+	coopscene GATE_STORY_MEET_RIVAL
 	lockall
 	setvar VAR_0x8008, 1
 	goto LittlerootTown_MaysHouse_1F_EventScript_MeetRival
 	end
 
 LittlerootTown_MaysHouse_1F_EventScript_MeetRival2::
+	coopscene GATE_STORY_MEET_RIVAL
 	lockall
 	setvar VAR_0x8008, 2
 	goto LittlerootTown_MaysHouse_1F_EventScript_MeetRival

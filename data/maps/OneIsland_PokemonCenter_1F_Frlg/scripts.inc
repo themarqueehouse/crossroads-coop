@@ -54,6 +54,7 @@ OneIsland_PokemonCenter_1F_OnFrame::
 	.2byte 0
 
 OneIsland_PokemonCenter_1F_EventScript_MeetCelioScene::
+	coopscene GATE_SCENE_ONEISLAND_POKEMONCENTER_1F_EVENTSCRIPT_MEETCELIOSCENE
 	lockall
 	textcolor NPC_TEXT_COLOR_MALE
 	applymovement LOCALID_PLAYER, OneIsland_PokemonCenter_1F_Movement_PlayerWalkToCelio
@@ -411,24 +412,28 @@ OneIsland_PokemonCenter_1F_EventScript_NetworkMachineLinkedWithHoenn::
 	end
 
 OneIsland_PokemonCenter_1F_EventScript_LeaveOneIslandTriggerTop::
+	coopscene GATE_SCENE_ONEISLAND_POKEMONCENTER_1F_EVENTSCRIPT_LEAVEONEISLANDTRIGGERTOP
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto OneIsland_PokemonCenter_1F_EventScript_LeaveOneIslandScene
 	end
 
 OneIsland_PokemonCenter_1F_EventScript_LeaveOneIslandTriggerMidTop::
+	coopscene GATE_SCENE_ONEISLAND_POKEMONCENTER_1F_EVENTSCRIPT_LEAVEONEISLANDTRIGGERMIDTOP
 	lockall
 	setvar VAR_TEMP_1, 2
 	goto OneIsland_PokemonCenter_1F_EventScript_LeaveOneIslandScene
 	end
 
 OneIsland_PokemonCenter_1F_EventScript_LeaveOneIslandTriggerMidBottom::
+	coopscene GATE_SCENE_ONEISLAND_POKEMONCENTER_1F_EVENTSCRIPT_LEAVEONEISLANDTRIGGERMIDBOTTOM
 	lockall
 	setvar VAR_TEMP_1, 3
 	goto OneIsland_PokemonCenter_1F_EventScript_LeaveOneIslandScene
 	end
 
 OneIsland_PokemonCenter_1F_EventScript_LeaveOneIslandTriggerBottom::
+	coopscene GATE_SCENE_ONEISLAND_POKEMONCENTER_1F_EVENTSCRIPT_LEAVEONEISLANDTRIGGERBOTTOM
 	lockall
 	setvar VAR_TEMP_1, 4
 	goto OneIsland_PokemonCenter_1F_EventScript_LeaveOneIslandScene

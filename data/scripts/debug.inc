@@ -422,6 +422,52 @@ Debug_EventScript_Script_15::
 	release
 	end
 
+@ PAST THE OPENING (R+Start, Scripts..., Script 19). Run on ONE console --
+@ these are shared, so they reach the partner by themselves.
+@
+@ The story state Debug_CheatStart leaves behind, without the Pokemon, the
+@ Pokedex or the bike. The co-op checks are about the co-op machinery, and a
+@ fresh game drops both players into a town whose own story is still trying
+@ to happen around them: Oak stopping you at the edge of Pallet Town, Birch's
+@ twin sending you to Route 101, mum and the running shoes. Every one of
+@ those is a mirrored scene now, which is right in play and means a test
+@ measuring something else is forever being interrupted by one.
+Debug_EventScript_Script_19::
+	setflag FLAG_SYS_POKEMON_GET
+	setflag FLAG_RESCUED_BIRCH
+	setflag FLAG_HIDE_ROUTE_101_BIRCH_ZIGZAGOON_BATTLE
+	setflag FLAG_ADVENTURE_STARTED
+	setflag FLAG_HIDE_ROUTE_101_BIRCH_STARTERS_BAG
+	setflag FLAG_RECEIVED_RUNNING_SHOES
+	setflag FLAG_SYS_B_DASH
+	setvar VAR_BIRCH_LAB_STATE, 5
+	setvar VAR_ROUTE101_STATE, 3
+	setvar VAR_LITTLEROOT_TOWN_STATE, 4
+	setvar VAR_LITTLEROOT_INTRO_STATE, 7
+	setvar VAR_LITTLEROOT_HOUSES_STATE_BRENDAN, 2
+	setvar VAR_LITTLEROOT_HOUSES_STATE_MAY, 2
+	setvar VAR_LITTLEROOT_RIVAL_STATE, 4
+	setvar VAR_MAP_SCENE_PALLET_TOWN_OAK, 1
+	release
+	end
+
+@ TO ROUTE 101, AT THE START OF THE STORY (R+Start, Scripts..., Script 18).
+@
+@ For the opening check. It puts the console on Route 101 in the state the
+@ game is in when you first walk out of Littleroot, so the Birch chase and
+@ his bag are both still ahead -- which is the part of the game that has to
+@ work as co-op and the part that is an hour of walking to reach honestly.
+@
+@ Run on ONE console: it is a plain warp, and the partner follows by the
+@ ordinary travel-together route.
+Debug_EventScript_Script_18::
+	setvar VAR_ROUTE101_STATE, 0
+	setvar VAR_LITTLEROOT_TOWN_STATE, 2
+	warp MAP_ROUTE101, 8, 15
+	waitstate
+	release
+	end
+
 @ A CONVERSATION, ON DEMAND (R+Start, Scripts..., Script 16).
 @
 @ Several checks need one console to be mid-conversation while something

@@ -31,6 +31,7 @@ SkyPillar_Outside_OnFrame:
 	.2byte 0
 
 SkyPillar_Outside_EventScript_WallaceScene::
+	coopscene GATE_SCENE_SKYPILLAR_OUTSIDE_EVENTSCRIPT_WALLACESCENE
 	lockall
 	applymovement LOCALID_SKY_PILLAR_WALLACE, SkyPillar_Outside_Movement_WallaceApproachPlayer
 	waitmovement 0

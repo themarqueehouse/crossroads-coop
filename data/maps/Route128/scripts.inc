@@ -12,6 +12,7 @@ Route128_OnFrame:
 	.2byte 0
 
 Route128_EventScript_KyogreAwakenedScene::
+	coopscene GATE_SCENE_ROUTE128_EVENTSCRIPT_KYOGREAWAKENEDSCENE
 	lockall
 	delay 20
 	applymovement LOCALID_ROUTE128_ARCHIE, Route128_Movement_ArchieLookAround

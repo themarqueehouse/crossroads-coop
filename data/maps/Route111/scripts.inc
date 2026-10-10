@@ -105,6 +105,7 @@ Route111_OnFrame:
 	.2byte 0
 
 Route111_EventScript_MirageTowerDisappear::
+	coopscene GATE_SCENE_ROUTE111_EVENTSCRIPT_MIRAGETOWERDISAPPEAR
 	lockall
 	special StartMirageTowerShake
 	waitstate

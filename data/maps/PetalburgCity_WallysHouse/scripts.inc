@@ -17,6 +17,7 @@ PetalburgCity_WallysHouse_OnFrame:
 	.2byte 0
 
 PetalburgCity_WallysHouse_EventScript_GiveHMSurf::
+	coopscene GATE_STORY_WALLY_SURF
 	lockall
 	msgbox PetalburgCity_WallysHouse_Text_PleaseExcuseUs, MSGBOX_DEFAULT
 	giveitem ITEM_HM_SURF

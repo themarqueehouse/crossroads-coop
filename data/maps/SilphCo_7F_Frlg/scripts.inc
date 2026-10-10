@@ -18,12 +18,14 @@ SilphCo_7F_EventScript_SetObjRocketsGone::
 	return
 
 SilphCo_7F_EventScript_RivalTriggerTop::
+	coopscene GATE_SCENE_SILPHCO_7F_EVENTSCRIPT_RIVALTRIGGERTOP
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto SilphCo_7F_EventScript_RivalScene
 	end
 
 SilphCo_7F_EventScript_RivalTriggerBottom::
+	coopscene GATE_SCENE_SILPHCO_7F_EVENTSCRIPT_RIVALTRIGGERBOTTOM
 	lockall
 	setvar VAR_TEMP_1, 1
 	goto SilphCo_7F_EventScript_RivalScene

@@ -30,6 +30,7 @@ PetalburgCity_OnFrame:
 	.2byte 0
 
 PetalburgCity_EventScript_WallyTutorial::
+	coopscene GATE_STORY_WALLY_TUTORIAL
 	lockall
 	special SavePlayerParty
 	special LoadWallyZigzagoon
@@ -56,6 +57,7 @@ PetalburgCity_EventScript_WallyTutorial::
 	end
 
 PetalburgCity_EventScript_WalkToWallyHouse::
+	coopscene GATE_STORY_WALLY_HOUSE
 	lockall
 	setflag FLAG_HIDE_MAP_NAME_POPUP
 	applymovement LOCALID_PETALBURG_WALLYS_DAD, PetalburgCity_Movement_WalkToWallyHouseWallysDad
@@ -235,24 +237,28 @@ PetalburgCity_EventScript_WallyHouseSign::
 	end
 
 PetalburgCity_EventScript_ShowGymToPlayer0::
+	coopscene GATE_STORY_PETALBURG_GYM_SHOW
 	lockall
 	setvar VAR_0x8008, 0
 	goto PetalburgCity_EventScript_ShowGymToPlayer
 	end
 
 PetalburgCity_EventScript_ShowGymToPlayer1::
+	coopscene GATE_STORY_PETALBURG_GYM_SHOW
 	lockall
 	setvar VAR_0x8008, 1
 	goto PetalburgCity_EventScript_ShowGymToPlayer
 	end
 
 PetalburgCity_EventScript_ShowGymToPlayer2::
+	coopscene GATE_STORY_PETALBURG_GYM_SHOW
 	lockall
 	setvar VAR_0x8008, 2
 	goto PetalburgCity_EventScript_ShowGymToPlayer
 	end
 
 PetalburgCity_EventScript_ShowGymToPlayer3::
+	coopscene GATE_STORY_PETALBURG_GYM_SHOW
 	lockall
 	setvar VAR_0x8008, 3
 	goto PetalburgCity_EventScript_ShowGymToPlayer
@@ -497,6 +503,7 @@ PetalburgCity_Movement_PlayerWalkToGym3:
 	step_end
 
 PetalburgCity_EventScript_Scott0::
+	coopscene GATE_STORY_SCOTT_PETALBURG
 	lockall
 	addobject LOCALID_PETALBURG_SCOTT
 	setvar VAR_0x8008, 0
@@ -505,6 +512,7 @@ PetalburgCity_EventScript_Scott0::
 	end
 
 PetalburgCity_EventScript_Scott1::
+	coopscene GATE_STORY_SCOTT_PETALBURG
 	lockall
 	addobject LOCALID_PETALBURG_SCOTT
 	setvar VAR_0x8008, 1
@@ -513,6 +521,7 @@ PetalburgCity_EventScript_Scott1::
 	end
 
 PetalburgCity_EventScript_Scott2::
+	coopscene GATE_STORY_SCOTT_PETALBURG
 	lockall
 	addobject LOCALID_PETALBURG_SCOTT
 	setvar VAR_0x8008, 2
@@ -521,6 +530,7 @@ PetalburgCity_EventScript_Scott2::
 	end
 
 PetalburgCity_EventScript_Scott3::
+	coopscene GATE_STORY_SCOTT_PETALBURG
 	lockall
 	addobject LOCALID_PETALBURG_SCOTT
 	setvar VAR_0x8008, 3

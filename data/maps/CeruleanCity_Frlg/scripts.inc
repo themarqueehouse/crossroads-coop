@@ -14,12 +14,14 @@ CeruleanCity_EventScript_BlockExits::
 	return
 
 CeruleanCity_EventScript_RivalTriggerLeft::
+	coopscene GATE_SCENE_CERULEANCITY_EVENTSCRIPT_RIVALTRIGGERLEFT
 	lockall
 	setvar VAR_TEMP_1, 0
 	goto CeruleanCity_EventScript_Rival
 	end
 
 CeruleanCity_EventScript_RivalTriggerMid::
+	coopscene GATE_SCENE_CERULEANCITY_EVENTSCRIPT_RIVALTRIGGERMID
 	lockall
 	setvar VAR_TEMP_1, 1
 	setobjectxyperm LOCALID_CERULEAN_RIVAL, 23, 0
@@ -27,6 +29,7 @@ CeruleanCity_EventScript_RivalTriggerMid::
 	end
 
 CeruleanCity_EventScript_RivalTriggerRight::
+	coopscene GATE_SCENE_CERULEANCITY_EVENTSCRIPT_RIVALTRIGGERRIGHT
 	lockall
 	setvar VAR_TEMP_1, 2
 	setobjectxyperm LOCALID_CERULEAN_RIVAL, 24, 0
@@ -201,6 +204,7 @@ CeruleanCity_EventScript_NoRoomForTM28::
 	end
 
 CeruleanCity_EventScript_GruntTriggerTop::
+	coopscene GATE_SCENE_CERULEANCITY_EVENTSCRIPT_GRUNTTRIGGERTOP
 	lockall
 	setvar VAR_TEMP_1, 0
 	applymovement LOCALID_CERULEAN_GRUNT, Common_Movement_WalkInPlaceFasterUp
@@ -211,6 +215,7 @@ CeruleanCity_EventScript_GruntTriggerTop::
 	end
 
 CeruleanCity_EventScript_GruntTriggerBottom::
+	coopscene GATE_SCENE_CERULEANCITY_EVENTSCRIPT_GRUNTTRIGGERBOTTOM
 	lockall
 	setvar VAR_TEMP_1, 1
 	applymovement LOCALID_CERULEAN_GRUNT, Common_Movement_WalkInPlaceFasterDown

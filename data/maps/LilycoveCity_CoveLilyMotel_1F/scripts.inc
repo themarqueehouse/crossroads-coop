@@ -38,6 +38,7 @@ LilycoveCity_CoveLilyMotel_1F_EventScript_GameClear::
 	end
 
 LilycoveCity_CoveLilyMotel_1F_EventScript_BlockingTV::
+	coopscene GATE_SCENE_LILYCOVECITY_COVELILYMOTEL_1F_EVENTSCRIPT_BLOCKINGTV
 	lockall
 	playse SE_PIN
 	applymovement LOCALID_MOTEL_OWNER, Common_Movement_ExclamationMark

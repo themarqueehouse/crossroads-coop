@@ -2,6 +2,7 @@ PetalburgWoods_MapScripts::
 	.byte 0
 
 PetalburgWoods_EventScript_DevonResearcherLeft::
+	coopscene GATE_STORY_PETALBURG_WOODS
 	lockall
 	call PetalburgWoods_EventScript_DevonResearcherIntro
 	applymovement LOCALID_PETALBURG_WOODS_DEVON_EMPLOYEE, PetalburgWoods_Movement_DevonResearcherApproachPlayerLeft
@@ -37,6 +38,7 @@ PetalburgWoods_EventScript_DevonResearcherLeft::
 	end
 
 PetalburgWoods_EventScript_DevonResearcherRight::
+	coopscene GATE_STORY_PETALBURG_WOODS
 	lockall
 	call PetalburgWoods_EventScript_DevonResearcherIntro
 	applymovement LOCALID_PETALBURG_WOODS_DEVON_EMPLOYEE, PetalburgWoods_Movement_DevonResearcherApproachPlayerRight
