@@ -2408,11 +2408,55 @@ static void DespawnPeerFollower(void)
 // on. The same rules the game applies to our own: a Pokemon with no overworld
 // sprite cannot be drawn at all, and one whose sprite is bigger than a tile
 // does not fit indoors.
+// How many object slots are still free.
+//
+// There are sixteen, for the whole map, and co-op spends two of them on every
+// map: the partner, and the partner's follower Pokemon. On a crowded map that
+// is two of the map's own objects that cannot spawn -- and the ones that lose
+// are the ones listed last, which is how a Celebi placed at the end of
+// Petalburg Woods' object list came to be invisible on Player 2's console
+// while standing in front of Player 1.
+static u8 FreeObjectSlots(void)
+{
+    u8 i, free = 0;
+
+    for (i = 0; i < OBJECT_EVENTS_COUNT; i++)
+    {
+        if (!gObjectEvents[i].active)
+            free++;
+    }
+
+    return free;
+}
+
 static bool8 PeerFollowerFits(void)
 {
     const struct ObjectEventGraphicsInfo *info;
+    u8 free;
 
     if (sPeerFollowerSpecies == SPECIES_NONE)
+        return FALSE;
+
+    // Not when the map has no room to spare.
+    //
+    // Sixteen object slots serve a whole map, and a busy one fills them: in
+    // Petalburg Woods both consoles sit at sixteen of sixteen. Whatever
+    // spawns last simply is not there, and with co-op spending two slots --
+    // the partner, and the partner's follower -- the two that lose are the
+    // map's own. That is how a Celebi standing in front of one player was
+    // invisible to the other.
+    //
+    // So the follower gives way. The partner themselves never does: a co-op
+    // game where you cannot see the other player is not a co-op game. This is
+    // decoration, and an NPC or a legendary that cannot spawn is a piece of
+    // the game missing.
+    //
+    // The two thresholds are deliberate. One free slot while it is already up
+    // means there is still a spare; one free slot while it is down means that
+    // spare IS the one it would take, so it stays down until the map has real
+    // room -- which keeps it from flickering in and out as the camera moves.
+    free = FreeObjectSlots();
+    if (GetPeerFollowerObject() != NULL ? free < 1 : free < 2)
         return FALSE;
 
     info = SpeciesToGraphicsInfo(sPeerFollowerSpecies,
@@ -2429,9 +2473,11 @@ static bool8 PeerFollowerFits(void)
 
 static void SpawnPeerFollower(const struct ObjectEvent *peer)
 {
-    u16 gfxId = GetGraphicsIdForMon(sPeerFollowerSpecies,
-                                    (sPeerFollowerFlags & COOP_FOLLOWER_SHINY) != 0,
-                                    (sPeerFollowerFlags & COOP_FOLLOWER_FEMALE) != 0);
+    u16 gfxId;
+
+    gfxId = GetGraphicsIdForMon(sPeerFollowerSpecies,
+                                (sPeerFollowerFlags & COOP_FOLLOWER_SHINY) != 0,
+                                (sPeerFollowerFlags & COOP_FOLLOWER_FEMALE) != 0);
     // On top of the partner, which is where the game puts a follower that has
     // just appeared too. Their next step pushes it into the tile behind them.
     u8 id = SpawnSpecialObjectEventParameterized(gfxId, MOVEMENT_TYPE_NONE,
