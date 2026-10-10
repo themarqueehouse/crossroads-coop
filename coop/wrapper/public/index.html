@@ -332,8 +332,12 @@
 
     <div class="note">
       <b>Player 1 holds the save.</b> Load your <code>.sav</code> on Player 1's
-      phone only. Use <b>Save file</b> in-game to pull a copy out — do that often,
-      and keep it somewhere safe.
+      phone only.
+      <br><br>
+      To pull a copy out: save in-game first (START → SAVE), then press
+      <b>Save file</b>. That button copies the game's save chip, so it only
+      ever contains what you last saved in-game — it will tell you rather than
+      hand you an empty file. Do it often and keep the copies somewhere safe.
     </div>
 
   </div>
@@ -476,17 +480,63 @@ $('log-btn').addEventListener('click', () => {
 });
 
 $('save-btn').addEventListener('click', async () => {
+  const btn = $('save-btn');
+  const was = btn.textContent;
+  btn.disabled = true;
+
   try {
     const blob = await app.exportSave();
+    const name = `crossroads-${stamp()}.sav`;
+
+    // Two ways out, because a phone and a desktop want different ones.
+    //
+    // The share sheet first where it exists. On iOS an anchor download is
+    // patchy -- depending on the version it saves to Files, opens the bytes
+    // in a viewer, or does nothing at all, and "nothing at all" is the worst
+    // possible outcome for the one button standing between a player and
+    // losing their save. The share sheet is the sanctioned way to get a file
+    // out of Safari and it lets them put it in Files, AirDrop it, or mail it
+    // to themselves.
+    const file = new File([blob], name, { type: 'application/octet-stream' });
+
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: name });
+        log(`saved ${name} (${blob.size} bytes)`);
+        return;
+      } catch (err) {
+        // Cancelling the sheet is not a failure, and must not fall through
+        // to a second attempt the player did not ask for.
+        if (err.name === 'AbortError') return;
+        log(`share failed (${err.message}); trying a download instead`);
+      }
+    }
+
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'emerald-coop.sav';
+    a.download = name;
+    document.body.appendChild(a);
     a.click();
+    a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    log(`saved ${name} (${blob.size} bytes)`);
   } catch (err) {
     log(err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = was;
   }
 });
+
+// A timestamp in the filename, so pulling a second copy out does not quietly
+// overwrite the first in the downloads folder. A player who takes a backup
+// before something risky wants both of them.
+function stamp() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}` +
+         `-${p(d.getHours())}${p(d.getMinutes())}`;
+}
 
 // Flush the save when the page goes away, so a backgrounded tab that iOS kills
 // does not lose progress.

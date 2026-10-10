@@ -17,6 +17,7 @@ import mGBA from './vendor/mgba.js';
 import { Mailbox, findAllMailboxes, pickLiveMailbox, HOST_DOWN } from './mailbox.js';
 import { Bridge, HOST_CONNECTING, HOST_READY, HOST_LOST } from './bridge.js';
 import { NetClient } from './netclient.js';
+import { countSaveSectors, looksLikeASave } from './savefile.js';
 import {
   DEFAULT_LAYOUT,
   MGBA_NAMES,
@@ -518,14 +519,36 @@ export class CoopApp {
    * Built early and deliberately: a two-players-required ROM means a dead
    * relay locks both of you out of your own game, so the save must never be
    * trapped behind a service.
+   *
+   * What comes out is a copy of the emulator's save chip, and the chip holds
+   * what the GAME last wrote to it -- not what is on screen. So this refuses
+   * to hand over a chip the game has never saved to. It would be a
+   * well-formed 128 KiB file with no game in it, indistinguishable from a
+   * real save until the day you load it.
    */
   async exportSave() {
     if (!this.core) throw new Error('not running');
     // Flush anything the emulator still has buffered before reading it back.
     await this.core.FSSync();
     const data = this.core.getSave();
-    if (!data) throw new Error('no save data yet — play a little first');
+    if (!data || data.length === 0)
+      throw new Error('no save data yet — play a little first');
+
+    if (!looksLikeASave(data)) {
+      throw new Error(
+        'nothing has been saved in-game yet, so this file would be empty. ' +
+        'Open the menu with START, choose SAVE, then try again.');
+    }
+
     return new Blob([data], { type: 'application/octet-stream' });
+  }
+
+  /** How many sectors of the current chip carry a save. Diagnostics. */
+  async saveSectorCount() {
+    if (!this.core) return 0;
+    await this.core.FSSync();
+    const data = this.core.getSave();
+    return data ? countSaveSectors(data) : 0;
   }
 
   async stop() {
