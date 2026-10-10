@@ -554,9 +554,6 @@ bool8 CheckForTrainersWantingBattle(void)
 static u8 CheckTrainer(u8 objectEventId)
 {
     const u8 *trainerBattlePtr;
-    // The top of a mirrored script, kept so the approach can run the scene
-    // even though the scan had to start past it.
-    const u8 *coopSceneScript = NULL;
     u8 numTrainers = 1;
 
     u8 approachDistance = GetTrainerApproachDistance(&gObjectEvents[objectEventId]);
@@ -598,15 +595,6 @@ static u8 CheckTrainer(u8 objectEventId)
          && *trainerBattlePtr == SCR_OP_COOPSCENE
          && !Coop_PartnerIsHere())
             return 0;
-
-        // The scan below runs the script to find the battle in it, and a
-        // mirrored scene's opening must not be run by a look. Scan from past
-        // it; the approach, further down, still starts at the top.
-        coopSceneScript = (trainerBattlePtr != NULL
-                           && *trainerBattlePtr == SCR_OP_COOPSCENE)
-                        ? trainerBattlePtr : NULL;
-        if (coopSceneScript != NULL)
-            trainerBattlePtr = Coop_SkipScenePrologue(trainerBattlePtr);
 
         struct ScriptContext ctx;
         if (RunScriptImmediatelyUntilEffect(SCREFF_V1 | SCREFF_SAVE | SCREFF_HARDWARE | SCREFF_TRAINERBATTLE, trainerBattlePtr, &ctx))
@@ -668,11 +656,7 @@ static u8 CheckTrainer(u8 objectEventId)
     }
 
     gApproachingTrainers[gNoOfApproachingTrainers].objectEventId = objectEventId;
-    // The whole script for a mirrored scene, so the broadcast and the gate
-    // happen as the trainer walks up -- which is where they belong, and the
-    // one place it is safe to run them.
-    gApproachingTrainers[gNoOfApproachingTrainers].trainerScriptPtr =
-        coopSceneScript != NULL ? coopSceneScript : trainerBattlePtr;
+    gApproachingTrainers[gNoOfApproachingTrainers].trainerScriptPtr = trainerBattlePtr;
     gApproachingTrainers[gNoOfApproachingTrainers].radius = approachDistance;
     InitTrainerApproachTask(&gObjectEvents[objectEventId], approachDistance - 1);
     gNoOfApproachingTrainers++;
