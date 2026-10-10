@@ -645,6 +645,12 @@ static bool8 CoopSendFollow(u16 *sendCmd)
     return TRUE;
 }
 
+// How many frames the partner has been reported on their new map. See
+// Coop_UpdateFollow for why arriving too eagerly puts you in the wrong place.
+static EWRAM_DATA u8 sFollowSettled = 0;
+
+#define FOLLOW_SETTLE_FRAMES 30
+
 void Coop_ReceiveFollow(u8 playerId, const u16 *cmd)
 {
     u8 seq = cmd[1] & 0xFF;
@@ -660,6 +666,7 @@ void Coop_ReceiveFollow(u8 playerId, const u16 *cmd)
     sUsedPeerFollowSeq = seq;
     sFollowPending = TRUE;
     sFollowWaited = 0;
+    sFollowSettled = 0;
     sFollowIsFirstPlacement = FALSE;
 }
 
@@ -704,8 +711,26 @@ static void Coop_UpdateFollow(void)
             sFollowPending = FALSE;
             sFollowIsFirstPlacement = FALSE;
         }
+        sFollowSettled = 0;
         return;
     }
+
+    // Let them land before going after them.
+    //
+    // A position carries the map it was taken on, so the two are always
+    // consistent -- but during a warp the map header changes before the
+    // player object is put down, and a position published in that window
+    // reads as "the new map, at the old map's coordinates". Following it
+    // lands the partner on the right map in entirely the wrong place: in
+    // testing, the host warped into Petalburg Woods and the guest arrived in
+    // the woods at the host's old Littleroot tile, half a map away, where
+    // none of what the host was standing next to had even spawned.
+    //
+    // So the peer has to have been reported on the new map for a few frames
+    // running, by which time what they are reporting is where they really
+    // are. Half a second, against a follow that is allowed several seconds.
+    if (++sFollowSettled < FOLLOW_SETTLE_FRAMES)
+        return;
 
     sFollowPending = FALSE;
     sFollowIsFirstPlacement = FALSE;

@@ -148,6 +148,18 @@ async function main() {
            `p1 ${await flagSet(0, FLAG_LEGENDARY_CELEBI)}  ` +
            `p2 ${await flagSet(1, FLAG_LEGENDARY_CELEBI)}`);
 
+    // Where each console thinks the other one is. If the guest is standing
+    // somewhere else on the map, Celebi is simply outside their spawn window
+    // -- objects only come into being near the camera -- and nothing is wrong
+    // with the object at all.
+    t.note('positions',
+           `p1 thinks the partner is at ${(await rig.mailbox(0)).peerPos}; ` +
+           `p2 thinks we are at ${(await rig.mailbox(1)).peerPos}`);
+    t.note('every object on the guest',
+           allTheirs.map((o) => `#${o.localId}@${o.x},${o.y}`).join(' '));
+    t.note('every object on the host',
+           mine.map((o) => `#${o.localId}@${o.x},${o.y}`).join(' '));
+
     t.note('what the partner sees',
            theirs.map((o) => `#${o.localId} species ${o.gfx & 0x3fff} at ${o.x},${o.y}`)
                  .join('  ') || 'none');
