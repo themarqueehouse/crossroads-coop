@@ -23,6 +23,8 @@
 #include "field_control_avatar.h"
 #include "event_scripts.h"
 #include "intro.h"
+#include "naming_screen.h"
+#include "script_pokemon_util.h"
 #include "constants/event_objects.h"
 
 // ---------------------------------------------------------------------------
@@ -1500,6 +1502,10 @@ EWRAM_DATA u16 gCoopDbgGateRecv = 0;
 // every script in the game equally well.
 EWRAM_DATA u32 gCoopDbgScriptPtr = 0;
 
+// CONTEXT_RUNNING / CONTEXT_WAITING / CONTEXT_SHUTDOWN, mirrored for the same
+// reason. WAITING means a menu or a prompt has the script.
+EWRAM_DATA u8 gCoopDbgScriptStatus = 0;
+
 // Silence every outgoing sync for a moment.
 //
 // Wiping a save is thousands of flag, var, Pokedex, bag and storage writes,
@@ -1539,6 +1545,7 @@ static void DespawnPeer(void);
 static bool8 CoopSendFollowerMon(u16 *sendCmd);
 static void CheckOurFollower(void);
 static void ResetPeerFollower(void);
+static void Coop_UpdateFirstRun(void);
 
 // ---------------------------------------------------------------------------
 // Handing the link to a battle.
@@ -1636,6 +1643,7 @@ static void PublishDiagnostics(void)
     u8 flags = 0;
 
     gCoopDbgScriptPtr = (u32)ScriptContext_GetScriptPtr();
+    gCoopDbgScriptStatus = ScriptContext_GetStatus();
 
     if (gLinkStatus & LINK_STAT_CONN_ESTABLISHED) flags |= COOP_DIAG_LINK_OPEN;
     if (gReceivedRemoteLinkPlayers)               flags |= COOP_DIAG_PLAYERS_RECEIVED;
@@ -1862,6 +1870,9 @@ void Coop_Update(void)
                         // the player is actually in control.
                         sPendingRecord = *stored;
                         sHasPendingRecord = TRUE;
+                        // Player 1's save remembers who this player is, so
+                        // there is nothing to ask them.
+                        Coop_CancelFirstRun();
                     }
                     else
                     {
@@ -1881,6 +1892,13 @@ void Coop_Update(void)
                         sFollowPending = TRUE;
                         sFollowWaited = 0;
                         sFollowIsFirstPlacement = TRUE;
+
+                        // And nobody has played as Player 2 before, so this
+                        // player still has to say who they are and pick a
+                        // starter. Armed here rather than when their console
+                        // started, because until this arrives there is no way
+                        // to tell a first session from a returning one.
+                        Coop_ArmFirstRun();
                     }
                     sGotPlayer2 = TRUE;
                 }
@@ -1950,6 +1968,7 @@ void Coop_Update(void)
 
     Coop_UpdateGate();
     CheckOurFollower();
+    Coop_UpdateFirstRun();
     Coop_UpdateFollow();
     Coop_UpdateBoxSync();
     UpdateGuestScene();
@@ -2516,4 +2535,151 @@ void Coop_UpdatePeerSprite(void)
     sPeerFollowerToX = gCoopPeer.x;
     sPeerFollowerToY = gCoopPeer.y;
     UpdatePeerFollower(peer);
+}
+
+// ---------------------------------------------------------------------------
+// First run: who you are, and which Pokemon you start with.
+//
+// The opening asks both of those, and a co-op game does not have an opening.
+// See data/scripts/coop.inc for the script itself.
+//
+// Armed per console, never shared. "Have I been set up" is not a question the
+// two players answer together -- a flag would be, because flags are Player 1's
+// and are copied wholesale to Player 2 on join, so Player 1 finishing their
+// setup would have told Player 2 it was already done.
+// ---------------------------------------------------------------------------
+
+static EWRAM_DATA bool8 sFirstRunPending = FALSE;
+
+// Set while the first-run script is actually on screen.
+//
+// Separate from the pending flag, which is cleared the moment the script
+// starts. Anything outside wanting to know "is this console in the opening
+// questions" -- the test rig, mainly -- cannot tell that from SCRIPT_BUSY,
+// which is equally true of a signpost.
+static EWRAM_DATA bool8 sFirstRunRunning = FALSE;
+
+void Coop_ArmFirstRun(void)
+{
+    sFirstRunPending = TRUE;
+}
+
+void Coop_CancelFirstRun(void)
+{
+    sFirstRunPending = FALSE;
+}
+
+bool8 Coop_FirstRunIsRunning(void)
+{
+    return sFirstRunRunning;
+}
+
+bool8 Coop_FirstRunIsPending(void)
+{
+    return sFirstRunPending;
+}
+
+static void Coop_UpdateFirstRun(void)
+{
+    if (!sFirstRunPending)
+        return;
+
+    // Not before the session is up. Player 2's own setup is skipped entirely
+    // when Player 1's save already remembers them, and that is only known
+    // once the join has delivered the stored record.
+    if (!IsCoopLinkActive())
+        return;
+
+    // The same wait every other deferred script here uses: nothing else
+    // running, the player in control and standing still.
+    if (ArePlayerFieldControlsLocked() || ScriptContext_IsEnabled()
+        || gPaletteFade.active || !IsPlayerStandingStill())
+        return;
+
+    sFirstRunPending = FALSE;
+    sFirstRunRunning = TRUE;
+    ScriptContext_SetupScript(CoopEventScript_FirstRun);
+}
+
+// Set while the naming screen has the console.
+//
+// The script-status mirror cannot cover this one: it is published from the
+// overworld, and the naming screen replaces the overworld, so the mirror
+// simply freezes at whatever it last said. A test driving these prompts has
+// to know when the keyboard is up and when it has gone, and "the value
+// stopped changing" is not something it can wait on.
+static EWRAM_DATA bool8 sFirstRunNaming = FALSE;
+
+bool8 Coop_FirstRunNamingScreenIsUp(void)
+{
+    return sFirstRunNaming;
+}
+
+static void CB2_CoopFirstRunNamed(void)
+{
+    sFirstRunNaming = FALSE;
+    SetMainCallback2(CB2_ReturnToFieldContinueScript);
+}
+
+void CoopDoPlayerNamingScreen(void)
+{
+    sFirstRunNaming = TRUE;
+    DoNamingScreen(NAMING_SCREEN_PLAYER, gSaveBlock2Ptr->playerName,
+                   gSaveBlock2Ptr->playerGender, 0, 0,
+                   CB2_CoopFirstRunNamed);
+}
+
+void Coop_SetGenderMale(struct ScriptContext *ctx)
+{
+    gSaveBlock2Ptr->playerGender = MALE;
+}
+
+void Coop_SetGenderFemale(struct ScriptContext *ctx)
+{
+    gSaveBlock2Ptr->playerGender = FEMALE;
+}
+
+// The chosen starter, from VAR_TEMP_E.
+//
+// Level 5 and no held item, like every starter the game hands out. Given here
+// rather than with the script's own givemon so the species can come from a
+// variable -- givemon takes a constant, and nine regions of three would
+// otherwise be twenty-seven copies of the same four lines.
+void Coop_GiveChosenStarter(struct ScriptContext *ctx)
+{
+    u16 species = VarGet(VAR_TEMP_E);
+
+    if (species == SPECIES_NONE)
+        return;
+
+    ScriptGiveMon(species, 5, ITEM_NONE);
+
+    // Which of the three it was, for the parts of the story that ask what you
+    // started with -- the rival's team, mostly.
+    //
+    // Approximate on purpose, and only Player 1 writes it. The var holds an
+    // index into one region's three, which is a question with no answer once
+    // the choice spans nine regions; the slot is the nearest honest reading
+    // of it. And it is a shared var, so if both players wrote it the second
+    // to choose would silently overwrite the first.
+    if (NetLink_IsMaster() || !gNetLinkActive)
+        VarSet(VAR_STARTER_MON, VarGet(VAR_TEMP_F));
+}
+
+// Setup is over on this console.
+//
+// The gender and the name are already in SaveBlock2 and the starter is in the
+// party, and all three travel to the partner by the ordinary routes: the
+// record for Player 2, the position broadcast for the sprite.
+void Coop_FirstRunDone(struct ScriptContext *ctx)
+{
+    sFirstRunPending = FALSE;
+    sFirstRunRunning = FALSE;
+    sFirstRunNaming = FALSE;
+
+    // Nothing is written to a flag to remember this. A player who quits in
+    // the middle of being asked is asked again from the top next session,
+    // which is the right outcome and costs nothing to arrange: the arming is
+    // driven by the two things that are already persistent -- a brand-new
+    // save on Player 1's side, and an unclaimed record on Player 2's.
 }

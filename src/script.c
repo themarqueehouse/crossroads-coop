@@ -253,6 +253,19 @@ const u8 *ScriptContext_GetScriptPtr(void)
     return sGlobalScriptContext.scriptPtr;
 }
 
+// RUNNING, WAITING or SHUTDOWN, for the co-op harness.
+//
+// WAITING is what a script looks like while a menu or a full-screen prompt
+// owns it -- the naming screen, a multichoice. Nothing else distinguishes
+// that from a script that is simply mid-message, and a test driving the
+// opening questions has to know which of the two it is pressing at: a press
+// sent a few frames before a menu opens goes somewhere else entirely, and
+// everything after it is one step out.
+u8 ScriptContext_GetStatus(void)
+{
+    return sGlobalScriptContextStatus;
+}
+
 // Re-initializes the global script context to zero.
 void ScriptContext_Init(void)
 {

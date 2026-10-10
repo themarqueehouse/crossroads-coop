@@ -640,3 +640,4 @@ gSpecials::
 	def_special CheckAddCoins
 	def_special Special_FlightCallKanto
 	def_special Special_FlightCallHoenn
+	def_special CoopDoPlayerNamingScreen

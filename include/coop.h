@@ -306,6 +306,16 @@ void Coop_ReceiveSceneAdvance(u8 playerId, const u16 *cmd);
 void Coop_ReceiveFollowerMon(u8 playerId, const u16 *cmd);
 
 /**
+ * Ask this player who they are and which starter they want, once there is a
+ * safe frame to do it in. See data/scripts/coop.inc.
+ */
+void Coop_ArmFirstRun(void);
+void Coop_CancelFirstRun(void);
+bool8 Coop_FirstRunIsPending(void);
+bool8 Coop_FirstRunIsRunning(void);
+bool8 Coop_FirstRunNamingScreenIsUp(void);
+
+/**
  * True while BOTH consoles are already inside the same mirrored script.
  *
  * Scripts goto each other freely, so a scene that has been mirrored can run
@@ -370,6 +380,7 @@ void Coop_SuppressSync(bool8 suppress);
 extern u8 gCoopDbgJoinEntry;
 extern u8 gCoopDbgMenuAction;
 extern u32 gCoopDbgScriptPtr;
+extern u8 gCoopDbgScriptStatus;
 extern u16 gCoopDbgGateSent;
 extern u16 gCoopDbgGateRecv;
 

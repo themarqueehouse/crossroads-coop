@@ -93,6 +93,7 @@ WANTED_SYMBOLS = {
     # the harness addresses memory as one run of EWRAM outwards from the
     # mailbox, so it cannot reach it.
     "gCoopDbgScriptPtr": "dbgScriptPtrAddr",
+    "gCoopDbgScriptStatus": "dbgScriptStatusAddr",
     "gCoopDbgGateSent": "dbgGateSentAddr",
     "gCoopDbgGateRecv": "dbgGateRecvAddr",
     "gCoopDbgPosEvicted": "dbgPosEvictedAddr",
@@ -107,12 +108,19 @@ WANTED_SYMBOLS = {
     "sPeerFollowerSpecies": "peerFollowerSpeciesAddr",
     "sPeerFollowerObjectId": "peerFollowerObjectIdAddr",
     "gObjectEvents": "objectEventsAddr",
+    "gCoopPeer": "coopPeerAddr",
     # A mirrored scene that has arrived but not started yet, and how long it
     # has been waiting. "Player 2 never played the scene" has two very
     # different causes -- it never arrived, or it arrived and could not start
     # -- and the gate log cannot tell them apart.
     "sPendingScene": "pendingSceneAddr",
     "sPendingSceneFrames": "pendingSceneFramesAddr",
+    # Whether this console is in the opening questions. SCRIPT_BUSY is equally
+    # true of a signpost, so the rig cannot tell from that whether it is
+    # looking at the first-run prompts or at something it pressed by accident.
+    "sFirstRunPending": "firstRunPendingAddr",
+    "sFirstRunRunning": "firstRunRunningAddr",
+    "sFirstRunNaming": "firstRunNamingAddr",
 }
 
 # Symbol -> the field names its entries carry, in order.
@@ -125,6 +133,7 @@ ARRAYS = {
     "gCoopObjectOffsets": [
         "sizeofObjectEvent", "objLocalId", "objCurrentCoords", "objGraphicsId",
         "coordsX", "coordsY", "objectEventsCount",
+        "sb2PlayerGender", "peerGender",
     ],
     "gCoopWorldOffsets": [
         "flags", "numFlagBytes", "dexSeen", "dexCaught", "numDexFlagBytes",

@@ -1995,6 +1995,14 @@ void CB2_CoopNewGameSkipIntro(void)
                Coop_IsJoiningPlayer() ? gText_CoopPlayerTwoDefaultName
                                       : gText_CoopPlayerOneDefaultName);
 
+    // This save is brand new, so whoever owns it has not been asked who they
+    // are or handed anything to battle with. Player 2 is not armed here:
+    // their console comes through this function on every session, and whether
+    // they need asking depends on what Player 1's save remembers about them,
+    // which is not known until the join. coop.c arms them from there.
+    if (!Coop_IsJoiningPlayer())
+        Coop_ArmFirstRun();
+
     gCoopDbgJoinEntry = 42;
 
     // NewGameInitData finishes by putting the player indoors where their

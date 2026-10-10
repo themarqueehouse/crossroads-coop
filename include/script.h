@@ -41,6 +41,7 @@ bool8 ArePlayerFieldControlsLocked(void);
 void ScriptContext_Init(void);
 bool8 ScriptContext_IsEnabled(void);
 const u8 *ScriptContext_GetScriptPtr(void);
+u8 ScriptContext_GetStatus(void);
 bool8 ScriptContext_RunScript(void);
 void ScriptContext_SetupScript(const u8 *ptr);
 void ScriptContext_ContinueScript(struct ScriptContext *ctx);

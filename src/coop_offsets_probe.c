@@ -13,6 +13,7 @@
 // out of the object file. Regenerate with tools/coop/emit_offsets.py.
 #include "global.h"
 #include "constants/flags.h"
+#include "coop.h"
 
 const unsigned gCoopOffsets[] = {
     sizeof(struct SaveBlock1),
@@ -66,4 +67,10 @@ const unsigned gCoopObjectOffsets[] = {
     offsetof(struct Coords16, x),
     offsetof(struct Coords16, y),
     OBJECT_EVENTS_COUNT,
+    // Who each player says they are. The playtest came back with "player 2
+    // chose girl and both screens showed boys", which is two separate claims
+    // -- what the console recorded, and what the partner was told -- and one
+    // offset each to check them.
+    offsetof(struct SaveBlock2, playerGender),
+    offsetof(struct CoopPeer, gender),
 };

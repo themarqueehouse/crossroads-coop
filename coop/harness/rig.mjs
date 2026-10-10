@@ -58,8 +58,93 @@ export function decodeName(bytes) {
 // every prompt and lets the repetition do the work.
 const NUDGE = [null, 'A', 'A', 'A', 'Start', null, 'A', 'Start'];
 
+
+// Walk one console through the first-run prompts: name, gender, region,
+// starter. Shared with stage 14, which drives it deliberately rather than
+// getting it out of the way.
+//
+// Start on the naming screen is its "done" shortcut, which keeps the default
+// name rather than spelling one out a key at a time.
+const CONTEXT_WAITING = 1;   // script.c: a menu or a prompt owns the script
+
+export async function answerFirstRunPrompt(rig, w, region = 0, starter = 0,
+                                           girl = false) {
+  const status = () => rig.u8(w, OFFSETS.dbgScriptStatusAddr);
+
+  // Wait for the next menu to actually be on screen.
+  //
+  // Driving this by fixed waits does not work and fails quietly when it
+  // doesn't: a press sent a few frames before a menu opens goes to whatever
+  // was there instead, and every press after it is one step out. The symptom
+  // was both players coming out of the gender question as girls -- the Down
+  // meant for "Girl" had landed on the message box before it, and the A
+  // meant for the menu had opened it.
+  //
+  // The script is WAITING for exactly as long as a menu or the naming screen
+  // has it, and RUNNING in between, so the edge between the two is the thing
+  // to wait for rather than a number of frames.
+  const untilNextMenu = async () => {
+    for (let i = 0; i < 80 && (await status()) === CONTEXT_WAITING; i++)
+      await rig.wait(10);
+    for (let i = 0; i < 80; i++) {
+      if ((await status()) === CONTEXT_WAITING) return;
+      await rig.wait(10);
+    }
+    throw new Error(`core ${w}: the next first-run menu never opened`);
+  };
+
+  const pick = async (n) => {
+    for (let i = 0; i < n; i++) { await rig.tap(w, 'Down', 6); await rig.wait(16); }
+    await rig.tap(w, 'A', 8);
+    await rig.wait(30);
+  };
+
+  const naming = () => rig.u8(w, OFFSETS.firstRunNamingAddr);
+  const until = async (want, what) => {
+    for (let i = 0; i < 80; i++) {
+      if ((await naming()) === want) return;
+      await rig.wait(10);
+    }
+    throw new Error(`core ${w}: ${what}`);
+  };
+
+  await rig.tap(w, 'A', 8);     // the welcome box
+  await until(1, 'the naming screen never opened');
+
+  // START is the keyboard's OK, and on an empty field it moves the cursor
+  // there rather than pressing it, so A finishes the job. Alternating until
+  // the screen reports itself gone beats guessing which of the two it wants.
+  for (let i = 0; i < 12 && (await naming()) === 1; i++) {
+    await rig.tap(w, i % 2 === 0 ? 'Start' : 'A', 8);
+    await rig.wait(40);
+  }
+  await until(0, 'the naming screen would not close');
+
+  await untilNextMenu();
+  await pick(girl ? 1 : 0);     // Boy / Girl
+
+  await untilNextMenu();
+  await pick(region);           // whose starters
+
+  await untilNextMenu();
+  await pick(starter);          // which of its three
+
+  // Press on until the prompt reports itself finished rather than a fixed
+  // number of times: the closing message is two pages today and a counted
+  // run that is one short leaves the console standing in a message box with
+  // its controls locked, which nothing later can recover from.
+  for (let i = 0; i < 25; i++) {
+    if ((await rig.u8(w, OFFSETS.firstRunRunningAddr)) === 0)
+      return;
+    await rig.tap(w, 'A', 8);
+    await rig.wait(40);
+  }
+  throw new Error(`core ${w}: the first-run prompt would not finish`);
+}
+
 export async function startRig({ rom, port, introLoops = 300, settle = 1200,
-                                 paired = true, saveB64 = null }) {
+                                 paired = true, saveB64 = null,
+                                 answerFirstRun = true }) {
   assertOffsetsFresh(rom);
   const { size } = await stat(rom);
   console.log(`rom: ${rom} (${(size / 1048576).toFixed(1)} MiB)`);
@@ -92,24 +177,37 @@ export async function startRig({ rom, port, introLoops = 300, settle = 1200,
   await page.evaluate((p) => window.__pair.openSession(p), paired);
   console.log('session opened; relay pumping in-page every frame');
 
-  console.log('walking both through the intro...');
+  // Press through the copyright screen, the title and the main menu -- and
+  // stop the moment both consoles are standing in the world.
+  //
+  // This used to mash A for a fixed three hundred loops and then press B
+  // eight times to back out of whatever the last press had opened. That was
+  // the right shape when the console went through the van and Birch's speech;
+  // now both skip the opening, reach the overworld in a few presses, and the
+  // remaining two hundred and ninety A presses land on whatever is in front
+  // of them. Once a fresh game started asking the player their name, those
+  // presses were answering it -- typing a name out of the keyboard one letter
+  // at a time and picking a starter at random, before any test had looked.
+  //
+  // selfMap is published from the overworld and nowhere else, so it is zero
+  // for exactly as long as the game has not handed over control.
+  console.log('walking both to the overworld...');
   await page.evaluate(() => window.__pair.wait(1400));
   await page.evaluate(() => window.__pair.tap('both', 'Select', 12));
-  for (let i = 0; i < introLoops; i++) {
+
+  let reached = false;
+  for (let i = 0; i < introLoops && !reached; i++) {
+    const maps = await page.evaluate(() => [0, 1].map((n) => window.__pair.mailbox(n).selfMap));
+    reached = maps.every((m) => parseInt(m, 16) !== 0);
+    if (reached) break;
+
     await page.evaluate(() => window.__pair.wait(12));
     const key = NUDGE[i % NUDGE.length];
     if (key) await page.evaluate((k) => window.__pair.tap('both', k, 6), key);
   }
-  // Mashing A through the intro does not stop at the overworld: the player
-  // ends up stood in their bedroom talking to the television, and anything
-  // that needs the field controls free -- the debug menu, a trigger, a warp --
-  // silently does nothing because a message box is open. So back out of
-  // whatever the last A opened, and give it a moment to actually close.
-  console.log('backing out of whatever the intro left open...');
-  for (let i = 0; i < 8; i++) {
-    await page.evaluate(() => window.__pair.tap('both', 'B', 6));
-    await page.evaluate(() => window.__pair.wait(20));
-  }
+  if (introLoops && !reached)
+    throw new Error('a console never reached the overworld');
+
   if (settle) await page.evaluate((n) => window.__pair.wait(n), settle);
 
   // Every core's mailbox sits at the same EWRAM address; the heap offset it
@@ -170,33 +268,58 @@ export async function startRig({ rom, port, introLoops = 300, settle = 1200,
     },
   };
 
-  // Make sure both consoles are actually back in the player's hands.
+  // Get both consoles out of whatever the intro left open, then answer the
+  // opening questions.
   //
   // The intro is got through by mashing A, which does not stop at the
-  // overworld: the last press lands on a television, a sign or a menu, and the
+  // overworld: the last press lands on a television, a sign or a menu. The
   // eight B presses above are a guess at how many it takes to back out of
-  // whatever that was. Usually enough. About one run in five it was not, and
-  // the console sat with its field controls locked -- which is indistinguish-
-  // able from a console that is simply idle, right up until something needs it
-  // to be free.
+  // whatever that was, and about one run in five it was not enough -- leaving
+  // a console with its field controls locked, which is indistinguishable from
+  // an idle one right up until something needs it free. A mirrored scene will
+  // not start on a console in that state, so stage 3 reported "player 2 never
+  // played the scene" at about that same rate, for a ROM that was working.
   //
-  // What that cost: a mirrored scene will not start on a console whose
-  // controls are locked, so stage 3 reported "player 2 never played the scene"
-  // at about that same one-in-five, for a ROM that was working. A flaky test
-  // is worse than a failing one -- it gets re-run until it passes, and then it
-  // is not a test of anything.
+  // Being in the first-run prompt counts as free: that script only starts on
+  // a frame where the player was in control, so its presence is proof.
   for (const w of [0, 1]) {
-    let free = false;
-    for (let i = 0; i < 24 && !free; i++) {
-      const mb = await api.mailbox(w);
-      free = !mb.flags.includes('SCRIPT_BUSY');
-      if (!free) {
+    let ok = false;
+    for (let i = 0; i < 40 && !ok; i++) {
+      const asking = (await api.u8(w, OFFSETS.firstRunRunningAddr)) !== 0;
+      const busy = (await api.mailbox(w)).flags.includes('SCRIPT_BUSY');
+      ok = asking || !busy;
+      if (!ok) {
         await api.tap(w, 'B', 6);
         await api.wait(20);
       }
     }
-    if (!free)
+    if (!ok)
       throw new Error(`core ${w}: never came back to the player after the intro`);
+  }
+
+  // A fresh co-op game asks each player their name, their gender and which
+  // starter they want -- the things the opening would have asked, which a
+  // co-op game does not have. Every stage boots into that prompt, and every
+  // stage that is about something else wants it dealt with and a playable
+  // character on the other side. Stage 14, which is about the prompt itself,
+  // passes answerFirstRun: false.
+  //
+  // Hoenn and its third starter, chosen for no reason beyond having to.
+  if (answerFirstRun) {
+    for (const w of [0, 1]) {
+      let asking = false;
+      for (let i = 0; i < 40 && !asking; i++) {
+        asking = (await api.u8(w, OFFSETS.firstRunRunningAddr)) !== 0;
+        if (!asking) await api.wait(30);
+      }
+      if (!asking)
+        throw new Error(`core ${w}: the first-run prompt never appeared`);
+
+      await answerFirstRunPrompt(api, w, 2, 2);
+
+      if ((await api.u8(w, OFFSETS.firstRunRunningAddr)) !== 0)
+        throw new Error(`core ${w}: still in the first-run prompt after answering`);
+    }
   }
 
   return api;
