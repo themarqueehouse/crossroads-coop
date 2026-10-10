@@ -20,21 +20,26 @@ import { NetClient } from './netclient.js';
 import { countSaveSectors, looksLikeASave } from './savefile.js';
 import {
   DEFAULT_LAYOUT,
+  TouchStick,
   MGBA_NAMES,
   KEY_MAP,
   resolveTouches,
   unionButtons,
+  cancelOpposites,
   InputState,
 } from './controls.js';
 
 const ROM_NAME = 'emerald-coop.gba';
 
 export class CoopApp {
-  constructor({ canvas, overlay, onStatus, onLog }) {
+  constructor({ canvas, overlay, onStatus, onLog, onStick }) {
     this.canvas = canvas;
     this.overlay = overlay;
     this.onStatus = onStatus || (() => {});
     this.onLog = onLog || (() => {});
+    // Where to draw the thumbstick, since the stick's position is decided by
+    // the finger rather than by the layout.
+    this.onStick = onStick || (() => {});
 
     this.core = null;
     this.mailbox = null;
@@ -331,6 +336,11 @@ export class CoopApp {
     this.mouseButtons = new Set();
     this.keyButtons = new Set();
 
+    // The thumbstick has to remember which finger owns it and where that
+    // finger went down, so it lives across events rather than being worked
+    // out from each one.
+    this.stick = new TouchStick(this.layout);
+
     const touchHandler = (ev) => {
       ev.preventDefault();
       this.touchButtons = this.readTouches(ev);
@@ -422,14 +432,22 @@ export class CoopApp {
   }
 
   syncInput() {
-    this.applyInput(this.input.diff(
-      unionButtons(this.touchButtons, this.mouseButtons, this.keyButtons)));
+    // cancelOpposites after the merge, not just inside each source: a thumb on
+    // screen and an arrow key can pull opposite ways, and the hardware has no
+    // way to say so.
+    this.applyInput(this.input.diff(cancelOpposites(
+      unionButtons(this.touchButtons, this.mouseButtons, this.keyButtons))));
   }
 
   releaseAll() {
     this.touchButtons = new Set();
     this.mouseButtons = new Set();
     this.keyButtons = new Set();
+
+    // Let go of the stick too, or a backgrounded tab comes back still
+    // walking in whatever direction the thumb was last pointing.
+    this.stick?.clear();
+    this.onStick?.(null);
     this.applyInput(this.input.clear());
   }
 
@@ -438,18 +456,26 @@ export class CoopApp {
     // safe-area insets as padding, so the controls are DRAWN inside the padding
     // box while the overlay's own rect includes it -- the two disagree by the
     // inset. On a phone in landscape that is a large offset on the notch side
-    // and at the home indicator, which is exactly where the d-pad and the
+    // and at the home indicator, which is exactly where the stick and the
     // bottom row sit.
     const box = this.overlay.firstElementChild || this.overlay;
     const rect = box.getBoundingClientRect();
     const points = [];
     for (const t of ev.touches) {
       points.push({
+        // The identifier matters: the stick must follow the finger that
+        // created it, not whichever touch happens to be first in the list.
+        // Without it the stick jumps across the screen every time the other
+        // thumb presses A.
+        id: t.identifier,
         x: (t.clientX - rect.left) / rect.width,
         y: (t.clientY - rect.top) / rect.height,
       });
     }
-    return resolveTouches(this.layout, points);
+
+    const pressed = resolveTouches(this.layout, points, this.stick);
+    this.onStick?.(this.stick.visual());
+    return pressed;
   }
 
   applyInput({ press, release }) {

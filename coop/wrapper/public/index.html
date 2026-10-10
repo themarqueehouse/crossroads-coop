@@ -93,6 +93,23 @@
   }
   #overlay svg { width: 100%; height: 100%; display: block; }
 
+  /* The thumbstick. The ghost is the "put your thumb here" hint, which gets
+     out of the way the moment a thumb is actually down. */
+  .ctl.ghost { opacity: .22; }
+  .ctl-label.ghost { opacity: .35; letter-spacing: .08em; }
+  .stick-ring {
+    fill: rgba(255,255,255,.07);
+    stroke: rgba(255,255,255,.55);
+    stroke-width: .004;
+    vector-effect: non-scaling-stroke;
+  }
+  .stick-knob {
+    fill: rgba(255,255,255,.42);
+    stroke: rgba(255,255,255,.75);
+    stroke-width: .004;
+    vector-effect: non-scaling-stroke;
+  }
+
   .ctl { fill: rgba(232, 243, 236, 0.10); stroke: rgba(232, 243, 236, 0.30); stroke-width: 0.004; }
   .ctl.small { fill: rgba(232, 243, 236, 0.08); }
   .ctl-label {
@@ -381,12 +398,22 @@ function renderControls(layout) {
     return t;
   };
 
-  const { cx, cy, r } = layout.dpad;
-  svg.appendChild(circle(cx, cy, r, 'ctl'));
-  // Cross arms, drawn as a hint only; the hit-testing is angular.
-  for (const [dx, dy, ch] of [[0,-1,'▲'],[0,1,'▼'],[-1,0,'◀'],[1,0,'▶']]) {
-    svg.appendChild(text(cx + dx * r * 0.62, cy + dy * r * 0.62, ch, 'ctl-label tiny'));
-  }
+  // The stick has no fixed home -- it appears wherever a thumb lands -- so
+  // what is drawn here is only a hint at where that works. The live ring and
+  // knob are added on top while a thumb is down.
+  const st = layout.stick;
+  const hintX = st.x0 + (st.x1 - st.x0) * 0.36;
+  const hintY = st.y0 + (st.y1 - st.y0) * 0.62;
+  const hint = circle(hintX, hintY, st.r, 'ctl ghost');
+  svg.appendChild(hint);
+  svg.appendChild(text(hintX, hintY, 'MOVE', 'ctl-label tiny ghost'));
+
+  const ring = circle(0, 0, st.r, 'stick-ring');
+  const knob = circle(0, 0, st.r * 0.44, 'stick-knob');
+  ring.style.display = knob.style.display = 'none';
+  svg.appendChild(ring);
+  svg.appendChild(knob);
+  stickParts = { ring, knob, hint };
 
   const LABELS = { [BTN.A]:'A', [BTN.B]:'B', [BTN.L]:'L', [BTN.R]:'R',
                    [BTN.START]:'START', [BTN.SELECT]:'SELECT' };
@@ -399,6 +426,26 @@ function renderControls(layout) {
 
   $('overlay').replaceChildren(svg);
 }
+
+// Set by renderControls; moved by the app as a thumb drags.
+let stickParts = null;
+
+function drawStick(v) {
+  if (!stickParts) return;
+  const { ring, knob, hint } = stickParts;
+  if (!v) {
+    ring.style.display = knob.style.display = 'none';
+    hint.style.display = '';
+    return;
+  }
+  ring.setAttribute('cx', v.origin.x); ring.setAttribute('cy', v.origin.y);
+  knob.setAttribute('cx', v.knob.x);   knob.setAttribute('cy', v.knob.y);
+  ring.style.display = knob.style.display = '';
+  // The hint is only there to say where to put your thumb. Once it is there,
+  // it is in the way.
+  hint.style.display = 'none';
+}
+
 renderControls(DEFAULT_LAYOUT);
 
 // --- setup validation ------------------------------------------------------
@@ -427,6 +474,7 @@ validate();
 const app = new CoopApp({
   canvas: $('screen'),
   overlay: $('overlay'),
+  onStick: drawStick,
   onLog: (m) => log(m),
   onStatus: (s) => {
     if (s.fatal) {

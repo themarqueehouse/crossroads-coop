@@ -8,45 +8,52 @@ import {
   MGBA_NAMES,
   DEFAULT_LAYOUT as L,
   TOUCH_SLOP,
-  DPAD_DEADZONE,
-  dpadDirections,
+  STICK_DEADZONE,
+  stickDirections,
+  inStickRegion,
+  TouchStick,
   buttonAt,
   resolveTouches,
+  cancelOpposites,
   InputState,
   KEY_MAP,
   unionButtons,
 } from '../src/controls.js';
 
-/** A point at angle `deg` and `frac` of the d-pad radius, in screen coords. */
-function onDpad(deg, frac = 0.8) {
+// Somewhere a thumb would plausibly land in the stick region.
+const HOME = { x: 0.18, y: 0.7 };
+
+/** A point at angle `deg`, `frac` of the stick's travel radius from HOME. */
+function fromHome(deg, frac = 0.8, origin = HOME) {
   const a = (deg * Math.PI) / 180;
-  const { cx, cy, r } = L.dpad;
-  return { x: cx + Math.cos(a) * r * frac, y: cy - Math.sin(a) * r * frac };
+  const r = L.stick.r;
+  return { x: origin.x + Math.cos(a) * r * frac, y: origin.y - Math.sin(a) * r * frac };
 }
+
+const dirs = (p, origin = HOME) =>
+  stickDirections(L, origin.x, origin.y, p.x, p.y);
 
 function at(id) {
   return L.buttons.find((b) => b.id === id);
 }
 
 // ---------------------------------------------------------------------------
-// d-pad
+// the thumbstick
 // ---------------------------------------------------------------------------
 
 test('the four cardinal directions resolve correctly', () => {
-  assert.deepEqual(dpadDirections(L, onDpad(0).x, onDpad(0).y), [BTN.RIGHT]);
-  assert.deepEqual(dpadDirections(L, onDpad(90).x, onDpad(90).y), [BTN.UP]);
-  assert.deepEqual(dpadDirections(L, onDpad(180).x, onDpad(180).y), [BTN.LEFT]);
-  assert.deepEqual(dpadDirections(L, onDpad(270).x, onDpad(270).y), [BTN.DOWN]);
+  assert.deepEqual(dirs(fromHome(0)), [BTN.RIGHT]);
+  assert.deepEqual(dirs(fromHome(90)), [BTN.UP]);
+  assert.deepEqual(dirs(fromHome(180)), [BTN.LEFT]);
+  assert.deepEqual(dirs(fromHome(270)), [BTN.DOWN]);
 });
 
 test('up is up — screen y is inverted and must not be mixed up', () => {
   // A regression guard: getting this backwards is the classic bug here, and
   // it would make the game playable-but-wrong in a very confusing way.
-  const { cx, cy, r } = L.dpad;
-  const above = { x: cx, y: cy - r * 0.8 };
-  assert.deepEqual(dpadDirections(L, above.x, above.y), [BTN.UP]);
-  const below = { x: cx, y: cy + r * 0.8 };
-  assert.deepEqual(dpadDirections(L, below.x, below.y), [BTN.DOWN]);
+  const r = L.stick.r;
+  assert.deepEqual(dirs({ x: HOME.x, y: HOME.y - r * 0.8 }), [BTN.UP]);
+  assert.deepEqual(dirs({ x: HOME.x, y: HOME.y + r * 0.8 }), [BTN.DOWN]);
 });
 
 test('diagonals press two directions at once', () => {
@@ -56,42 +63,126 @@ test('diagonals press two directions at once', () => {
     [225, [BTN.LEFT, BTN.DOWN]],
     [315, [BTN.RIGHT, BTN.DOWN]],
   ]) {
-    const p = onDpad(deg);
-    const got = dpadDirections(L, p.x, p.y);
+    const got = dirs(fromHome(deg));
     assert.equal(got.length, 2, `${deg} deg gives two directions, got ${got}`);
     assert.deepEqual(new Set(got), new Set(want), `${deg} deg`);
   }
 });
 
 test('the diagonal band is wide enough to hold comfortably', () => {
-  // Walking around corners and Acro Bike tricks need diagonals to be holdable,
-  // not a knife edge. Anything within ~15 degrees of the diagonal should hold.
   for (const deg of [32, 45, 58]) {
-    const p = onDpad(deg);
-    assert.equal(dpadDirections(L, p.x, p.y).length, 2, `${deg} deg still diagonal`);
+    assert.equal(dirs(fromHome(deg)).length, 2, `${deg} deg still diagonal`);
   }
 });
 
-test('the centre deadzone presses nothing', () => {
-  const { cx, cy } = L.dpad;
-  assert.deepEqual(dpadDirections(L, cx, cy), [], 'dead centre');
-  const inside = onDpad(45, DPAD_DEADZONE * 0.5);
-  assert.deepEqual(dpadDirections(L, inside.x, inside.y), [], 'inside deadzone');
+test('a thumb resting at the centre presses nothing', () => {
+  assert.deepEqual(dirs(HOME), [], 'dead centre');
+  assert.deepEqual(dirs(fromHome(45, STICK_DEADZONE * 0.5)), [], 'inside deadzone');
 });
 
-test('a touch well outside the d-pad presses nothing', () => {
-  const far = onDpad(0, TOUCH_SLOP + 0.5);
-  assert.deepEqual(dpadDirections(L, far.x, far.y), []);
-  assert.deepEqual(dpadDirections(L, 0.5, 0.5), [], 'middle of the screen');
+test('the stick keeps steering however far the thumb travels', () => {
+  // The whole point of replacing the d-pad. A d-pad has an edge you slide off
+  // without noticing -- you are looking at the game, not your hands -- and
+  // what it feels like is the game ignoring you.
+  for (const frac of [1, 3, 10]) {
+    assert.deepEqual(dirs(fromHome(90, frac)), [BTN.UP], `${frac}x out`);
+  }
 });
 
-test('touch slop extends the d-pad slightly past its drawn edge', () => {
-  const justOutside = onDpad(90, 1.15);
-  assert.deepEqual(
-    dpadDirections(L, justOutside.x, justOutside.y),
-    [BTN.UP],
-    'a finger landing just past the edge still registers'
-  );
+test('the stick is created wherever the thumb lands, not in one place', () => {
+  // Two thumbs-down a long way apart both work, and each steers from its own
+  // centre. A fixed control cannot do this and that is the complaint it fixes.
+  for (const origin of [{ x: 0.05, y: 0.35 }, { x: 0.40, y: 0.95 }]) {
+    assert.ok(inStickRegion(L, origin.x, origin.y), `${origin.x},${origin.y} usable`);
+    assert.deepEqual(dirs(fromHome(180, 0.8, origin), origin), [BTN.LEFT]);
+  }
+});
+
+test('no button can be turned into a stick by touching it', () => {
+  // The region is deliberately generous -- anywhere down the left is a
+  // reasonable place to rest a thumb -- so it does overlap the bottom row.
+  // What matters is that a touch landing ON a control presses that control
+  // instead of creating a stick under it.
+  for (const b of L.buttons) {
+    const s = new TouchStick(L);
+    s.update([{ id: 1, x: b.cx, y: b.cy }]);
+    assert.equal(s.origin, null, `${b.id} must not grab the stick`);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// the stick across frames
+// ---------------------------------------------------------------------------
+
+test('the first frame of a touch presses nothing', () => {
+  const s = new TouchStick(L);
+  assert.deepEqual(s.update([{ id: 1, ...HOME }]), [],
+    'the thumb is at the centre by definition on the frame it lands');
+});
+
+test('the stick follows the finger that made it, not the first in the list', () => {
+  // The other thumb is on the face buttons. A stick that re-centred on
+  // whichever touch came first would jump across the screen every time
+  // somebody pressed A -- and you would be walking the wrong way.
+  const s = new TouchStick(L);
+  s.update([{ id: 7, ...HOME }]);
+
+  const a = at(BTN.A);
+  const moved = fromHome(90);
+  const got = s.update([
+    { id: 99, x: a.cx, y: a.cy },       // the other thumb, listed first
+    { id: 7, x: moved.x, y: moved.y },  // ours
+  ]);
+
+  assert.deepEqual(got, [BTN.UP]);
+  assert.equal(s.origin.x, HOME.x, 'origin unchanged');
+  assert.equal(s.origin.y, HOME.y, 'origin unchanged');
+});
+
+test('lifting the finger lets the stick go', () => {
+  const s = new TouchStick(L);
+  s.update([{ id: 1, ...HOME }]);
+  const moved = fromHome(0);
+  assert.deepEqual(s.update([{ id: 1, x: moved.x, y: moved.y }]), [BTN.RIGHT]);
+  assert.deepEqual(s.update([]), []);
+  assert.equal(s.origin, null);
+});
+
+test('a new touch after a lift makes a new stick somewhere else', () => {
+  const s = new TouchStick(L);
+  s.update([{ id: 1, ...HOME }]);
+  s.update([]);
+
+  const elsewhere = { x: 0.35, y: 0.42 };
+  s.update([{ id: 2, ...elsewhere }]);
+  const moved = fromHome(270, 0.8, elsewhere);
+  assert.deepEqual(s.update([{ id: 2, x: moved.x, y: moved.y }]), [BTN.DOWN]);
+});
+
+test('a touch on a face button never becomes the stick', () => {
+  const s = new TouchStick(L);
+  const a = at(BTN.A);
+  s.update([{ id: 1, x: a.cx, y: a.cy }]);
+  assert.equal(s.origin, null, 'pressing A must not create a stick');
+});
+
+test('the knob stops at the rim however far the thumb goes', () => {
+  // Otherwise it reads as a dot chasing your finger rather than a stick.
+  const s = new TouchStick(L);
+  s.update([{ id: 1, ...HOME }]);
+  const far = fromHome(0, 8);
+  s.update([{ id: 1, x: far.x, y: far.y }]);
+
+  const v = s.visual();
+  const d = Math.hypot(v.knob.x - v.origin.x, v.knob.y - v.origin.y);
+  assert.ok(Math.abs(d - L.stick.r) < 1e-9, `knob at ${d}, rim at ${L.stick.r}`);
+});
+
+test('clear lets go, so a backgrounded tab does not keep walking', () => {
+  const s = new TouchStick(L);
+  s.update([{ id: 1, ...HOME }]);
+  s.clear();
+  assert.equal(s.visual(), null);
 });
 
 // ---------------------------------------------------------------------------
@@ -149,9 +240,9 @@ test('no two buttons overlap at their drawn radii', () => {
 });
 
 test('every control sits inside the overlay box', () => {
-  const { cx, cy, r } = L.dpad;
-  assert.ok(cx - r >= 0 && cx + r <= 1, 'dpad within x');
-  assert.ok(cy - r >= 0 && cy + r <= 1, 'dpad within y');
+  const s = L.stick;
+  assert.ok(s.x0 >= 0 && s.x1 <= 1, 'stick region within x');
+  assert.ok(s.y0 >= 0 && s.y1 <= 1, 'stick region within y');
   for (const b of L.buttons) {
     assert.ok(b.cx - b.r >= 0 && b.cx + b.r <= 1, `${b.id} within x`);
     assert.ok(b.cy - b.r >= 0 && b.cy + b.r <= 1, `${b.id} within y`);
@@ -165,36 +256,50 @@ test('every control sits inside the overlay box', () => {
 test('running works: B held with a direction', () => {
   // The single most common two-finger combination in the whole game.
   const b = at(BTN.B);
-  const dir = onDpad(180);
+  const stick = new TouchStick(L);
+  stick.update([{ id: 1, ...HOME }]);          // thumb down
+  const dir = fromHome(180);
   const pressed = resolveTouches(L, [
-    { x: dir.x, y: dir.y },
-    { x: b.cx, y: b.cy },
-  ]);
+    { id: 1, x: dir.x, y: dir.y },
+    { id: 2, x: b.cx, y: b.cy },
+  ], stick);
   assert.deepEqual(new Set(pressed), new Set([BTN.LEFT, BTN.B]));
 });
 
 test('three simultaneous touches all register', () => {
+  // A diagonal on the stick plus two buttons: four inputs from three fingers.
   const a = at(BTN.A);
   const r = at(BTN.R);
-  const dir = onDpad(45);
+  const stick = new TouchStick(L);
+  stick.update([{ id: 1, ...HOME }]);
+  const dir = fromHome(45);
   const pressed = resolveTouches(L, [
-    { x: dir.x, y: dir.y },
-    { x: a.cx, y: a.cy },
-    { x: r.cx, y: r.cy },
-  ]);
+    { id: 1, x: dir.x, y: dir.y },
+    { id: 2, x: a.cx, y: a.cy },
+    { id: 3, x: r.cx, y: r.cy },
+  ], stick);
   assert.deepEqual(new Set(pressed), new Set([BTN.RIGHT, BTN.UP, BTN.A, BTN.R]));
 });
 
-test('opposite directions from two touches cancel', () => {
+test('the stick never reports opposite directions, whatever the angle', () => {
   // The hardware cannot report left and right together; letting both through
-  // makes the avatar stutter in place.
-  const left = onDpad(180);
-  const right = onDpad(0);
-  const pressed = resolveTouches(L, [
-    { x: left.x, y: left.y },
-    { x: right.x, y: right.y },
-  ]);
-  assert.ok(!pressed.has(BTN.LEFT) && !pressed.has(BTN.RIGHT), 'both cancelled');
+  // makes the avatar stutter in place. One thumb cannot be in two places, so
+  // the guard here is against a too-wide diagonal band -- sweep the whole
+  // circle rather than trusting the one angle that happens to be tested above.
+  for (let deg = 0; deg < 360; deg++) {
+    const got = new Set(dirs(fromHome(deg)));
+    assert.ok(!(got.has(BTN.LEFT) && got.has(BTN.RIGHT)), `${deg} deg: L+R`);
+    assert.ok(!(got.has(BTN.UP) && got.has(BTN.DOWN)), `${deg} deg: U+D`);
+    assert.ok(got.size >= 1 && got.size <= 2, `${deg} deg gave ${got.size}`);
+  }
+});
+
+test('a key and the thumb pulling opposite ways cancel', () => {
+  // Desktop play: the sources are merged after the stick has had its say, so
+  // this is the one place an opposing pair can still appear.
+  const merged = cancelOpposites(
+    unionButtons(new Set([BTN.RIGHT, BTN.B]), new Set([BTN.LEFT])));
+  assert.deepEqual([...merged], [BTN.B]);
 });
 
 test('no touches means nothing pressed', () => {
@@ -290,8 +395,8 @@ test('unionButtons tolerates missing sources', () => {
 });
 
 test('releasing a key does not cancel a button another source still holds', () => {
-  // The reason the sources are tracked separately. Thumb on the d-pad, hand on
-  // the keyboard: letting go of the key must not clear the d-pad direction.
+  // The reason the sources are tracked separately. Thumb on the stick, hand on
+  // the keyboard: letting go of the key must not clear the held direction.
   const touch = new Set(['up']);
   const keys = new Set(['a']);
   const input = new InputState();
