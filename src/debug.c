@@ -192,7 +192,13 @@ enum DebugTrainerSelection
 #define DEBUG_NUMBER_ICON_X 210
 #define DEBUG_NUMBER_ICON_Y 50
 
-#define DEBUG_MAX_MENU_ITEMS 20
+// Raised from 20. The Scripts submenu passed it when the co-op checks grew
+// past twenty entries, and the loop that fills this writes one list item and
+// one name per menu entry with no bound of its own -- so opening that menu
+// wrote off the end of both arrays and took the game with it. The harness
+// opens it during startup, which turned "I added a test script" into "nothing
+// boots any more".
+#define DEBUG_MAX_MENU_ITEMS 48
 #define DEBUG_MAX_SUB_MENU_LEVELS 4
 
 // *******************************
@@ -398,6 +404,7 @@ extern const u8 Debug_EventScript_Script_19[];
 extern const u8 Debug_EventScript_Script_20[];
 extern const u8 Debug_EventScript_Script_21[];
 extern const u8 Debug_EventScript_Script_22[];
+extern const u8 Debug_EventScript_Script_23[];
 extern const u8 DebugScript_DaycareMonsNotCompatible[];
 extern const u8 DebugScript_OneDaycareMons[];
 extern const u8 DebugScript_ZeroDaycareMons[];
@@ -686,6 +693,7 @@ static const struct DebugMenuOption sDebugMenu_Actions_Scripts[] =
     { COMPOUND_STRING("Script 20"), DebugAction_ExecuteScript, Debug_EventScript_Script_20 },
     { COMPOUND_STRING("Script 21"), DebugAction_ExecuteScript, Debug_EventScript_Script_21 },
     { COMPOUND_STRING("Script 22"), DebugAction_ExecuteScript, Debug_EventScript_Script_22 },
+    { COMPOUND_STRING("Script 23"), DebugAction_ExecuteScript, Debug_EventScript_Script_23 },
     { NULL }
 };
 

@@ -61,11 +61,16 @@ async function objects(rig, w) {
   const out = [];
   for (let i = 0; i < objectEventsCount; i++) {
     const base = objectEventsAddr + i * sizeofObjectEvent;
+    // struct ObjectEvent opens with its bitfields, and `active` is bit 0 of
+    // the first byte. Without checking it this counts slots that merely hold
+    // the leftovers of something that used to be there, which is how a map
+    // with room to spare reported itself full.
+    const live = ((await rig.u8(w, base)) & 1) !== 0;
+    if (!live) continue;
     const localId = await rig.u8(w, base + objLocalId);
     const gfx = await rig.u16(w, base + objGraphicsId);
     const x = await rig.u16(w, base + objCurrentCoords + coordsX);
     const y = await rig.u16(w, base + objCurrentCoords + coordsY);
-    if (gfx === 0 && localId === 0) continue;
     out.push({ i, localId, gfx, x, y });
   }
   return out;
@@ -116,13 +121,33 @@ async function main() {
             `expected something near ${CELEBI.x},${CELEBI.y}`);
 
     // --- 4: the partner sees it too ---------------------------------------
-    const allTheirs = await objects(rig, 1);
+    // Give their console time to put the map together. Objects spawn as the
+    // camera settles, and the partner arrives a moment after we do.
+    let allTheirs = await objects(rig, 1);
+    for (let i = 0; i < 12; i++) {
+      if (allTheirs.some((o) => (o.gfx & OBJ_EVENT_MON) !== 0 && o.localId !== 241)) break;
+      await rig.wait(60);
+      allTheirs = await objects(rig, 1);
+    }
     const theirs = allTheirs.filter((o) => (o.gfx & OBJ_EVENT_MON) !== 0);
     // How full their object list is. There are only sixteen slots, and a map
     // with its own NPCs plus a mirrored partner and two follower Pokemon can
     // run out -- in which case whatever spawns last is simply not there.
     t.note('partner object slots used', `${allTheirs.length} of ${OFFSETS.objectEventsCount}`);
     t.note('ours', `${mine.length} of ${OFFSETS.objectEventsCount}`);
+    // Is it hidden rather than missing? The object's hide flag is also the
+    // "already dealt with" flag, and flags are shared across the pair -- so a
+    // flag that came up set on one console and not the other would explain an
+    // object that exists for one player and not the other.
+    const FLAG_LEGENDARY_CELEBI = 0xB26;
+    const flagSet = async (w, id) => {
+      const byte = await rig.u8(w, OFFSETS.saveBlock1Addr + OFFSETS.flags + (id >> 3));
+      return ((byte >> (id & 7)) & 1) !== 0;
+    };
+    t.note('Celebi\'s flag',
+           `p1 ${await flagSet(0, FLAG_LEGENDARY_CELEBI)}  ` +
+           `p2 ${await flagSet(1, FLAG_LEGENDARY_CELEBI)}`);
+
     t.note('what the partner sees',
            theirs.map((o) => `#${o.localId} species ${o.gfx & 0x3fff} at ${o.x},${o.y}`)
                  .join('  ') || 'none');
@@ -163,6 +188,78 @@ async function main() {
     // which belongs to whoever walked up to it.
     t.check('the partner was left alone', !(await inBattle(rig, 1)),
             'both consoles went into one player\'s wild battle');
+
+    // ------------------------------------------------- the crowded route
+    //
+    // "None of the trainers there challenged any of us" came back from the
+    // first real playtest, and Route 103 is where it was seen. It carries 20
+    // object events -- more than the sixteen slots the game used to have for
+    // the whole map, with four of those going to the two players and their
+    // Pokemon -- so the ones listed last never spawned, and a trainer who is
+    // not there cannot see you.
+    // Out of the Celebi battle first. The previous version of this went
+    // straight on to open the debug menu while a battle was still running,
+    // where B does not open menus -- so the warp never happened and every
+    // reading below described Petalburg Woods.
+    console.log('\n--- leaving the Celebi battle ---');
+    for (let i = 0; i < 25 && (await inBattle(rig, 0)); i++) {
+      await rig.tap(0, 'Down', 8);
+      await rig.wait(16);
+      await rig.tap(0, 'Right', 8);
+      await rig.wait(16);
+      await rig.tap(0, 'A', 8);
+      await rig.wait(60);
+      await rig.tap(0, 'A', 8);
+      await rig.wait(60);
+    }
+    t.check('you can run from it', !(await inBattle(rig, 0)),
+            'still in the Celebi battle after 25 attempts to run');
+    await rig.wait(180);
+
+    console.log('\n--- Route 103, where nobody challenged anybody ---');
+    await forgetLastBattle(rig, 0);
+    await runDebugScriptOn(rig, 0, 23);
+    await rig.wait(300);
+
+    const onRoute = await objects(rig, 0);
+    const where = await rig.mailboxes();
+    t.note('where we ended up', where.map((x) => `p${x.id} map ${x.selfMap}`).join('  '));
+    t.note('objects live on Route 103', `${onRoute.length} of ${OFFSETS.objectEventsCount}`);
+    // Not a check. The game only spawns what is near the camera, so a wide
+    // route never has all twenty of its objects up at once -- 11 here, with
+    // twenty-one slots to spare. Worth printing, because "the trainers never
+    // challenged us" could have been them never spawning, and this says it
+    // was not that.
+    t.note('spare slots', `${OFFSETS.objectEventsCount - onRoute.length} free`);
+
+    // Amy and Liv are two tiles up, both facing down with a one-tile line of
+    // sight, so the player has to actually step into it.
+    //
+    // More than one press, because the first one does not move anybody: the
+    // warp lands them facing south, and a direction you are not already
+    // facing turns you before it walks you. The previous version pressed Up
+    // once, the player turned on the spot two tiles short of the twins, and
+    // the check reported that trainers do not notice you.
+    for (let i = 0; i < 3 && !(await inBattle(rig, 0)); i++) {
+      await rig.tap(0, 'Up', 10);
+      await rig.wait(120);
+    }
+    await rig.wait(240);
+    await rig.shot('/tmp/claude-0/stage16-route103');
+
+    // A trainer who notices you walks over and talks first. Press through the
+    // introduction before asking whether there is a battle -- checking at the
+    // moment of the step reported that nobody reacted while Amy was on screen
+    // saying "I'm AMY, and this is my little sister LIV".
+    const challenged = await isBusy(rig, 0);
+    for (let i = 0; i < 10 && !(await inBattle(rig, 0)); i++) {
+      await rig.tap(0, 'A', 8);
+      await rig.wait(90);
+    }
+    t.check('a trainer notices you and comes over', challenged,
+            'walked into two trainers\' line of sight and neither reacted');
+    t.check('and it turns into a battle', await inBattle(rig, 0),
+            'the introduction ran but no battle started');
 
     t.summary();
   } finally {

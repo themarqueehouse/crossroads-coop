@@ -1170,3 +1170,17 @@ Debug_EventScript_Script_22::
 	waitstate
 	release
 	end
+
+@ TO ROUTE 103, IN FRONT OF A TRAINER (R+Start, Scripts..., Script 23).
+@
+@ For the "none of the trainers challenged us" report. Amy and Liv are the
+@ twins at 64,12 and 65,12, both facing down with a one-tile sight range.
+@ This drops you two tiles below them, so walking up once steps into both
+@ lines at once -- and if nothing happens, nothing is going to.
+Debug_EventScript_Script_23::
+	setvar VAR_ROUTE103_STATE, 3
+	coopfollowme
+	warp MAP_ROUTE103, 64, 14
+	waitstate
+	release
+	end
