@@ -15,11 +15,8 @@
 // is the right size and structurally plausible but belongs to the wrong player.
 //
 //   node coop/harness/stage1.mjs path/to/rom.gba
-import { chromium } from 'playwright';
-import { globSync, readFileSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import { basename } from 'node:path';
-import server, { setRom } from './serve.mjs';
+import { readFileSync } from 'node:fs';
+import { startRig } from './rig.mjs';
 
 const PORT = 8779;
 const ROM = process.argv[2] || '/home/claude/crossroads/pokeemerald.gba';
@@ -55,49 +52,19 @@ function decodeName(bytes) {
   return out;
 }
 
-const NUDGE = [null, 'A', 'A', 'A', 'Start', null, 'A', 'Start'];
-
 async function main() {
-  const { size } = await stat(ROM);
-  console.log(`rom: ${ROM} (${(size / 1048576).toFixed(1)} MiB)`);
-  setRom(ROM);
-  await new Promise((r) => server.listen(PORT, r));
-
-  const exe = globSync('/opt/pw-browsers/chromium-*/chrome-linux/chrome');
-  const browser = await chromium.launch({
-    ...(exe.length ? { executablePath: exe[0] } : {}),
-    args: ['--no-sandbox'],
-  });
+  // The shared rig rather than a boot of its own.
+  //
+  // This had a copy of startRig's opening inline, which was fine until the
+  // opening changed: both consoles now skip the intro and are asked their
+  // name and starter instead, and a boot that does not answer those leaves
+  // both players standing in a prompt. Player 2 never reports itself, so
+  // there is no stored record to check and every check below fails for a
+  // reason that has nothing to do with what they test.
+  const rig = await startRig({ rom: ROM, port: PORT });
+  const page = rig.page;
 
   try {
-    const page = await (await browser.newContext()).newPage();
-    page.on('pageerror', (e) => console.log(`  [pageerror] ${e.message}`));
-    await page.goto(`http://127.0.0.1:${PORT}/pair.html`);
-    await page.waitForFunction(() => !!window.__pair);
-
-    console.log('booting both cores in one page...');
-    await page.evaluate(([u, n]) => window.__pair.boot(u, n),
-      [`http://127.0.0.1:${PORT}/rom.gba`, basename(ROM)]);
-    await page.evaluate(() => window.__pair.wait(120));
-
-    const found = await page.evaluate(() => window.__pair.locate());
-    for (const f of found)
-      console.log(`  core ${f.id}: mailbox 0x${f.base.toString(16)} ` +
-                  `(${f.candidates} candidates, ${f.live} live)`);
-
-    await page.evaluate(() => window.__pair.openSession());
-    console.log('session opened; relay pumping in-page every frame');
-
-    console.log('walking both through the intro...');
-    await page.evaluate(() => window.__pair.wait(1400));
-    await page.evaluate(() => window.__pair.tap('both', 'Select', 12));
-
-    for (let i = 0; i < 300; i++) {
-      await page.evaluate(() => window.__pair.wait(12));
-      const key = NUDGE[i % NUDGE.length];
-      if (key) await page.evaluate((k) => window.__pair.tap('both', k, 6), key);
-    }
-
     // Let the hand-over run: Player 1 sends, Player 2 answers, Player 1 stores.
     console.log('settling, so the hand-over can complete...');
     for (let i = 0; i < 6; i++) {
@@ -107,10 +74,15 @@ async function main() {
         m.map((x) => `p${x.id} ${x.state} map=${x.selfMap} out=${x.outPending}`).join('   '));
     }
 
-    // The heap offset of anything in EWRAM, from the mailbox we located.
-    const heapOf = (addr) => found[0].base - (MAILBOX_ADDR - addr);
+    // Per core, from the rig.
+    //
+    // This used to resolve every address against core 0's heap base and then
+    // read core 1 with it. The two cores have separate WASM heaps; it worked
+    // only because they happened to land at the same base, which is not
+    // something a test should be relying on without saying so.
+    const heapOf = rig.heapOf;
 
-    const p2Off = heapOf(SAVEBLOCK1_ADDR) + OFFSETS.coopPlayer2;
+    const p2Off = heapOf(0, SAVEBLOCK1_ADDR) + OFFSETS.coopPlayer2;
     const stored = await page.evaluate(
       ([off, len]) => window.__pair.readAt(0, off, len),
       [p2Off, OFFSETS.sizeofCoopPlayer2]);
@@ -130,7 +102,7 @@ async function main() {
     for (const i of [0, 1]) {
       const raw = await page.evaluate(
         ([w, off, len]) => window.__pair.readAt(w, off, len),
-        [i, heapOf(SAVEBLOCK2_ADDR) + SB2_PLAYERNAME, 8]);
+        [i, heapOf(i, SAVEBLOCK2_ADDR) + SB2_PLAYERNAME, 8]);
       liveNames.push(decodeName(raw));
     }
     console.log(`\nplayer 1 is actually: ${liveNames[0]}`);
@@ -150,7 +122,7 @@ async function main() {
     // Set a badge and a Pokedex entry on Player 1 directly in memory, then
     // reconnect and see whether they reach Player 2. Badges are plain flags
     // (FLAG_BADGE01_GET), so this exercises the whole flag array at once.
-    const sb1 = (which) => heapOf(SAVEBLOCK1_ADDR);
+    const sb1 = (which) => heapOf(which, SAVEBLOCK1_ADDR);
     const badgeByte = OFFSETS.flags + Math.floor(OFFSETS.flagBadge01 / 8);
     const badgeBit = 1 << (OFFSETS.flagBadge01 % 8);
 
@@ -178,11 +150,11 @@ async function main() {
       const b = await page.evaluate(([w, a]) => window.__pair.readAt(w, a, 4), [which, addr]);
       return (b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0;
     };
-    const key1 = await u32At(0, heapOf(SAVEBLOCK2_ADDR) + OFFSETS.encryptionKey);
+    const key1 = await u32At(0, heapOf(0, SAVEBLOCK2_ADDR) + OFFSETS.encryptionKey);
     const ITEM_ID = 13, QTY = 7;
     const enc = (QTY ^ (key1 & 0xffff)) & 0xffff;
     await page.evaluate(([w, a, b]) => window.__pair.writeAt(w, a, b),
-      [0, heapOf(SAVEBLOCK1_ADDR) + OFFSETS.bag,
+      [0, heapOf(0, SAVEBLOCK1_ADDR) + OFFSETS.bag,
        [ITEM_ID & 0xff, ITEM_ID >> 8, enc & 0xff, enc >> 8]]);
 
     console.log(`\nset badge 1, a dex catch, and item ${ITEM_ID} x${QTY} on Player 1`);
@@ -199,13 +171,13 @@ async function main() {
 
     const after = await page.evaluate(
       ([w, off, len]) => window.__pair.readAt(w, off, len),
-      [1, heapOf(SAVEBLOCK2_ADDR) + SB2_PLAYERNAME, 8]);
+      [1, heapOf(1, SAVEBLOCK2_ADDR) + SB2_PLAYERNAME, 8]);
     const p2After = decodeName(after);
 
     const p2Badge = await page.evaluate(([off]) => window.__pair.readAt(1, off, 1),
-                                        [heapOf(SAVEBLOCK1_ADDR) + badgeByte]);
+                                        [heapOf(1, SAVEBLOCK1_ADDR) + badgeByte]);
     const p2Dex = await page.evaluate(([off]) => window.__pair.readAt(1, off, 1),
-                                      [heapOf(SAVEBLOCK1_ADDR) + OFFSETS.dexCaught]);
+                                      [heapOf(1, SAVEBLOCK1_ADDR) + OFFSETS.dexCaught]);
     console.log(`player 2 badge bit: ${(p2Badge[0] & badgeBit) ? 'SET' : 'clear'}`);
     console.log(`player 2 dex bit:   ${(p2Dex[0] & 1) ? 'SET' : 'clear'}`);
     if ((p2Badge[0] & badgeBit) && (p2Dex[0] & 1))
@@ -213,15 +185,15 @@ async function main() {
     else
       console.log('FAIL: shared progression did not cross');
 
-    const key2 = await u32At(1, heapOf(SAVEBLOCK2_ADDR) + OFFSETS.encryptionKey);
+    const key2 = await u32At(1, heapOf(1, SAVEBLOCK2_ADDR) + OFFSETS.encryptionKey);
     const slot = await page.evaluate(([w, a]) => window.__pair.readAt(w, a, 4),
-      [1, heapOf(SAVEBLOCK1_ADDR) + OFFSETS.bag]);
+      [1, heapOf(1, SAVEBLOCK1_ADDR) + OFFSETS.bag]);
     const gotId = slot[0] | (slot[1] << 8);
     const gotQty = ((slot[2] | (slot[3] << 8)) ^ (key2 & 0xffff)) & 0xffff;
     console.log(`player 2 bag slot 0: item ${gotId} x${gotQty} ` +
                 `(keys ${key1 === key2 ? 'MATCH - test is weak' : 'differ - good'})`);
     const raw1 = await page.evaluate(([w, a]) => window.__pair.readAt(w, a, 4),
-      [0, heapOf(SAVEBLOCK1_ADDR) + OFFSETS.bag]);
+      [0, heapOf(0, SAVEBLOCK1_ADDR) + OFFSETS.bag]);
     console.log(`  p1 raw slot: ${raw1.map((x) => x.toString(16).padStart(2, '0')).join(' ')}` +
                 `  key1=0x${key1.toString(16)}`);
     console.log(`  p2 raw slot: ${slot.map((x) => x.toString(16).padStart(2, '0')).join(' ')}` +
@@ -246,8 +218,7 @@ async function main() {
     await page.locator('#s1').screenshot({ path: '/tmp/claude-0/stage1-p2.png' });
     console.log('screens -> /tmp/claude-0/stage1-p{1,2}.png');
   } finally {
-    await browser.close();
-    server.close();
+    await rig.close();
   }
 }
 

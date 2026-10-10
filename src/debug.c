@@ -1650,6 +1650,18 @@ static void DebugAction_Util_Warp_SelectWarp(u8 taskId)
 // character stored in it, and the join hands it to whoever connects next --
 // overwriting the name and gender they just chose with somebody else's. A
 // save meant to be handed to other people has to leave that slot empty.
+// Empty the party, for test fixtures that then fill it themselves.
+//
+// givemon only fills the slots that are free, and since a fresh co-op game
+// hands each player a starter there is now always one in the way: the battle
+// fixture's six level-50 Pokemon became five, behind a level-5 lead, and the
+// battle it was supposed to test was a different battle.
+void Debug_ClearParty(struct ScriptContext *ctx)
+{
+    ZeroPlayerPartyMons();
+    gPlayerPartyCount = 0;
+}
+
 void Debug_ClearCoopPlayer2(struct ScriptContext *ctx)
 {
     struct CoopPlayer2 *rec = GetCoopPlayer2();

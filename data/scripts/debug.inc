@@ -254,6 +254,11 @@ Debug_EventScript_Script_4::
 @ console separately -- it is not a co-op scene -- then run Script 4 to fight.
 @ Something strong enough to win a test battle without careful play.
 Debug_EventScript_Script_5::
+	@ From empty, so the party is the same six however the console got here.
+	@ givemon only fills free slots, and a fresh co-op game now starts every
+	@ player with a starter -- which sat at the front of this team and took
+	@ the battle into a fight nobody meant to test.
+	callnative Debug_ClearParty
 	givemon SPECIES_SWAMPERT, 50
 	givemon SPECIES_SCEPTILE, 50
 	givemon SPECIES_BLAZIKEN, 50

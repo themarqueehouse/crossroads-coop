@@ -68,7 +68,7 @@ const NUDGE = [null, 'A', 'A', 'A', 'Start', null, 'A', 'Start'];
 const CONTEXT_WAITING = 1;   // script.c: a menu or a prompt owns the script
 
 export async function answerFirstRunPrompt(rig, w, region = 0, starter = 0,
-                                           girl = false) {
+                                           girl = false, letter = 0) {
   const status = () => rig.u8(w, OFFSETS.dbgScriptStatusAddr);
 
   // Wait for the next menu to actually be on screen.
@@ -111,11 +111,24 @@ export async function answerFirstRunPrompt(rig, w, region = 0, starter = 0,
   await rig.tap(w, 'A', 8);     // the welcome box
   await until(1, 'the naming screen never opened');
 
-  // START is the keyboard's OK, and on an empty field it moves the cursor
-  // there rather than pressing it, so A finishes the job. Alternating until
-  // the screen reports itself gone beats guessing which of the two it wants.
-  for (let i = 0; i < 12 && (await naming()) === 1; i++) {
-    await rig.tap(w, i % 2 === 0 ? 'Start' : 'A', 8);
+  // Type a letter, then confirm.
+  //
+  // A name has to be entered: the screen will not leave on an empty field.
+  // One letter is enough, and it has to differ between the two consoles --
+  // stage 1's whole point is telling Player 1's stored record from Player
+  // 2's, and when both players are called the same thing it cannot. The
+  // keyboard opens on A, so this is A for core 0 and B for core 1.
+  for (let i = 0; i < letter; i++) { await rig.tap(w, 'Right', 6); await rig.wait(16); }
+  await rig.tap(w, 'A', 8);     // types it
+  await rig.wait(30);
+
+  // START moves the cursor to OK; it does not press it. Both, in that order,
+  // and then wait for the screen to say it has gone rather than assuming the
+  // press took.
+  for (let i = 0; i < 6 && (await naming()) === 1; i++) {
+    await rig.tap(w, 'Start', 8);
+    await rig.wait(24);
+    await rig.tap(w, 'A', 8);
     await rig.wait(40);
   }
   await until(0, 'the naming screen would not close');
@@ -315,10 +328,35 @@ export async function startRig({ rom, port, introLoops = 300, settle = 1200,
       if (!asking)
         throw new Error(`core ${w}: the first-run prompt never appeared`);
 
-      await answerFirstRunPrompt(api, w, 2, 2);
+      await answerFirstRunPrompt(api, w, 2, 2, false, w);
 
       if ((await api.u8(w, OFFSETS.firstRunRunningAddr)) !== 0)
         throw new Error(`core ${w}: still in the first-run prompt after answering`);
+    }
+
+    // And wait for them to end up together.
+    //
+    // On a first session Player 2 is placed next to Player 1, and that warp
+    // cannot happen while either of them is locked in the opening questions.
+    // So it lands a moment after the last answer, and a test that starts
+    // measuring before it does sees the two on different maps -- which is
+    // true, briefly, and not what it was looking at.
+    // PEER_SAME_MAP rather than two matching map numbers. The numbers match
+    // the instant the warp lands, but each console learns where the other is
+    // from their position broadcast, so for a moment afterwards they are
+    // standing together and neither of them knows it yet. A test that starts
+    // measuring in that moment sees a partner who is not there.
+    let together = false;
+    for (let i = 0; i < 80 && !together; i++) {
+      const mb = await api.mailboxes();
+      together = mb.every((x) => x.flags.includes('PEER_SAME_MAP'));
+      if (!together) await api.wait(30);
+    }
+    if (!together) {
+      const mb = await api.mailboxes();
+      throw new Error('the two players never ended up together ' +
+                      `(p1 ${mb[0].selfMap} ${mb[0].flags} | ` +
+                      `p2 ${mb[1].selfMap} ${mb[1].flags})`);
     }
   }
 

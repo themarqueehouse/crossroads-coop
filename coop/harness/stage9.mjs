@@ -21,7 +21,7 @@
 //      connect is the thing this exists to avoid.
 //
 //   node coop/harness/stage9.mjs path/to/rom.gba
-import { startRig, tally, OFFSETS } from './rig.mjs';
+import { startRig, tally, OFFSETS, answerFirstRunPrompt } from './rig.mjs';
 
 const PORT = 8799;
 const ROM = process.argv[2] || '/home/claude/crossroads/pokeemerald.gba';
@@ -49,8 +49,11 @@ async function nudge(rig, loops) {
 async function main() {
   // Unpaired: the relay is up, but the mailbox says the other player has not
   // joined. introLoops 0 so nothing mashes past the menu before we look.
+  // answerFirstRun off: the prompt cannot appear until the pair is up, and
+  // the whole point of this stage is that it is not, yet.
   const rig = await startRig({ rom: ROM, port: PORT, paired: false,
-                               introLoops: 0, settle: 0 });
+                               introLoops: 0, settle: 0,
+                               answerFirstRun: false });
   const t = tally();
 
   try {
@@ -128,6 +131,14 @@ async function main() {
     t.check('player 2 got in with no save and no intro',
             (await mapOf(rig, 1)) !== 0,
             'player 2 never reached the overworld');
+
+    // Both are asked who they are, and until they answer neither can be moved
+    // anywhere -- the placement warp will not run on a console whose controls
+    // are locked by a prompt. The rig answers these for every other stage; it
+    // cannot here, because they do not exist until the pair is up and the
+    // pair coming up is what this stage is about.
+    console.log('\n--- answering the opening questions ---');
+    for (const w of [0, 1]) await answerFirstRunPrompt(rig, w, 2, 2, false, w);
 
     // And in the same world as Player 1.
     //
