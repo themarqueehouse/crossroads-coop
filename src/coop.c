@@ -1,5 +1,6 @@
 #include "global.h"
 #include "coop.h"
+#include "random.h"
 #include "fieldmap.h"
 #include "palette.h"
 #include "money.h"
@@ -2816,4 +2817,66 @@ void Coop_FirstRunDone(struct ScriptContext *ctx)
     // which is the right outcome and costs nothing to arrange: the arming is
     // driven by the two things that are already persistent -- a brand-new
     // save on Player 1's side, and an unclaimed record on Player 2's.
+}
+
+// ---------------------------------------------------------------------------
+// The rare one in the grass.
+//
+// The hundred and eight placed legendaries are findable: each is standing
+// somewhere, and somebody will eventually walk into every cave. This is the
+// other kind -- the one that happens to you.
+//
+// A small chance, on any wild encounter anywhere, that what steps out is a
+// legendary instead of what the table said. It keeps the level of wherever you
+// are, so an early route gives you a small one and Victory Road gives you a
+// big one, and it is drawn only from the ones that wander in their own games:
+// the mythicals and the sub-legendaries. A box legendary is the centre of
+// somebody's story and belongs in the place it was put, not in a patch of
+// grass on Route 102.
+//
+// Nothing is marked when this happens. The placed one of the same species is
+// still standing where it was -- these are two different encounters with the
+// same Pokemon, and catching one in the wild does not take the other away.
+// ---------------------------------------------------------------------------
+
+// One in this many wild encounters. Tuned to be a thing that happens to you
+// perhaps once in a long playthrough rather than a thing you can farm: at a
+// few dozen encounters an hour in grass, this is most of a day of walking.
+#define WILD_LEGENDARY_ODDS 500
+
+// How many times to pick a species at random before giving up and leaving the
+// encounter alone. The legendaries are a few percent of the dex, so this finds
+// one almost always; failing is simply an ordinary encounter.
+#define WILD_LEGENDARY_TRIES 48
+
+u16 Coop_MaybeWildLegendary(u16 species)
+{
+    u16 i;
+
+    if (Random() % WILD_LEGENDARY_ODDS != 0)
+        return species;
+
+    for (i = 0; i < WILD_LEGENDARY_TRIES; i++)
+    {
+        u16 pick = (Random() % (NUM_SPECIES - 1)) + 1;
+
+        // Wanderers only. Everything else -- the box legendaries, the Ultra
+        // Beasts, the Paradox forms, the alternate forms -- has a place of its
+        // own and should be found there.
+        if (!gSpeciesInfo[pick].isSubLegendary && !gSpeciesInfo[pick].isMythical)
+            continue;
+        if (gSpeciesInfo[pick].isMegaEvolution || gSpeciesInfo[pick].isGigantamax
+            || gSpeciesInfo[pick].isTotem || gSpeciesInfo[pick].isPrimalReversion
+            || gSpeciesInfo[pick].isAlolanForm || gSpeciesInfo[pick].isGalarianForm
+            || gSpeciesInfo[pick].isHisuianForm || gSpeciesInfo[pick].isPaldeanForm)
+            continue;
+        // A species the build left out has no stats at all, and sending one
+        // into a battle is a blank sprite with no moves.
+        if (gSpeciesInfo[pick].baseHP == 0)
+            continue;
+
+        return pick;
+    }
+
+    return species;
 }

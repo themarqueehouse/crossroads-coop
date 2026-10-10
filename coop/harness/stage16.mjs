@@ -34,8 +34,24 @@ const MAP_PETALBURG_WOODS = 0x0f22;   // group 0x22, map 0x0f -- read below anyw
 const isBusy = async (rig, w) =>
   (await rig.mailbox(w)).flags.includes('SCRIPT_BUSY');
 
-const inBattle = async (rig, w) =>
-  (await rig.mailbox(w)).flags.includes('BATTLE');
+// Whether a battle is running, read from the battle rather than the mailbox.
+//
+// The mailbox's BATTLE flag means "the co-op session stood down for a battle",
+// which a co-op battle does and a wild battle does not -- so the first version
+// of this reported that talking to Celebi had done nothing while a Celebi was
+// on screen at level 50. An opponent with hit points is the battle itself
+// saying it exists.
+const inBattle = async (rig, w) => {
+  const { partiesAddr, sizeofPokemon, monMaxHp, partySize } = OFFSETS;
+  const enemy = partiesAddr + partySize * sizeofPokemon;   // B_TRAINER_1
+  return (await rig.u16(w, enemy + monMaxHp)) > 0;
+};
+
+// Clear the last battle's leftovers, so the check above is about this one.
+const forgetLastBattle = async (rig, w) => {
+  const { partiesAddr, sizeofPokemon, monMaxHp, partySize } = OFFSETS;
+  await rig.writeAt(w, partiesAddr + partySize * sizeofPokemon + monMaxHp, [0, 0]);
+};
 
 // Every object event on the map, as the console has them: local id, where it
 // is, and what it is drawn as. OBJ_EVENT_MON (1 << 14) marks a species sprite.
@@ -100,16 +116,26 @@ async function main() {
             `expected something near ${CELEBI.x},${CELEBI.y}`);
 
     // --- 4: the partner sees it too ---------------------------------------
-    const theirs = (await objects(rig, 1)).filter((o) => (o.gfx & OBJ_EVENT_MON) !== 0);
+    const allTheirs = await objects(rig, 1);
+    const theirs = allTheirs.filter((o) => (o.gfx & OBJ_EVENT_MON) !== 0);
+    // How full their object list is. There are only sixteen slots, and a map
+    // with its own NPCs plus a mirrored partner and two follower Pokemon can
+    // run out -- in which case whatever spawns last is simply not there.
+    t.note('partner object slots used', `${allTheirs.length} of ${OFFSETS.objectEventsCount}`);
+    t.note('ours', `${mine.length} of ${OFFSETS.objectEventsCount}`);
+    t.note('what the partner sees',
+           theirs.map((o) => `#${o.localId} species ${o.gfx & 0x3fff} at ${o.x},${o.y}`)
+                 .join('  ') || 'none');
     t.check('the partner is looking at the same one',
             theirs.some((o) => here && o.gfx === here.gfx),
-            `partner sees ${theirs.length} species sprites`);
+            `partner sees ${theirs.length} species sprites, none of them it`);
 
     // --- 3: talking to it starts a battle ---------------------------------
     //
     // Walk into it rather than guessing a facing: the warp lands the player
     // directly below, so north and A is the whole interaction.
     console.log('\n--- talking to it ---');
+    await forgetLastBattle(rig, 0);
     // The warp lands the player on the tile directly below it, so one press
     // north to face it and A to talk.
     await rig.tap(0, 'Up', 8);
@@ -126,8 +152,11 @@ async function main() {
             `script busy=${await isBusy(rig, 0)}, no battle`);
 
     if (fighting) {
-      const species = await rig.u16(0, OFFSETS.partiesAddr + OFFSETS.sizeofPokemon * 6);
-      t.note('battle started', 'the encounter is running');
+      const { partiesAddr, sizeofPokemon, monMaxHp, monLevel, partySize } = OFFSETS;
+      const enemy = partiesAddr + partySize * sizeofPokemon;
+      t.note('what stepped out',
+             `level ${await rig.u8(0, enemy + monLevel)}, ` +
+             `${await rig.u16(0, enemy + monMaxHp)} HP`);
     }
 
     // And the partner was not dragged into it: a legendary is a wild battle,

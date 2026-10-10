@@ -430,6 +430,15 @@ bool8 IsCoopSessionEngaged(void);
  * Both consoles must suspend at the same moment, which is what the sync gate in
  * front of a co-op battle is for.
  */
+/**
+ * A small chance that a wild encounter is a legendary instead.
+ *
+ * Pass the species the table chose; what comes back is either that species or
+ * one of the wandering legendaries. See the note in src/coop.c for which ones
+ * are eligible and why the box legendaries are not.
+ */
+u16 Coop_MaybeWildLegendary(u16 species);
+
 void Coop_SuspendForBattle(void);
 void Coop_ResumeAfterBattle(void);
 bool8 Coop_IsSuspendedForBattle(void);

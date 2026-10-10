@@ -1,4 +1,5 @@
 #include "global.h"
+#include "coop.h"
 #include "battle_setup.h"
 #include "battle_pike.h"
 #include "battle_pyramid.h"
@@ -537,7 +538,9 @@ static bool8 TryGenerateWildMon(const struct WildPokemonInfo *wildMonInfo, enum 
     if (gMapHeader.mapLayoutId != LAYOUT_BATTLE_FRONTIER_BATTLE_PIKE_ROOM_WILD_MONS && flags & WILD_CHECK_KEEN_EYE && !IsAbilityAllowingEncounter(level))
         return FALSE;
 
-    CreateWildMon(wildMonInfo->wildPokemon[wildMonIndex].species, level);
+    // A rare chance that something else entirely steps out. See
+    // Coop_MaybeWildLegendary; ordinarily this hands back what it was given.
+    CreateWildMon(Coop_MaybeWildLegendary(wildMonInfo->wildPokemon[wildMonIndex].species), level);
     return TRUE;
 }
 
