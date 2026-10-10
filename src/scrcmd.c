@@ -980,6 +980,25 @@ bool8 ScrCmd_coopscenewait(struct ScriptContext *ctx)
     return TRUE;
 }
 
+// A gate the player is allowed not to turn up to.
+//
+// coopgate waits for ever, which is right for the two halves of one scene: the
+// partner is certainly coming, and giving up would leave half a cutscene on one
+// console. It is wrong wherever either player can say no -- the one who said
+// yes would wait for ever -- so this one gives up and ends the script, with the
+// long timeout a player reading a question needs rather than the short one a
+// script already in motion gets.
+bool8 ScrCmd_coopreadygate(struct ScriptContext *ctx)
+{
+    u16 gateId = ScriptReadHalfword(ctx);
+
+    Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
+
+    Coop_BeginReadyGate(gateId);
+    SetupNativeScript(ctx, RunCoopSceneGate);
+    return TRUE;
+}
+
 // Both players against two trainers at once. The macro puts a waitstate after
 // this, and the battle's return path resumes the script.
 bool8 ScrCmd_coopbattle(struct ScriptContext *ctx)
@@ -1047,6 +1066,25 @@ bool8 ScrCmd_coopfollowme(struct ScriptContext *ctx)
 
     Coop_FollowMe();
     return FALSE;
+}
+
+// The two players against each other. The macro puts a waitstate after this,
+// and the battle's return path resumes the script.
+bool8 ScrCmd_cooppvp(struct ScriptContext *ctx)
+{
+    Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
+
+    // Nobody to fight. Can only happen if the partner walked off between
+    // agreeing and the gate opening, and the script's waitstate would then
+    // never be woken -- so end it here instead of locking the player in place.
+    if (!Coop_PartnerIsHere())
+    {
+        ScriptContext_Abort();
+        return TRUE;
+    }
+
+    Coop_StartPvpBattle();
+    return TRUE;
 }
 
 bool8 ScrCmd_coopbattleready(struct ScriptContext *ctx)

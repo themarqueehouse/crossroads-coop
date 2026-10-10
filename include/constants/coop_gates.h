@@ -29,7 +29,17 @@
 // time, since setting one up locks both players out of the overworld.
 #define GATE_COOP_BATTLE_READY 99
 
-// Gates 1-99 are reserved for testing the mechanism itself.
+// The two players agreeing to fight each other.
+//
+// Two ids, because the offer and the answer are separate moments. Pressing A
+// at your partner mirrors the offer onto their console (GATE_COOP_PVP), and
+// then each player answers for themselves -- whoever says yes first waits at
+// GATE_COOP_PVP_READY for the other's answer. Saying no simply never reports
+// the second gate, so the keen one is let go when it times out.
+#define GATE_COOP_PVP       97
+#define GATE_COOP_PVP_READY 98
+
+// Gates 1-96 are reserved for testing the mechanism itself.
 #define GATE_TEST        1
 #define GATE_TEST_SECOND 2
 #define GATE_TEST_GIFT   3

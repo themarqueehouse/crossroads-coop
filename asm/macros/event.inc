@@ -2034,6 +2034,32 @@
 	.byte SCR_OP_COOPFOLLOWME
 	.endm
 
+	@ A sync gate that gives up.
+	@
+	@ Use it where either player is allowed to say no. coopgate waits for
+	@ ever, which is right for two halves of one scene and wrong here: the
+	@ player who agreed would wait for ever on one who never will. This shows
+	@ the same "waiting for your partner" box, then releases them and ends the
+	@ script having changed nothing.
+	.macro coopgate_or_give_up id:req
+	.byte SCR_OP_COOPREADYGATE
+	.2byte \id
+	.endm
+
+	@ The two players against each other.
+	@
+	@ MUST sit inside a coopscene, and behind a gate that both players have
+	@ agreed at: this tears the co-op link down to build a link battle out of
+	@ it, and a console doing that while its partner is still walking around
+	@ gets no battle and a black screen until it gives up.
+	@
+	@ Costs nothing. Each party is put aside and handed back exactly as it
+	@ was, so nobody faints for real and nobody walks to a Center afterwards.
+	.macro cooppvp
+	.byte SCR_OP_COOPPVP
+	waitstate
+	.endm
+
 	.macro coopbattle trainer_a:req, trainer_b:req
 	.byte SCR_OP_COOPBATTLE
 	.2byte \trainer_a

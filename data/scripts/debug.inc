@@ -1129,3 +1129,29 @@ Debug_EventScript_TellTheTime_Text_0:
 
 DebugEventScript_PrintWeekday_Text_0:
 	.string "Time of day: {STR_VAR_1}$"
+
+@ OFFER YOUR PARTNER A BATTLE (R+Start, Scripts..., Script 20).
+@
+@ What pressing A at the other player does, reachable without walking the two
+@ sprites onto adjacent tiles -- which a test rig cannot do reliably and which
+@ is not the part under test anyway. Run on ONE console: the script mirrors
+@ itself onto the other, which is the first thing the check wants to see.
+Debug_EventScript_Script_20::
+	goto CoopEventScript_BattlePartner
+
+@ ONE POKEMON EACH (R+Start, Scripts..., Script 21). Run on BOTH consoles.
+@
+@ For the player-versus-player check. A battle between two full teams of six
+@ level-50 Pokemon takes thousands of frames and, more to the point, puts a
+@ replacement-choice screen in front of a test rig every time something
+@ faints -- a screen whose cursor opens on the Pokemon that just fainted, so
+@ a rig pressing A at it gets "there's no will to fight" for ever.
+@
+@ One each ends the moment either of them goes down, which is the part the
+@ check is actually about: that the battle ends, both consoles come back, and
+@ neither player is any worse off for it.
+Debug_EventScript_Script_21::
+	callnative Debug_ClearParty
+	givemon SPECIES_ZIGZAGOON, 5
+	release
+	end

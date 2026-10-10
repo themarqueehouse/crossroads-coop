@@ -144,7 +144,10 @@ export async function answerFirstRunPrompt(rig, w, girl = false, letter = 0) {
 // and by stages that need a fixture; the menu path is the same either way.
 const SCRIPTS_MENU_INDEX = 5;
 
-async function runDebugScriptOn(rig, w, slot) {
+// dismiss: whether to mash B afterwards until the script lets go. Right for a
+// fixture script that puts a box up on its way out, wrong for one whose whole
+// point is the prompt it leaves on screen -- B on a yes/no answers it no.
+export async function runDebugScriptOn(rig, w, slot, { dismiss = true } = {}) {
   for (let i = 0; i < 16; i++) {
     const mb = await rig.mailbox(w);
     if (!mb.flags.includes('SCRIPT_BUSY')) break;
@@ -163,6 +166,7 @@ async function runDebugScriptOn(rig, w, slot) {
   for (let i = 1; i < slot; i++) { await rig.tap(w, 'Down', 6); await rig.wait(8); }
   await rig.tap(w, 'A', 8);
   await rig.wait(40);
+  if (!dismiss) return;
   for (let i = 0; i < 12; i++) {
     const mb = await rig.mailbox(w);
     if (!mb.flags.includes('SCRIPT_BUSY')) return;

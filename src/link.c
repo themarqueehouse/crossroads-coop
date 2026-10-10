@@ -152,6 +152,16 @@ EWRAM_DATA u8 gCoopLinkErrorSite = 0;
 EWRAM_DATA u8 gCoopDbgRecvQueue = 0;
 EWRAM_DATA u32 gCoopLinkErrorStatus = 0;
 
+// How many times a close has run to completion this boot.
+//
+// Waiting for gReceivedRemoteLinkPlayers to fall is not a reliable way to ask
+// "has my link closed". Both consoles close at the same moment, and the first
+// one through opens a fresh link for whatever it was closing for -- a battle
+// -- whose player exchange sets that flag straight back to 1, often inside the
+// frame the other console was going to look. A counter that only ever goes up
+// cannot be missed that way.
+EWRAM_DATA u16 gCoopLinkClosedCount = 0;
+
 
 // Flow-control state. Stall above a quarter of the backlog -- early enough to
 // catch the drift before it becomes a loss, late enough that an ordinary burst
@@ -780,6 +790,36 @@ void ClearLinkCallback(void)
         ClearLinkRfuCallback();
     else
         gLinkCallback = NULL;
+}
+
+// Which stage of the close this console is at, for the test rig.
+//
+// 0 no callback at all (the close has not been asked for, or it finished),
+// 1 asked and waiting for the receive queue to empty, 2 told the partner and
+// waiting for them to say the same, 3 some other callback is installed -- and
+// 3 is the interesting one, because SetCloseLinkCallback quietly does nothing
+// when it finds one.
+u8 Coop_LinkCloseStage(void)
+{
+    if (gLinkCallback == NULL)
+        return 0;
+    if (gLinkCallback == LinkCB_ReadyCloseLink)
+        return 1;
+    if (gLinkCallback == LinkCB_WaitCloseLink)
+        return 2;
+    if (gLinkCallback == LinkCB_RequestPlayerDataExchange)
+        return 4;
+    if (gLinkCallback == LinkCB_SendHeldKeys)
+        return 5;
+    if (gLinkCallback == LinkCB_BlockSendBegin)
+        return 6;
+    if (gLinkCallback == LinkCB_BlockSend)
+        return 7;
+    if (gLinkCallback == LinkCB_BlockSendEnd)
+        return 8;
+    if (gLinkCallback == LinkCB_Standby || gLinkCallback == LinkCB_StandbyForAll)
+        return 9;
+    return 3;
 }
 
 void ClearLinkCallback_2(void)
@@ -1479,6 +1519,7 @@ static void LinkCB_WaitCloseLink(void)
         gBattleTypeFlags &= ~BATTLE_TYPE_LINK_IN_BATTLE;
         gLinkVSyncDisabled = TRUE;
         CloseLink();
+        gCoopLinkClosedCount++;
         gLinkCallback = NULL;
     }
 }
@@ -1539,6 +1580,7 @@ static void LinkCB_WaitCloseLinkWithJP(void)
         gBattleTypeFlags &= ~BATTLE_TYPE_LINK_IN_BATTLE;
         gLinkVSyncDisabled = TRUE;
         CloseLink();
+        gCoopLinkClosedCount++;
         gLinkCallback = NULL;
     }
 }

@@ -63,4 +63,21 @@ void Coop_CancelNextBattle(void);
 /** True from the moment a co-op battle starts until the field comes back. */
 bool8 Coop_IsBattleActive(void);
 
+/**
+ * Begin a battle between the two players.
+ *
+ * Must be called on BOTH consoles in the same moment, like Coop_StartBattle --
+ * the script that calls it puts both of them behind a gate first, because one
+ * console tearing its link down while the other is still walking about gives
+ * neither of them a battle.
+ *
+ * Nothing is kept: each party is put aside beforehand and handed back exactly
+ * as it was, so a fight between friends costs no Pokemon, no money and no walk
+ * to a Center.
+ */
+void Coop_StartPvpBattle(void);
+
+/** True while the two players are fighting each other, rather than trainers. */
+bool8 Coop_IsPvpActive(void);
+
 #endif // GUARD_COOP_BATTLE_H

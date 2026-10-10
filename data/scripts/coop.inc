@@ -31,6 +31,62 @@ CoopText_TestStillTogether:
 	.string "second gate.$"
 
 @ ---------------------------------------------------------------------------
+@ Battling each other.
+@
+@ "How do you battle each other?" -- you walk up to them and press A. That is
+@ the first place anyone would try, and the other player is the one thing in
+@ the world that is actually standing there.
+@
+@ It also stops a crash. The partner is a spawned object with no map template
+@ behind it, and the ordinary interaction path looks a script up through that
+@ template -- so before this, pressing A at your partner read a script pointer
+@ out of nothing and ran whatever it found.
+@
+@ The offer is mirrored, so both consoles ask. Each player then answers for
+@ themselves, because a battle that began when your friend pressed A at your
+@ back is not something you agreed to. Whoever says yes waits at the gate; a
+@ no never reports it, and the keen one is let go when it times out.
+@ ---------------------------------------------------------------------------
+CoopEventScript_BattlePartner::
+	coopscene GATE_COOP_PVP
+	lockall
+	msgbox CoopText_PvpOffer, MSGBOX_YESNO
+	goto_if_eq VAR_RESULT, NO, CoopEventScript_PvpDeclined
+	coopgate_or_give_up GATE_COOP_PVP_READY
+	cooppvp
+	releaseall
+	end
+
+CoopEventScript_PvpDeclined:
+	msgbox CoopText_PvpDeclined, MSGBOX_DEFAULT
+	releaseall
+	end
+
+@ Their follower Pokemon, which is also a spawned object with no template and
+@ so also had nothing to look a script up in. Nothing to do here but say
+@ something -- it is not yours, and it is not going to battle you.
+CoopEventScript_PartnersPokemon::
+	lockall
+	msgbox CoopText_PartnersPokemon, MSGBOX_DEFAULT
+	releaseall
+	end
+
+@ One page, deliberately. A \p needs a button press to turn it, and the press
+@ comes before the Yes/No rather than after -- so the box sat there looking
+@ answered while the answer went into the paragraph break.
+CoopText_PvpOffer:
+	.string "Battle each other? You both have\n"
+	.string "to say yes.$"
+
+CoopText_PvpDeclined:
+	.string "Not right now.$"
+
+CoopText_PartnersPokemon:
+	.string "This one is your partner's.\p"
+	.string "It doesn't look like it wants\n"
+	.string "anything to do with you.$"
+
+@ ---------------------------------------------------------------------------
 @ First run: who you are, and which Pokemon you start with.
 @
 @ What the opening would have asked, asked here instead. Two players skipping
@@ -249,7 +305,9 @@ CoopText_FirstRunPickRegion:
 CoopText_FirstRunReady:
 	.string "Then you're ready.\p"
 	.string "Your partner is out here too -\n"
-	.string "go and find out what's going on.$"
+	.string "go and find out what's going on.\p"
+	.string "Walk up to them and press A if you\n"
+	.string "ever want to battle each other.$"
 
 CoopText_StarterChosen:
 	.string "Your partner is picking theirs -\n"

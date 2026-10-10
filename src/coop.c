@@ -321,6 +321,8 @@ static EWRAM_DATA u16 sGateSendSeq = 0;
 // delivery; more costs nothing and covers a reconnect clearing the ring
 // mid-wait.
 static EWRAM_DATA u8 sGateSendsLeft = 0;
+// Frames spent holding an opened gate while the arrival is put on the wire.
+static EWRAM_DATA u8 sGateFlushFrames = 0;
 
 // The peer's last report, remembered across their arrivals and ours.
 static EWRAM_DATA u16 sPeerGateId = 0;
@@ -330,6 +332,10 @@ static EWRAM_DATA u16 sPeerGateSeq = 0;
 static EWRAM_DATA u16 sUsedPeerGateSeq = 0;
 
 #define GATE_SEND_REPEATS 4
+
+// How long the gate will hold while its own arrival goes out. A handful of
+// frames is all it should ever take; see Coop_GateIsOpen for the bound.
+#define GATE_FLUSH_MAX_FRAMES 30
 
 // How long a scene's opening gate waits before giving up. Generous, because the
 // usual reason the partner is slow is that they are mid-conversation with an NPC
@@ -389,6 +395,7 @@ void Coop_BeginGate(u16 gateId)
 {
     sGateId = gateId;
     sGateWaitFrames = 0;
+    sGateFlushFrames = 0;
     sGateCanTimeOut = FALSE;
     sGateTimedOut = FALSE;
 
@@ -429,6 +436,36 @@ bool8 Coop_GateIsOpen(void)
     if (!sGateOpen)
         return FALSE;
 
+    // Not until our own arrival has actually gone out.
+    //
+    // sGateSend* outlives the gate opening, and normally that is enough: the
+    // link callback drains it over the next few frames while the script walks
+    // on, and nobody notices the difference. It is not enough when the next
+    // thing the script does is take the link away.
+    //
+    // That is what a battle does. The player who answers second opens their
+    // gate on the same frame they arrive -- the partner's report was already
+    // waiting -- and goes straight into tearing the link down for the battle,
+    // before a single frame has carried their own report back. The partner,
+    // who is waiting to hear from US, hears nothing, sits out the full minute
+    // and gives up. One player in a battle, the other standing in a field.
+    //
+    // Four frames, and only while there is a link to put it on: with none,
+    // nothing will ever drain this and the hold would be permanent.
+    //
+    // Bounded all the same. The drain happens in the link callback, and a
+    // block send -- a trade, a battle setup, anything that calls
+    // InitBlockSend -- overwrites that callback outright. If one lands in
+    // these few frames the queue stops draining and a story scene that would
+    // merely have been a beat out of step becomes a game that has stopped.
+    // Better to go on with the report unsent than to stand here.
+    if (sGateSendsLeft != 0 && IsCoopLinkActive()
+        && sGateFlushFrames < GATE_FLUSH_MAX_FRAMES)
+    {
+        sGateFlushFrames++;
+        return FALSE;
+    }
+
     // This call is the one that releases the script, so the gate is done with.
     // The announcement is not: it lives in sGateSend* and goes out regardless.
     sGateId = 0;
@@ -464,7 +501,30 @@ void Coop_UpdateGate(void)
         sGateWaitFrames++;
 
     if (sGateCanTimeOut && sGateWaitFrames >= sGateTimeoutFrames)
+    {
         sGateTimedOut = TRUE;
+
+        // And say so, or the report we sent on arriving outlives the gate it
+        // belonged to.
+        //
+        // The partner stores the last thing they heard from us and keeps it
+        // until something spends it. A gate we gave up on is never spent, so
+        // it sits there -- and the next time the partner arrives at that same
+        // gate, however much later, it opens instantly on a report about a
+        // moment that was abandoned. They walk on alone while we are still
+        // reading the question.
+        //
+        // That is how the first attempt at a battle between the two players
+        // behaved: offer, decline, offer again, and the console that said yes
+        // first did not wait at all. It tore its link down for a battle the
+        // other player had not agreed to yet, could not close it with the
+        // partner's still open, and gave up a black screen later.
+        sGateSendId = 0;
+        if (++sGateSeq == 0)
+            sGateSeq = 1;
+        sGateSendSeq = sGateSeq;
+        sGateSendsLeft = GATE_SEND_REPEATS;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -660,7 +720,9 @@ static void Coop_UpdateFollow(void)
 // a command.
 static bool8 CoopSendGate(u16 *sendCmd)
 {
-    if (sGateSendId == 0 || sGateSendsLeft == 0)
+    // id 0 is a real report -- "I am not at a gate any more" -- so only the
+    // repeat count decides whether there is anything to send.
+    if (sGateSendsLeft == 0)
         return FALSE;
 
     sendCmd[0] = LINKCMD_COOP_GATE;

@@ -60,21 +60,24 @@ Route103_EventScript_RivalBrendan::
 
 Route103_EventScript_StartMayBattleTreecko::
 	coopscene GATE_ROUTE103_EVENTSCRIPT_STARTMAYBATTLETREECKO
-	coopnextbattle_split TRAINER_MAY_ROUTE_103_TORCHIC
+	@ Brendan stands in as the second trainer, not a second May: the filler
+	@ brings a sprite and a name and nothing else, and "MAY and MAY" reads as
+	@ a bug rather than as two rivals taking on the two of you.
+	coopnextbattle_split TRAINER_BRENDAN_ROUTE_103_TREECKO
 	trainerbattle_no_intro TRAINER_MAY_ROUTE_103_TREECKO, Route103_Text_MayDefeated
 	goto Route103_EventScript_AfterMayBattle
 	end
 
 Route103_EventScript_StartMayBattleTorchic::
 	coopscene GATE_ROUTE103_EVENTSCRIPT_STARTMAYBATTLETORCHIC
-	coopnextbattle_split TRAINER_MAY_ROUTE_103_TREECKO
+	coopnextbattle_split TRAINER_BRENDAN_ROUTE_103_TREECKO
 	trainerbattle_no_intro TRAINER_MAY_ROUTE_103_TORCHIC, Route103_Text_MayDefeated
 	goto Route103_EventScript_AfterMayBattle
 	end
 
 Route103_EventScript_StartMayBattleMudkip::
 	coopscene GATE_ROUTE103_EVENTSCRIPT_STARTMAYBATTLEMUDKIP
-	coopnextbattle_split TRAINER_MAY_ROUTE_103_TREECKO
+	coopnextbattle_split TRAINER_BRENDAN_ROUTE_103_TREECKO
 	trainerbattle_no_intro TRAINER_MAY_ROUTE_103_MUDKIP, Route103_Text_MayDefeated
 	goto Route103_EventScript_AfterMayBattle
 	end

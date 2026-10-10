@@ -4,6 +4,8 @@
 // Co-op. See data/scripts/coop.inc.
 extern const u8 CoopEventScript_PartnerNotHere[];
 extern const u8 CoopEventScript_FirstRun[];
+extern const u8 CoopEventScript_BattlePartner[];
+extern const u8 CoopEventScript_PartnersPokemon[];
 extern const u8 CoopText_WaitingForPartner[];
 
 extern const u8 EventScript_Follower[];

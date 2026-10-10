@@ -47,8 +47,10 @@
 // afterwards.
 // ---------------------------------------------------------------------------
 
-#define tState   data[0]
-#define tTimer   data[1]
+#define tState    data[0]
+#define tTimer    data[1]
+#define tClosedAt data[2]
+#define tEvicted  data[3]
 
 // How long to wait for the link to close before giving up.
 //
@@ -57,7 +59,21 @@
 // the overworld rather than leave them on a black screen for ever.
 #define CLOSE_TIMEOUT_FRAMES 300
 
+// How long to sit still after our own link has closed, before opening the
+// battle's. Long enough for a partner a frame or two behind to finish theirs.
+#define CLOSE_SETTLE_FRAMES 30
+
 static EWRAM_DATA bool8 sCoopBattleActive = FALSE;
+
+// The two players against each other, rather than side by side.
+//
+// Deliberately NOT sCoopBattleActive. That flag means "a link battle whose
+// opponents are AI trainers", and everything keyed on it -- generating the
+// opposing parties, naming them from the trainer table, awarding experience --
+// is wrong here. A battle between the two players is an ordinary link battle
+// and every piece of vanilla link behaviour is already correct for it. This
+// flag exists only for the way back out.
+static EWRAM_DATA bool8 sPvpActive = FALSE;
 
 // Whether the two opposing trainer slots share ONE trainer's team.
 //
@@ -92,6 +108,11 @@ static EWRAM_DATA bool8 sNextMarked = FALSE;
 bool8 Coop_IsBattleActive(void)
 {
     return sCoopBattleActive;
+}
+
+bool8 Coop_IsPvpActive(void)
+{
+    return sPvpActive;
 }
 
 bool8 Coop_BattleSplitsTeam(void)
@@ -149,9 +170,74 @@ static void CB2_ReturnFromCoopBattle(void)
     SetMainCallback2(next != NULL ? next : CB2_ReturnToFieldContinueScriptPlayMapMusic);
 }
 
+// Back to the field after the two players have fought each other.
+//
+// The party comes back exactly as it went in. A battle between friends costs
+// nothing -- nobody faints for real, nobody loses money, nobody walks to a
+// Center afterwards -- which is the same bargain the cable club strikes
+// (CB2_ReturnFromCableClubBattle restores the party too) and the reason a link
+// battle can be fought standing in the middle of a route.
+//
+// No win/loss record is kept. The trainer card's link record is keyed on the
+// trainer cards the cable club's lobby exchanges, which this never visits, so
+// writing one would file the result against a blank name.
+static void CB2_ReturnFromPvpBattle(void)
+{
+    LoadPlayerParty();
+
+    gBattleTypeFlags &= ~BATTLE_TYPE_LINK_IN_BATTLE;
+    Overworld_ResetMapMusic();
+
+    sPvpActive = FALSE;
+    Coop_ResumeAfterBattle();
+
+    SetMainCallback2(CB2_ReturnToFieldContinueScriptPlayMapMusic);
+}
+
+// How far the entry got, and whether it gave up. Read by the test rig by
+// symbol address.
+//
+// Everything this task does happens behind a fade to black, so from outside
+// there is nothing to see but a black screen on one console and an overworld
+// on the other -- which is the same picture whether the link would not close,
+// the battle never started, or it started and ended instantly.
+EWRAM_DATA u8 gCoopDbgBattleStep = 0;
+EWRAM_DATA u8 gCoopDbgBattleBail = 0;
+EWRAM_DATA u8 gCoopDbgBattlePlayers = 0;
+EWRAM_DATA u8 gCoopDbgBattleCb = 0;
+EWRAM_DATA u8 gCoopDbgBattleQueue = 0;
+EWRAM_DATA u8 gCoopDbgCloseTrace[24] = {0};
+EWRAM_DATA u8 gCoopDbgCloseTraceLen = 0;
+
 static void Task_CoopBattleStart(u8 taskId)
 {
     struct Task *task = &gTasks[taskId];
+
+    gCoopDbgBattleStep = task->tState;
+    gCoopDbgBattlePlayers = gReceivedRemoteLinkPlayers;
+    // Which stage of the close this console reached. SetCloseLinkCallback
+    // quietly does NOTHING when a link callback is already installed, and
+    // LinkCB_ReadyCloseLink only arms the wait once the receive queue is
+    // empty, so "the link would not close" has three quite different causes
+    // and they are indistinguishable from the black screen they all produce.
+    gCoopDbgBattleCb = Coop_LinkCloseStage();
+    gCoopDbgBattleQueue = GetLinkRecvQueueLength();
+
+    // Every change in the close's state, in order, because the interesting
+    // ones last a frame and a sampling test rig walks straight past them.
+    // Each byte is the close stage in the low nibble and whether the link was
+    // up in the high one.
+    {
+        u8 mark = gCoopDbgBattleCb
+                | ((gLinkStatus & LINK_STAT_CONN_ESTABLISHED) ? 0x10 : 0)
+                | (gReceivedRemoteLinkPlayers ? 0x20 : 0);
+        if (gCoopDbgCloseTraceLen == 0
+            || (gCoopDbgCloseTraceLen < ARRAY_COUNT(gCoopDbgCloseTrace)
+                && gCoopDbgCloseTrace[gCoopDbgCloseTraceLen - 1] != mark))
+        {
+            gCoopDbgCloseTrace[gCoopDbgCloseTraceLen++] = mark;
+        }
+    }
 
     switch (task->tState)
     {
@@ -194,12 +280,48 @@ static void Task_CoopBattleStart(u8 taskId)
         break;
 
     case 3:
+        // Remember how many closes have finished, so the next state can tell
+        // ours apart from any that came before.
+        task->tClosedAt = gCoopLinkClosedCount;
         SetCloseLinkCallback();
         task->tState++;
         break;
 
     case 4:
-        if (!gReceivedRemoteLinkPlayers)
+        // Our own close finishing is what we are waiting for -- not
+        // gReceivedRemoteLinkPlayers falling.
+        //
+        // That flag was the original test and it is unreliable here for a
+        // reason that only shows up with two consoles doing this at once. The
+        // partner is a frame or two ahead; the moment their close completes
+        // they open a NEW link for the battle, and its player exchange sets
+        // the flag straight back to 1 -- often within the same frame this
+        // state was going to look at it. The console a frame behind then waits
+        // for a moment that has already passed, times out, and walks back into
+        // the overworld while its partner sits in a battle waiting for a
+        // player who is never coming. That is exactly what the first two
+        // players to try battling each other saw: one black screen, one field.
+        //
+        // The counter only goes up, so it cannot be missed. The flag stays as
+        // a second way through for the case where there was nothing to close.
+        if (gCoopLinkClosedCount != task->tClosedAt || !gReceivedRemoteLinkPlayers)
+        {
+            task->tState++;
+        }
+        // The close we asked for was thrown away.
+        //
+        // LinkCB_WaitCloseLink holds until every player has said they are
+        // ready, and a player who closed a frame before us stops saying
+        // anything -- so the message can be missed and the wait never ends.
+        // Then the partner, already through, opens the battle's link and its
+        // player exchange answers with a block send; InitBlockSend overwrites
+        // the link callback outright, and our close is simply gone.
+        //
+        // Asking again would lose the same race again. There is nothing left
+        // to close for: the link the partner has just rebuilt is the one the
+        // battle is about to use, and they are on the other end of it waiting
+        // for us. So take it and go.
+        else if (Coop_LinkCloseStage() == 0 && ++task->tEvicted > 30)
         {
             task->tState++;
         }
@@ -213,19 +335,65 @@ static void Task_CoopBattleStart(u8 taskId)
             // and giving up here is the one path out that never reaches the
             // battle -- so without this the player walks away permanently
             // three Pokemon lighter.
-            if (sReducedParty)
+            if (sReducedParty || sPvpActive)
                 LoadPlayerParty();
             sReducedParty = FALSE;
             sSplitTeam = FALSE;
 
+            gCoopDbgBattleBail++;
+
             Coop_ResumeAfterBattle();
             sCoopBattleActive = FALSE;
+            sPvpActive = FALSE;
             SetMainCallback2(CB2_ReturnToFieldContinueScriptPlayMapMusic);
             DestroyTask(taskId);
         }
         break;
 
     case 5:
+        // Let the partner finish their own close before opening a new link.
+        //
+        // The two consoles close within a frame or two of each other, and the
+        // first one through goes straight on to open a fresh link for the
+        // battle. That new link's handshake lands on a partner who is one
+        // frame away from finishing their own close -- and handling it
+        // installs a link callback, evicting the close they were in the
+        // middle of. They are left holding a link they did not ask for,
+        // waiting for a close that can no longer happen, until the timeout
+        // sends them back to the overworld. Meanwhile their partner is sat in
+        // a battle waiting for a player who has gone home: one black screen,
+        // one field, which is exactly what the first attempt at this produced.
+        if (++task->tTimer > CLOSE_SETTLE_FRAMES)
+        {
+            task->tTimer = 0;
+            task->tState++;
+        }
+        break;
+
+    case 6:
+        if (sPvpActive)
+        {
+            // The two players against each other: a plain two-player link
+            // battle, which is the one configuration in the game that already
+            // means exactly this. No MULTI, no BATTLE_TOWER -- both of those
+            // are there to make four players' worth of machinery behave for
+            // two, and with two real humans on opposite sides there is nothing
+            // to correct.
+            PlayMapChosenOrBattleBGM(MUS_VS_TRAINER);
+
+            gBattleTypeFlags = BATTLE_TYPE_LINK | BATTLE_TYPE_TRAINER;
+
+            // The battle needs somebody in the opponent slot even though the
+            // opponent's Pokemon arrive over the wire.
+            TRAINER_BATTLE_PARAM.opponentA = TRAINER_LINK_OPPONENT;
+
+            CleanupOverworldWindowsAndTilemaps();
+            gMain.savedCallback = CB2_ReturnFromPvpBattle;
+            SetMainCallback2(CB2_InitBattle);
+            DestroyTask(taskId);
+            break;
+        }
+
         PlayMapChosenOrBattleBGM(MUS_VS_GYM_LEADER);
 
         gBattleTypeFlags = BATTLE_TYPE_BATTLE_TOWER
@@ -244,6 +412,8 @@ static void Task_CoopBattleStart(u8 taskId)
 
 #undef tState
 #undef tTimer
+#undef tClosedAt
+#undef tEvicted
 
 void Coop_StartBattle(u16 opponentA, u16 opponentB, bool8 splitTeam)
 {
@@ -277,6 +447,29 @@ void Coop_StartBattle(u16 opponentA, u16 opponentB, bool8 splitTeam)
         ReducePlayerPartyToSelectedMons();
         sReducedParty = TRUE;
     }
+    CreateTask(Task_CoopBattleStart, 0);
+}
+
+void Coop_StartPvpBattle(void)
+{
+    sPvpActive = TRUE;
+    sCoopBattleActive = FALSE;
+    sSplitTeam = FALSE;
+    sReducedParty = FALSE;
+
+    // Nothing to chain: this battle is not part of a story beat with a script
+    // waiting on the other side of it, and the saved callback at this point
+    // belongs to whatever last used it.
+    sChainedCallback = NULL;
+
+    // Put the party somewhere safe before the battle touches it. The battle
+    // itself does the damage; CB2_ReturnFromPvpBattle hands it all back.
+    SavePlayerParty();
+
+    // Whole party, whatever each player happens to be carrying. The picker is
+    // for the split battles, where a cap is what keeps the fight honest against
+    // a gym leader's six -- here both sides are a player's own team and
+    // whatever they have is, by definition, a fair fight between them.
     CreateTask(Task_CoopBattleStart, 0);
 }
 

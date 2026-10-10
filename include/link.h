@@ -374,6 +374,8 @@ bool8 DoesLinkPlayerCountMatchSaved(void);
 void SetCloseLinkCallbackAndType(u16 type);
 bool32 IsSendingKeysToLink(void);
 u32 GetLinkRecvQueueLength(void);
+u8 Coop_LinkCloseStage(void);
+extern u16 gCoopLinkClosedCount;
 bool32 ShouldCheckForUnionRoom(void);
 
 #endif // GUARD_LINK_H

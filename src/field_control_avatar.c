@@ -1,6 +1,7 @@
 #include "global.h"
 #include "battle_setup.h"
 #include "bike.h"
+#include "coop.h"
 #include "coord_event_weather.h"
 #include "daycare.h"
 #include "debug.h"
@@ -400,6 +401,20 @@ static const u8 *GetInteractedObjectEventScript(struct MapPosition *position, u8
 
     gSelectedObjectEvent = objectEventId;
     gSpecialVar_LastTalked = gObjectEvents[objectEventId].localId;
+
+    // The other player, and their Pokemon.
+    //
+    // Both are spawned objects with no entry in the map's object template list,
+    // and the lookup below goes through that list -- so without this, pressing A
+    // at your partner dereferences a template that was never there and runs
+    // whatever it finds as a script. These two have to be answered here, before
+    // anything tries to find them a script of their own.
+    if (Coop_IsPartnerObject(&gObjectEvents[objectEventId]))
+    {
+        return gObjectEvents[objectEventId].localId == COOP_PEER_LOCAL_ID
+             ? CoopEventScript_BattlePartner
+             : CoopEventScript_PartnersPokemon;
+    }
 
     if (InTrainerHill() == TRUE)
         script = GetTrainerHillTrainerScript();

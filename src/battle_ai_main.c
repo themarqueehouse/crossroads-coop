@@ -265,6 +265,18 @@ static u64 GetAiFlags(u16 trainerId, enum BattlerId battler)
             flags = GetAiScriptsInBattleFactory();
         else if (gBattleTypeFlags & (BATTLE_TYPE_FRONTIER | BATTLE_TYPE_EREADER_TRAINER | BATTLE_TYPE_TRAINER_HILL | BATTLE_TYPE_SECRET_BASE))
             flags = AI_FLAG_CHECK_BAD_MOVE | AI_FLAG_CHECK_VIABILITY | AI_FLAG_TRY_TO_FAINT;
+        // The link and union-room opponents are placeholder ids with no entry
+        // in the trainer table, and the line below reads that entry. A battle
+        // against another person has no AI to set up anyway -- they are the
+        // one choosing the moves -- so there is nothing to look up.
+        //
+        // Reached by every plain two-player link battle, the cable club's
+        // included: BATTLE_TYPE_HAS_AI is defined to include BATTLE_TYPE_TRAINER,
+        // so a link battle is treated as having an AI side right up to the
+        // point where it asks which trainer that AI is. The ROM stops on an
+        // "INVALID TRAINER: 65281" assert, 65281 being TRAINER_LINK_OPPONENT.
+        else if (IsSpecialTrainer(trainerId))
+            flags = 0;
         else
             flags = GetTrainerAIFlagsFromId(trainerId);
     }

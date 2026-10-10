@@ -53,6 +53,21 @@ const unsigned gCoopWorldOffsets[] = {
     FLAG_SYS_POKEDEX_GET,
 };
 
+// The player's own party, for checking that a battle gave it back.
+//
+// A battle between the two players is meant to cost nothing: the party is put
+// aside beforehand and restored afterwards. "Restored" is a claim about HP, so
+// the harness has to be able to read HP -- and struct Pokemon's layout is not
+// something to restate in JavaScript, since hp sits past a BoxPokemon whose
+// size moves with every expansion feature that touches it.
+const unsigned gCoopPartyOffsets[] = {
+    sizeof(struct Pokemon),
+    offsetof(struct Pokemon, hp),
+    offsetof(struct Pokemon, maxHP),
+    offsetof(struct Pokemon, level),
+    PARTY_SIZE,
+};
+
 // Map object events, for checking what the partner's console actually drew.
 //
 // "The partner's follower is mirrored" is not a claim the mailbox can settle:

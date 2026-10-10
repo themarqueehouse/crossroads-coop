@@ -70,6 +70,9 @@ WANTED_SYMBOLS = {
     # other's, and the resulting half-picked party read as a battle that never
     # started.
     "gSelectedOrderFromParty": "selectedOrderAddr",
+    # gPlayerParty is a macro for gParties[B_TRAINER_0], so the symbol to
+    # find is the array itself; the player's own six are the first row.
+    "gParties": "partiesAddr",
     # Set the moment ChooseHalfPartyForBattle is called, so the harness can
     # wait for the menu to actually exist instead of waiting a fixed number of
     # frames and hoping. The guest's picker opens later than the host's, and
@@ -118,6 +121,27 @@ WANTED_SYMBOLS = {
     # Whether this console is in the opening questions. SCRIPT_BUSY is equally
     # true of a signpost, so the rig cannot tell from that whether it is
     # looking at the first-run prompts or at something it pressed by accident.
+    # Whether the two players are fighting each other rather than trainers.
+    # The battle type flags alone cannot say: a co-op battle against trainers
+    # is a link battle too, and the difference between them is which parties
+    # are on the far side.
+    "sPvpActive": "pvpActiveAddr",
+    # How far the battle entry got, and whether it gave up waiting for the
+    # link to close. Everything it does is behind a fade, so a console that
+    # never arrives looks the same as one that arrived and left.
+    "gCoopDbgBattleStep": "dbgBattleStepAddr",
+    "gCoopDbgBattleBail": "dbgBattleBailAddr",
+    "gCoopDbgBattlePlayers": "dbgBattlePlayersAddr",
+    "gCoopDbgBattleCb": "dbgBattleCbAddr",
+    # Counts the times SetCloseLinkCallback was asked to close a link and
+    # found another callback already installed -- in which case it does
+    # nothing at all, silently, and whoever was waiting for the close waits
+    # for ever.
+    "sReadyCloseLinkAttempts": "readyCloseAttemptsAddr",
+    "gCoopLinkClosedCount": "linkClosedCountAddr",
+    "gCoopDbgCloseTrace": "dbgCloseTraceAddr",
+    "gCoopDbgCloseTraceLen": "dbgCloseTraceLenAddr",
+    "gCoopDbgBattleQueue": "dbgBattleQueueAddr",
     "sFirstRunPending": "firstRunPendingAddr",
     "sFirstRunRunning": "firstRunRunningAddr",
     "sFirstRunNaming": "firstRunNamingAddr",
@@ -129,6 +153,9 @@ ARRAYS = {
         "sizeofSaveBlock1", "sizeofCoopPlayer2", "coopPlayer2",
         "playerName", "playerGender", "partyCount", "claimed",
         "pos", "location", "party",
+    ],
+    "gCoopPartyOffsets": [
+        "sizeofPokemon", "monHp", "monMaxHp", "monLevel", "partySize",
     ],
     "gCoopObjectOffsets": [
         "sizeofObjectEvent", "objLocalId", "objCurrentCoords", "objGraphicsId",

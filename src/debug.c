@@ -395,6 +395,8 @@ extern const u8 Debug_EventScript_Script_16[];
 extern const u8 Debug_EventScript_Script_17[];
 extern const u8 Debug_EventScript_Script_18[];
 extern const u8 Debug_EventScript_Script_19[];
+extern const u8 Debug_EventScript_Script_20[];
+extern const u8 Debug_EventScript_Script_21[];
 extern const u8 DebugScript_DaycareMonsNotCompatible[];
 extern const u8 DebugScript_OneDaycareMons[];
 extern const u8 DebugScript_ZeroDaycareMons[];
@@ -680,6 +682,8 @@ static const struct DebugMenuOption sDebugMenu_Actions_Scripts[] =
     { COMPOUND_STRING("Script 17"), DebugAction_ExecuteScript, Debug_EventScript_Script_17 },
     { COMPOUND_STRING("Script 18"), DebugAction_ExecuteScript, Debug_EventScript_Script_18 },
     { COMPOUND_STRING("Script 19"), DebugAction_ExecuteScript, Debug_EventScript_Script_19 },
+    { COMPOUND_STRING("Script 20"), DebugAction_ExecuteScript, Debug_EventScript_Script_20 },
+    { COMPOUND_STRING("Script 21"), DebugAction_ExecuteScript, Debug_EventScript_Script_21 },
     { NULL }
 };
 
