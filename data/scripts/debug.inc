@@ -1184,3 +1184,36 @@ Debug_EventScript_Script_23::
 	waitstate
 	release
 	end
+
+@ ALL SIXTEEN BADGES (R+Start, Scripts..., Script 24).
+@
+@ For checking the Trainer Card shows Kanto's eight as well as Hoenn's. The
+@ Kanto gyms set both their own flag and the original Hoenn one, because
+@ plenty of things gate on the originals; this sets the same pairs.
+Debug_EventScript_Script_24::
+	setflag FLAG_BADGE01_GET
+	setflag FLAG_BADGE02_GET
+	setflag FLAG_BADGE03_GET
+	setflag FLAG_BADGE04_GET
+	setflag FLAG_BADGE05_GET
+	setflag FLAG_BADGE06_GET
+	setflag FLAG_BADGE07_GET
+	setflag FLAG_BADGE08_GET
+	setflag FLAG_DEFEATED_RUSTBORO_GYM
+	setflag FLAG_DEFEATED_DEWFORD_GYM
+	setflag FLAG_DEFEATED_MAUVILLE_GYM
+	setflag FLAG_DEFEATED_LAVARIDGE_GYM
+	setflag FLAG_DEFEATED_PETALBURG_GYM
+	setflag FLAG_DEFEATED_FORTREE_GYM
+	setflag FLAG_DEFEATED_MOSSDEEP_GYM
+	setflag FLAG_DEFEATED_SOOTOPOLIS_GYM
+	setflag FLAG_KANTO_BADGE01_GET
+	setflag FLAG_KANTO_BADGE02_GET
+	setflag FLAG_KANTO_BADGE03_GET
+	setflag FLAG_KANTO_BADGE04_GET
+	setflag FLAG_KANTO_BADGE05_GET
+	setflag FLAG_KANTO_BADGE06_GET
+	setflag FLAG_KANTO_BADGE07_GET
+	setflag FLAG_KANTO_BADGE08_GET
+	release
+	end

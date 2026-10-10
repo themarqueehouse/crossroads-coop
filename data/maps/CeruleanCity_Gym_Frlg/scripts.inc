@@ -19,6 +19,8 @@ CeruleanCity_Gym_EventScript_MistyDefeated::
 	famechecker FAMECHECKER_MISTY, 1
 	setflag FLAG_DEFEATED_MISTY
 	setflag FLAG_BADGE02_GET
+	@ And Kanto's own, so the Trainer Card can tell the two regions apart.
+	setflag FLAG_KANTO_BADGE02_GET
 	setrespawn HEAL_LOCATION_CERULEAN_CITY
 	set_gym_trainers_frlg 2
 	goto CeruleanCity_Gym_EventScript_GiveTM03

@@ -827,15 +827,19 @@ static void SetDataFromTrainerCard(void)
         FLAG_DEFEATED_MOSSDEEP_GYM,
         FLAG_DEFEATED_SOOTOPOLIS_GYM,
 
-        // Kanto
-        FLAG_BADGE01_GET,
-        FLAG_BADGE02_GET,
-        FLAG_BADGE03_GET,
-        FLAG_BADGE04_GET,
-        FLAG_BADGE05_GET,
-        FLAG_BADGE06_GET,
-        FLAG_BADGE07_GET,
-        FLAG_BADGE08_GET,
+        // Kanto.
+        //
+        // These were FLAG_BADGE01_GET..08 -- Hoenn's own flags, listed twice
+        // -- so the second row lit up as you earned the first eight and no
+        // Kanto badge ever showed. See constants/coop_badges.h.
+        FLAG_KANTO_BADGE01_GET,
+        FLAG_KANTO_BADGE02_GET,
+        FLAG_KANTO_BADGE03_GET,
+        FLAG_KANTO_BADGE04_GET,
+        FLAG_KANTO_BADGE05_GET,
+        FLAG_KANTO_BADGE06_GET,
+        FLAG_KANTO_BADGE07_GET,
+        FLAG_KANTO_BADGE08_GET,
     };
 
     sData->hasPokedex = FALSE;

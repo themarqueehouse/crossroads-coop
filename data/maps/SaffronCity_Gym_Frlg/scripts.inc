@@ -21,6 +21,8 @@ SaffronCity_Gym_EventScript_DefeatedSabrina::
 	clearflag FLAG_HIDE_SAFFRON_CITY_POKECENTER_SABRINA_JOURNALS
 	setflag FLAG_DEFEATED_SABRINA
 	setflag FLAG_BADGE06_GET
+	@ And Kanto's own, so the Trainer Card can tell the two regions apart.
+	setflag FLAG_KANTO_BADGE06_GET
 	set_gym_trainers_frlg 6
 	goto SaffronCity_Gym_EventScript_GiveTM04
 	end

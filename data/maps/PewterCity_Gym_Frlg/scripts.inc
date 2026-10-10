@@ -19,6 +19,8 @@ PewterCity_Gym_EventScript_DefeatedBrock::
 	famechecker FAMECHECKER_BROCK, 1
 	setflag FLAG_DEFEATED_BROCK
 	setflag FLAG_BADGE01_GET
+	@ And Kanto's own, so the Trainer Card can tell the two regions apart.
+	setflag FLAG_KANTO_BADGE01_GET
 	setvar VAR_MAP_SCENE_PEWTER_CITY, 1
 	setflag FLAG_HIDE_PEWTER_CITY_GYM_GUIDE
 	clearflag FLAG_HIDE_PEWTER_CITY_RUNNING_SHOES_GUY

@@ -86,6 +86,34 @@ async function main() {
     if ((await rig.mailboxes()).some((x) => x.state !== 'ACTIVE'))
       throw new Error('the session never reached ACTIVE');
 
+    // --------------------------------------------- sixteen badges, shown
+    //
+    // "Kanto badges don't appear on the Trainer Card" was in the hack's own
+    // known-issues list, and the reason was that they were never recorded:
+    // every Kanto gym set Hoenn's eight flags, so the card's second row of
+    // eight was lighting from the first row's. Kanto has its own flags now.
+    console.log('\n--- the trainer card ---');
+    await runDebugScriptOn(rig, 0, 24);
+    await rig.wait(120);
+    // Start, then down twice to PLAYER1 -- the menu is POKeMON, BAG,
+    // PLAYER1, SAVE, OPTION, EXIT and the cursor opens on the first -- then A.
+    // The screenshot comes after the card is open, which the previous version
+    // got wrong: it photographed, then pressed, so every frame caught was the
+    // menu rather than the card.
+    await rig.tap(0, 'Start', 10);
+    await rig.wait(120);
+    await rig.tap(0, 'Down', 10);
+    await rig.wait(40);
+    await rig.tap(0, 'Down', 10);
+    await rig.wait(40);
+    await rig.tap(0, 'A', 10);
+    await rig.wait(240);
+    await rig.shot('/tmp/claude-0/stage16-card');
+    await rig.tap(0, 'B', 10);
+    await rig.wait(120);
+    await rig.tap(0, 'B', 10);
+    await rig.wait(120);
+
     console.log('\n--- a team, and then into the woods ---');
     await runDebugScriptOn(rig, 0, 5);
     await rig.wait(60);

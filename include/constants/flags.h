@@ -2452,5 +2452,6 @@
 // The scattered legendaries, one flag each. Included here so every place that
 // already sees a flag name -- scripts, map data, C -- sees these too.
 #include "constants/coop_legendaries.h"
+#include "constants/coop_badges.h"
 
 #endif // GUARD_CONSTANTS_FLAGS_H

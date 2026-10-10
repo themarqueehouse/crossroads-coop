@@ -63,6 +63,8 @@ CinnabarIsland_Gym_EventScript_DefeatedBlaine::
 	famechecker FAMECHECKER_BLAINE, 1
 	setflag FLAG_DEFEATED_BLAINE
 	setflag FLAG_BADGE07_GET
+	@ And Kanto's own, so the Trainer Card can tell the two regions apart.
+	setflag FLAG_KANTO_BADGE07_GET
 	setrespawn HEAL_LOCATION_CINNABAR_ISLAND
 	setvar VAR_MAP_SCENE_CINNABAR_ISLAND, 1
 	clearflag FLAG_HIDE_CINNABAR_BILL

@@ -20,6 +20,8 @@ FuchsiaCity_Gym_EventScript_DefeatedKoga::
 	clearflag FLAG_HIDE_FAME_CHECKER_KOGA_JOURNAL
 	setflag FLAG_DEFEATED_KOGA
 	setflag FLAG_BADGE05_GET
+	@ And Kanto's own, so the Trainer Card can tell the two regions apart.
+	setflag FLAG_KANTO_BADGE05_GET
 	set_gym_trainers_frlg 5
 	goto FuchsiaCity_Gym_EventScript_GiveTM06
 	end
