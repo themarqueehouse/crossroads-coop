@@ -8,7 +8,7 @@ name: Build co-op ROM
 
 on:
   push:
-    branches: [master, coop-netplay, main]
+    branches: [master, coop-netplay, coop-player2-autojoin, main]
     paths-ignore:
       - 'coop/**'
       - '**.md'
