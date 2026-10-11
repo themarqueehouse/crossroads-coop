@@ -68,6 +68,13 @@ LEVELS = {'isMythical': 50, 'isSubLegendary': 55, 'isUltraBeast': 55,
 OUTDOOR_TYPES = {'MAP_TYPE_ROUTE', 'MAP_TYPE_UNDERGROUND', 'MAP_TYPE_UNDERWATER',
                  'MAP_TYPE_OCEAN_ROUTE'}
 
+# Maps the story takes away. Mirage Tower collapses the moment the player picks
+# up a fossil, which is an ordinary thing to do early, and everything inside it
+# goes with it -- so a legendary standing there is one the player can lose
+# without ever knowing it was there.
+TRANSIENT = {'MAP_MIRAGE_TOWER_1F', 'MAP_MIRAGE_TOWER_2F',
+             'MAP_MIRAGE_TOWER_3F', 'MAP_MIRAGE_TOWER_4F'}
+
 # Name fragments that say "this is off the beaten path", and what they are
 # worth. A legendary at the back of a cave reads very differently from one
 # standing on a city route.
@@ -106,8 +113,90 @@ STATS = ('baseHP', 'baseAttack', 'baseDefense', 'baseSpeed', 'baseSpAttack',
          'baseSpDefense')
 
 
+# A base stat is not always a number.
+#
+#     .baseDefense   = P_UPDATED_STATS >= GEN_9 ? 110 : 120,
+#     .baseSpAttack  = CHARIZARD_SP_ATK,          @ which is the same thing
+#
+# A hundred and sixty-five species write at least one stat as a conditional on
+# the build's own configuration, directly or through a named macro. Reading only
+# plain digits did not give those species a wrong stat, it dropped them from the
+# file entirely -- and a species this script cannot see is a species it cannot
+# place. That is why Cresselia, Zacian and Zamazenta ended up with nowhere in
+# the world to be: not a shortage of caves, a regex.
+#
+# So the expression is resolved rather than assumed: the macros are read out of
+# the same headers, P_UPDATED_STATS is read from the config, and what is left is
+# arithmetic. If the config moves, this moves with it.
+GEN_RE = re.compile(r'\bGEN_(\d+)\b')
+STAT_MACRO = re.compile(r'^#define\s+([A-Z][A-Z0-9_]*)\s+(\(.*\))\s*$', re.M)
+
+
+def config_gen(name, default=9):
+    """What a GEN_* config constant resolves to, following one indirection."""
+    for path in ('include/config/pokemon.h', 'include/config/general.h'):
+        if not os.path.exists(path):
+            continue
+        m = re.search(r'^#define\s+%s\s+(\w+)' % name, open(path).read(), re.M)
+        if not m:
+            continue
+        value = m.group(1)
+        if value.isdigit():
+            return int(value)
+        g = GEN_RE.match(value)
+        if g:
+            return int(g.group(1))
+        if value != name:
+            return config_gen(value, default)
+    return default
+
+
+def stat_macros():
+    out = {}
+    for path in sorted(glob.glob(SPECIES_INFO)):
+        for m in STAT_MACRO.finditer(open(path).read()):
+            out[m.group(1)] = m.group(2)
+    return out
+
+
+def resolve_stat(expr, macros, updated_stats):
+    """A stat expression as an integer, or None if it is not one."""
+    expr = expr.strip()
+    for _ in range(4):                      # macros expanding to macros
+        if expr in macros:
+            expr = macros[expr].strip()
+            # The macros are written parenthesised. The ternary rewrite below
+            # splits on ? and :, which puts the opening bracket on one side of
+            # the split and the closing one on the other.
+            while expr.startswith('(') and expr.endswith(')'):
+                expr = expr[1:-1].strip()
+        else:
+            break
+    if expr.isdigit():
+        return int(expr)
+
+    # C to Python, then arithmetic. Only the vocabulary these files use.
+    py = expr.replace('||', ' or ').replace('&&', ' and ')
+    py = py.replace('P_UPDATED_STATS', str(updated_stats))
+    py = GEN_RE.sub(lambda m: m.group(1), py)
+    # Checked before the ternary is rewritten, because the rewrite introduces
+    # `if` and `else` and would then fail its own test.
+    if re.search(r'[A-Za-z_]', py.replace(' or ', ' | ').replace(' and ', ' & ')):
+        return None
+    m = re.match(r'^(.*?)\?(.*?):(.*)$', py, re.S)
+    if m:
+        py = '(%s) if (%s) else (%s)' % (m.group(2), m.group(1), m.group(3))
+    try:
+        value = eval(py, {'__builtins__': {}}, {})
+    except Exception:
+        return None
+    return int(value) if isinstance(value, (int, float)) else None
+
+
 def read_species():
     out = {}
+    macros = stat_macros()
+    updated = config_gen('P_UPDATED_STATS')
     for path in sorted(glob.glob(SPECIES_INFO)):
         text = open(path).read()
         starts = [(m.group(1), m.start(), m.end()) for m in ENTRY.finditer(text)]
@@ -116,8 +205,8 @@ def read_species():
             body = text[body_at:end]
             stats = []
             for field in STATS:
-                m = re.search(r'\.%s\s*=\s*(\d+)' % field, body)
-                stats.append(int(m.group(1)) if m else None)
+                m = re.search(r'\.%s\s*=\s*([^,\n]+),' % field, body)
+                stats.append(resolve_stat(m.group(1), macros, updated) if m else None)
             if any(s is None for s in stats):
                 continue
             types = re.search(r'\.types\s*=\s*MON_TYPES\(([^)]*)\)', body)
@@ -134,11 +223,49 @@ def read_species():
 
 
 def already_placed():
+    """Legendaries the HACK stands somewhere -- not the ones this script does.
+
+    SCRIPTS_OUT is this script's own output, so counting it as evidence made
+    the tool unable to notice that one of its own legendaries had lost its map.
+    What this script placed is tracked by previous_run, from the object events.
+    """
     placed = set()
     for path in glob.glob('data/maps/*/scripts.inc') + glob.glob('data/scripts/*.inc'):
+        if os.path.abspath(path) == os.path.abspath(SCRIPTS_OUT):
+            continue
         for m in re.finditer(r'setwildbattle\s+(SPECIES_[A-Z0-9_]+)', open(path).read()):
             placed.add(m.group(1))
     return placed
+
+
+# What an earlier run of this script already put in the world.
+#
+# This mattered because the emit phase used to rewrite the flags header and the
+# script file from scratch. Run it again to place a legendary it had missed and
+# it would place that one and delete the hundred and eight it had placed before
+# -- so the generator could only ever be run once, and a gap in its output could
+# not be closed by fixing the generator. Now it reads its own previous output
+# and adds to it.
+def previous_run():
+    """(species -> flag, species actually standing somewhere, maps in use)."""
+    flags = {}
+    if os.path.exists(FLAGS_OUT):
+        for m in re.finditer(r'#define\s+FLAG_LEGENDARY_([A-Z0-9_]+)\s+(0x[0-9A-Fa-f]+)',
+                             open(FLAGS_OUT).read()):
+            flags['SPECIES_' + m.group(1)] = int(m.group(2), 16)
+
+    standing, taken = set(), set()
+    for path in sorted(glob.glob('data/maps/*/map.json')):
+        text = open(path).read()
+        if 'FLAG_LEGENDARY_' not in text:
+            continue
+        taken.add(json.loads(text)['id'])
+        for m in re.finditer(r'FLAG_LEGENDARY_([A-Z0-9_]+)', text):
+            standing.add('SPECIES_' + m.group(1))
+    # A flag with no object is a legendary that was placed somewhere and then
+    # had its map taken away from it -- Necrozma was in Mirage Tower, which the
+    # fossil event demolishes. It keeps its flag and gets a new home.
+    return flags, standing, taken
 
 
 def read_maps():
@@ -371,18 +498,29 @@ def main():
 
     info = read_species()
     placed = already_placed()
+    done, standing, taken = previous_run()
+    # Already placed means standing in the world, not merely holding a flag.
+    placed |= standing
     maps = read_maps()
     lays = layouts()
     levels = map_levels()
 
     # One species per dex number; legendaries only; no alternate forms.
+    #
+    # Where a legendary exists ONLY as named forms -- Zacian is ZACIAN_HERO and
+    # ZACIAN_CROWNED and nothing else -- the weakest is the one to put in the
+    # world. It is the form the species is found in; the heavier one is what it
+    # becomes while holding an item it has not been given yet, and taking the
+    # name alphabetically picked that one.
     by_dex = {}
     for name, sp in sorted(info.items()):
         if not sp['dex'] or sp['flags'] & FORM_FLAGS:
             continue
         if not (sp['flags'] & LEGENDARY_FLAGS):
             continue
-        by_dex.setdefault(sp['dex'], name)
+        here = by_dex.get(sp['dex'])
+        if here is None or sp['bst'] < info[here]['bst']:
+            by_dex[sp['dex']] = name
     wanted = [n for n in by_dex.values() if n not in placed]
 
     def tier(name):
@@ -397,7 +535,7 @@ def main():
 
     # Candidate maps: outdoors and caves, with a layout, not already hosting a
     # legendary, ranked by how far off the path they feel.
-    hosting = set()
+    hosting = set(taken)
     for area in maps.values():
         text_path = os.path.join(os.path.dirname(area['_path']), 'scripts.inc')
         if os.path.exists(text_path) and 'setwildbattle' in open(text_path).read():
@@ -410,7 +548,7 @@ def main():
             continue
         if area['layout'] not in lays or map_id not in walkable:
             continue
-        if 'UNUSED' in map_id:
+        if 'UNUSED' in map_id or map_id in TRANSIENT:
             continue
         candidates.append(map_id)
     candidates.sort(key=lambda m: (-remoteness(m, levels), m))
@@ -478,18 +616,38 @@ def main():
              '// Allocated from 0x%X. The hack\'s own flags stop at 0xAAD and the' % FLAG_BASE,
              '// array holds 3160, so this range is free and well short of the end.',
              '']
-    for i, (name, map_id, spot) in enumerate(final):
-        lines.append('#define FLAG_LEGENDARY_%-22s 0x%X' % (name[8:], FLAG_BASE + i))
+    # Keep every flag an earlier run handed out -- a flag that moves is a
+    # legendary the player has already beaten coming back, or one they have
+    # never seen counted as beaten -- and give a new one to each new species
+    # from the first value nothing is using.
+    allocated = dict(done)
+    free = FLAG_BASE
+    for name, map_id, spot in final:
+        if name in allocated:
+            continue
+        while free in allocated.values():
+            free += 1
+        allocated[name] = free
+        free += 1
+    for name, value in sorted(allocated.items(), key=lambda kv: kv[1]):
+        lines.append('#define FLAG_LEGENDARY_%-22s 0x%X' % (name[8:], value))
     lines += ['', '#endif // GUARD_CONSTANTS_COOP_LEGENDARIES_H', '']
     open(FLAGS_OUT, 'w').write('\n'.join(lines))
 
     # --- scripts --------------------------------------------------------
-    out = [PREAMBLE]
+    #
+    # Appended. The scripts for the previous run's legendaries are still the
+    # right scripts, and their labels are referenced from a hundred map files.
+    existing = open(SCRIPTS_OUT).read() if os.path.exists(SCRIPTS_OUT) else PREAMBLE
+    out = [existing.rstrip('\n')]
     for name, map_id, spot in final:
-        out.append(SCRIPT.format(label='Legendary_EventScript_' + name[8:].title(),
-                                 species=name, level=LEVELS[tier(name)],
+        label = 'Legendary_EventScript_' + name[8:].title()
+        if re.search(r'^%s::' % label, existing, re.M):
+            continue
+        out.append(SCRIPT.format(label=label, species=name,
+                                 level=LEVELS[tier(name)],
                                  flag='FLAG_LEGENDARY_' + name[8:]))
-    open(SCRIPTS_OUT, 'w').write('\n'.join(out))
+    open(SCRIPTS_OUT, 'w').write('\n'.join(out) + '\n')
 
     # --- the object events ----------------------------------------------
     for name, map_id, spot in final:

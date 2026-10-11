@@ -91,12 +91,13 @@ PetalburgWoods_EventScript_DevonResearcherPostBattle::
 	waitmovement 0
 	msgbox PetalburgWoods_Text_ThatWasAwfullyClose, MSGBOX_DEFAULT
 	giveitem ITEM_GREAT_BALL
-	goto_if_eq VAR_RESULT, FALSE, PetalburgWoods_EventScript_BagFull
+	goto_if_eq VAR_RESULT, FALSE, PetalburgWoods_EventScript_BagFullToPc
 	goto PetalburgWoods_EventScript_DevonResearcherFinish
 	end
 
-PetalburgWoods_EventScript_BagFull::
+PetalburgWoods_EventScript_BagFullToPc::
 	msgbox PetalburgWoods_Text_YoureLoadedWithItems, MSGBOX_DEFAULT
+	call Common_EventScript_SendItemToPc
 	goto PetalburgWoods_EventScript_DevonResearcherFinish
 	end
 

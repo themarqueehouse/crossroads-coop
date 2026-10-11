@@ -1536,6 +1536,36 @@ bool8 ScrCmd_fadeinbgm(struct ScriptContext *ctx)
     return FALSE;
 }
 
+// The object with this local id, or NULL if it is not on the map right now.
+//
+// GetObjectEventIdByLocalId returns OBJECT_EVENTS_COUNT when it finds nothing,
+// which is a perfectly good "not found" and a disastrous array index:
+// gObjectEvents[OBJECT_EVENTS_COUNT] is one struct past the end of the array,
+// and in this build that lands on top of field_specials.c's statics. Three
+// script commands indexed with it unchecked.
+//
+// It is not a rare path. An object is absent from gObjectEvents whenever it has
+// been removeobject'd, whenever its visibility flag is set, and -- the common
+// one -- whenever it is simply too far from the camera to be spawned, which on
+// a route is most of the map. Reading through the stray pointer gave
+// IS_OW_MON_OBJ a graphicsId made of whatever field_specials happened to be
+// holding, and a 1 in 4 chance of bit 14 being set in it was a 1 in 4 chance of
+// ClearObjectEventMovement writing through gSprites[<arbitrary byte>] -- an
+// array of 64 -- which is a wild write up to thirteen kilobytes past the end.
+//
+// So: resolve once, check, and let the commands do nothing when there is
+// nothing to do. ScriptMovement_StartObjectMovementScript already handles an
+// absent object by itself, so the movement still queues exactly as before and
+// is picked up if the object spawns.
+static struct ObjectEvent *ObjectByLocalId(u16 localId)
+{
+    u8 id = GetObjectEventIdByLocalId(localId);
+
+    if (id >= OBJECT_EVENTS_COUNT)
+        return NULL;
+    return &gObjectEvents[id];
+}
+
 struct ObjectEvent *ScriptHideFollower(void)
 {
     struct ObjectEvent *obj = GetFollowerObject();
@@ -1561,13 +1591,14 @@ bool8 ScrCmd_applymovement(struct ScriptContext *ctx)
 
     // When applying script movements to follower, it may have frozen animation that must be cleared
     if ((localId == OBJ_EVENT_ID_FOLLOWER && (objEvent = GetFollowerObject()) && objEvent->frozen)
-            || ((objEvent = &gObjectEvents[GetObjectEventIdByLocalId(localId)]) && IS_OW_MON_OBJ(objEvent)))
+            || ((objEvent = ObjectByLocalId(localId)) && IS_OW_MON_OBJ(objEvent)))
     {
         ClearObjectEventMovement(objEvent, &gSprites[objEvent->spriteId]);
         gSprites[objEvent->spriteId].animCmdIndex = 0; // Reset start frame of animation
     }
 
-    gObjectEvents[GetObjectEventIdByLocalId(localId)].directionOverwrite = DIR_NONE;
+    if ((objEvent = ObjectByLocalId(localId)) != NULL)
+        objEvent->directionOverwrite = DIR_NONE;
     ScriptMovement_StartObjectMovementScript(localId, gSaveBlock1Ptr->location.mapNum, gSaveBlock1Ptr->location.mapGroup, movementScript);
     sMovingNpcId = localId;
     if (localId != OBJ_EVENT_ID_FOLLOWER
@@ -1585,10 +1616,12 @@ bool8 ScrCmd_applymovementat(struct ScriptContext *ctx)
     const void *movementScript = (const void *)ScriptReadWord(ctx);
     u8 mapGroup = ScriptReadByte(ctx);
     u8 mapNum = ScriptReadByte(ctx);
+    struct ObjectEvent *objEvent = ObjectByLocalId(localId);
 
     Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
 
-    gObjectEvents[GetObjectEventIdByLocalId(localId)].directionOverwrite = DIR_NONE;
+    if (objEvent != NULL)
+        objEvent->directionOverwrite = DIR_NONE;
     ScriptMovement_StartObjectMovementScript(localId, mapNum, mapGroup, movementScript);
     sMovingNpcId = localId;
     return FALSE;
@@ -3483,8 +3516,13 @@ bool8 Scrcmd_getobjectfacingdirection(struct ScriptContext *ctx)
     Script_RequestWriteVar(varId);
 
     u16 *varPointer = GetVarPointer(varId);
+    const struct ObjectEvent *objEvent = ObjectByLocalId(objectId);
 
-    *varPointer = gObjectEvents[GetObjectEventIdByLocalId(objectId)].facingDirection;
+    // DIR_NONE for an object that is not on the map, rather than whatever
+    // reading one struct past the end of the array happened to return. A script
+    // comparing the result will now take its "not facing me" branch instead of
+    // branching on noise.
+    *varPointer = objEvent != NULL ? objEvent->facingDirection : DIR_NONE;
 
     return FALSE;
 }

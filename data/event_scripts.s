@@ -1219,6 +1219,23 @@ EventScript_BagIsFull::
 	release
 	end
 
+@ For an item handed over by something that only happens once.
+@
+@ "Too bad, the bag is full" is a fine answer from a shopkeeper you can walk
+@ back to. It is the wrong answer from a cutscene: the scene is over, the flag
+@ that guards it is set, and an item the story later asks for is simply gone --
+@ which is how a bag that happened to be full on the wrong afternoon turns into
+@ a game that cannot be finished. So it goes to the PC instead, which the player
+@ can always make room in.
+@
+@ giveitem leaves its own arguments in VAR_0x8000 and VAR_0x8001 (see
+@ Std_ObtainItem, which only touches 0x8006 and 0x8007), so this can be called
+@ straight after one with nothing to set up.
+Common_EventScript_SendItemToPc::
+	addpcitem VAR_0x8000, VAR_0x8001
+	msgbox gText_BagWasFullSentToPc, MSGBOX_DEFAULT
+	return
+
 Common_EventScript_ShowNoRoomForDecor::
 	msgbox gText_NoRoomLeftForAnother, MSGBOX_DEFAULT
 	release

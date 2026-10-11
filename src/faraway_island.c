@@ -41,13 +41,31 @@ static u8 GetMewObjectEventId(void)
     return objectEventId;
 }
 
+// Mew, or NULL if it is not on the map.
+//
+// GetMewObjectEventId hands back OBJECT_EVENTS_COUNT when there is no Mew, and
+// the three callers below took that as an array index -- one struct past the
+// end of gObjectEvents. SetMewAboveGrass then wrote through it and indexed
+// gSprites, an array of 64, with whatever byte it found there.
+static struct ObjectEvent *GetMewObject(void)
+{
+    u8 id = GetMewObjectEventId();
+
+    if (id >= OBJECT_EVENTS_COUNT)
+        return NULL;
+    return &gObjectEvents[id];
+}
+
 // When the player enters Faraway Island interior it begins a "hide and seek" minigame where Mew disappears into the grass
 // This function returns the direction Mew will take a step, and is run every time the player takes a step
 enum Direction GetMewMoveDirection(void)
 {
     u8 i;
     int mewSafeFromTrap;
-    struct ObjectEvent *mew = &gObjectEvents[GetMewObjectEventId()];
+    struct ObjectEvent *mew = GetMewObject();
+
+    if (mew == NULL)
+        return DIR_NONE;
 
     sPlayerToMewDeltaX = gObjectEvents[gPlayerAvatar.objectEventId].previousCoords.x - mew->currentCoords.x;
     sPlayerToMewDeltaY = gObjectEvents[gPlayerAvatar.objectEventId].previousCoords.y - mew->currentCoords.y;
@@ -283,7 +301,10 @@ static enum Direction GetValidMewMoveDirection(enum Direction ignoredDir)
 {
     u8 i;
     u8 count = 0;
-    struct ObjectEvent *mew = &gObjectEvents[GetMewObjectEventId()];
+    struct ObjectEvent *mew = GetMewObject();
+
+    if (mew == NULL)
+        return DIR_NONE;
 
     for (i = 0; i < ARRAY_COUNT(sMewDirectionCandidates); i++)
         sMewDirectionCandidates[i] = DIR_NONE;
@@ -371,7 +392,10 @@ void SetMewAboveGrass(void)
 {
     s16 x;
     s16 y;
-    struct ObjectEvent *mew = &gObjectEvents[GetMewObjectEventId()];
+    struct ObjectEvent *mew = GetMewObject();
+
+    if (mew == NULL)
+        return;
 
     mew->invisible = FALSE;
     if (gSpecialVar_0x8004 == 1)

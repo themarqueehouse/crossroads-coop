@@ -31,9 +31,9 @@ VermilionCity_PokemonCenter_1F_EventScript_VSSeekerWoman::
 	faceplayer
 	goto_if_set FLAG_GOT_VS_SEEKER, VermilionCity_PokemonCenter_1F_EventScript_ExplainVSSeeker
 	msgbox VermilionCity_PokemonCenter_1F_Text_UrgeToBattleSomeoneAgain
-	setflag FLAG_GOT_VS_SEEKER
 	giveitem ITEM_VS_SEEKER
 	goto_if_eq VAR_RESULT, FALSE, EventScript_BagIsFull
+	setflag FLAG_GOT_VS_SEEKER
 	msgbox VermilionCity_PokemonCenter_1F_Text_UseDeviceForRematches
 	release
 	end

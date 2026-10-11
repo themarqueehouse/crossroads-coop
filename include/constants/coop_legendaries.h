@@ -116,5 +116,8 @@
 #define FLAG_LEGENDARY_KUBFU                  0xB69
 #define FLAG_LEGENDARY_MELTAN                 0xB6A
 #define FLAG_LEGENDARY_COSMOG                 0xB6B
+#define FLAG_LEGENDARY_ZAMAZENTA_HERO         0xB6C
+#define FLAG_LEGENDARY_ZACIAN_HERO            0xB6D
+#define FLAG_LEGENDARY_CRESSELIA              0xB6E
 
 #endif // GUARD_CONSTANTS_COOP_LEGENDARIES_H

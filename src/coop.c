@@ -177,12 +177,14 @@ static EWRAM_DATA u8 sDeltaTail = 0;
 // change forever.
 static EWRAM_DATA bool8 sApplyingRemote = FALSE;
 static EWRAM_DATA u16 sDeltasDropped = 0;
+// Set while the save is being wiped and rebuilt. See Coop_SuppressSync.
+static EWRAM_DATA bool8 sSyncSuppressed = FALSE;
 
 void Coop_QueueDelta(u8 kind, u16 id, u16 value)
 {
     u8 next;
 
-    if (!IsCoopLinkActive() || sApplyingRemote)
+    if (!IsCoopLinkActive() || sApplyingRemote || sSyncSuppressed)
         return;
 
     // Temp flags and vars are per-map scratch, cleared on every map change and
@@ -1290,7 +1292,7 @@ void Coop_QueueBoxWrite(u8 boxId, u8 position, const struct BoxPokemon *mon)
 
     // Not while applying the partner's own change, or the two consoles would
     // bounce the same deposit back and forth for ever.
-    if (!IsCoopLinkActive() || sApplyingBoxOp)
+    if (!IsCoopLinkActive() || sApplyingBoxOp || sSyncSuppressed)
         return;
 
     op.boxId = boxId;
@@ -1305,7 +1307,7 @@ void Coop_QueueBoxClear(u8 boxId, u8 position)
 {
     struct CoopBoxOp op;
 
-    if (!IsCoopLinkActive() || sApplyingBoxOp)
+    if (!IsCoopLinkActive() || sApplyingBoxOp || sSyncSuppressed)
         return;
 
     op.boxId = boxId;
@@ -1706,10 +1708,21 @@ EWRAM_DATA u8 gCoopDbgScriptStatus = 0;
 // away and replaced by Player 1's.
 //
 // Pointless is the charitable reading; it also wedged the console outright.
+//
+// This used to borrow sApplyingRemote and sApplyingBoxOp, the two flags that
+// mean "a change from the partner is being written right now". They are the
+// right flags to read and the wrong ones to set: both Coop_ReceiveDelta and
+// Coop_ApplyBoxOp clear theirs unconditionally on the way out, so one command
+// arriving from the partner during a wipe turns the suppression off and leaves
+// the rest of the wipe queueing -- which is the hang described above.
+//
+// Nothing arrives today, because NewGameInitData runs start to finish inside a
+// single callback with no frame boundary for the link to be serviced on. That
+// is a property of the caller, not of this, and it is one line of refactoring
+// away from not being true. Its own flag costs a byte.
 void Coop_SuppressSync(bool8 suppress)
 {
-    sApplyingRemote = suppress;
-    sApplyingBoxOp = suppress;
+    sSyncSuppressed = suppress;
 }
 
 bool8 Coop_IsJoiningPlayer(void)

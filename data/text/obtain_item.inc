@@ -15,6 +15,10 @@ gText_TooBadBagIsFull::
 	.string "Too bad!\n"
 	.string "The BAG is full…$"
 
+gText_BagWasFullSentToPc::
+	.string "The {STR_VAR_2} was sent\n"
+	.string "to the PC instead.$"
+
 gText_PlayerPutItemInBag::
 	.string "{PLAYER} put away the {STR_VAR_2}\n"
 	.string "in the BAG.$"

@@ -2063,3 +2063,60 @@ Legendary_EventScript_Cosmog::
 	setflag FLAG_LEGENDARY_COSMOG
 	releaseall
 	end
+
+Legendary_EventScript_Zamazenta_Hero::
+	lockall
+	waitse
+	playmoncry SPECIES_ZAMAZENTA_HERO, CRY_MODE_ENCOUNTER
+	delay 40
+	waitmoncry
+	setwildbattle SPECIES_ZAMAZENTA_HERO, 65
+	setflag FLAG_SYS_CTRL_OBJ_DELETE
+	special BattleSetup_StartLegendaryBattle
+	waitstate
+	clearflag FLAG_SYS_CTRL_OBJ_DELETE
+	specialvar VAR_RESULT, GetBattleOutcome
+	goto_if_eq VAR_RESULT, B_OUTCOME_RAN, Legendary_EventScript_Leave
+	goto_if_eq VAR_RESULT, B_OUTCOME_PLAYER_TELEPORTED, Legendary_EventScript_Leave
+	setflag FLAG_LEGENDARY_ZAMAZENTA_HERO
+	releaseall
+	end
+
+
+Legendary_EventScript_Zacian_Hero::
+	lockall
+	waitse
+	playmoncry SPECIES_ZACIAN_HERO, CRY_MODE_ENCOUNTER
+	delay 40
+	waitmoncry
+	setwildbattle SPECIES_ZACIAN_HERO, 65
+	setflag FLAG_SYS_CTRL_OBJ_DELETE
+	special BattleSetup_StartLegendaryBattle
+	waitstate
+	clearflag FLAG_SYS_CTRL_OBJ_DELETE
+	specialvar VAR_RESULT, GetBattleOutcome
+	goto_if_eq VAR_RESULT, B_OUTCOME_RAN, Legendary_EventScript_Leave
+	goto_if_eq VAR_RESULT, B_OUTCOME_PLAYER_TELEPORTED, Legendary_EventScript_Leave
+	setflag FLAG_LEGENDARY_ZACIAN_HERO
+	releaseall
+	end
+
+
+Legendary_EventScript_Cresselia::
+	lockall
+	waitse
+	playmoncry SPECIES_CRESSELIA, CRY_MODE_ENCOUNTER
+	delay 40
+	waitmoncry
+	setwildbattle SPECIES_CRESSELIA, 55
+	setflag FLAG_SYS_CTRL_OBJ_DELETE
+	special BattleSetup_StartLegendaryBattle
+	waitstate
+	clearflag FLAG_SYS_CTRL_OBJ_DELETE
+	specialvar VAR_RESULT, GetBattleOutcome
+	goto_if_eq VAR_RESULT, B_OUTCOME_RAN, Legendary_EventScript_Leave
+	goto_if_eq VAR_RESULT, B_OUTCOME_PLAYER_TELEPORTED, Legendary_EventScript_Leave
+	setflag FLAG_LEGENDARY_CRESSELIA
+	releaseall
+	end
+

@@ -209,6 +209,60 @@ def main():
             continue
         findings['no door opens onto this map'].append(map_id)
 
+    # --- items handed over after the giver is already spent ---------------
+    #
+    # giveitem can fail: a full pocket and the item is not added, and VAR_RESULT
+    # comes back FALSE. A script that has ALREADY set its "you have had this"
+    # flag, or removed the ball the item came out of, has nothing left to offer
+    # on a second visit -- so the item is gone for the rest of the game.
+    #
+    # For a Great Ball that is a nuisance. For the Tea, the Silph Scope or the
+    # Magma Emblem it is the end of the story: each one is the only key to a
+    # place the plot goes next.
+    #
+    # The shared bag makes this likelier here than in a single-player game.
+    # Two players fill one sixteen-slot ball pocket.
+    # Checked by whoever calls them, not in their own body.
+    CHECKED_BY_CALLER = {
+        # Std_FindItem does checkitemspace and only calls this when there is
+        # room. Every item ball in the game goes through it.
+        'EventScript_PickUpItem',
+        # The player's first Pokemon, handed over with an empty party.
+        'PalletTown_ProfessorOaksLab_EventScript_ChoseStarter',
+        # A debug script the game marks "functionally unused" and never calls.
+        'LilycoveCity_ContestLobby_EventScript_SetDebug',
+    }
+    for path in glob.glob('data/maps/*/scripts.inc') + glob.glob('data/scripts/*.inc'):
+        if path.endswith('debug.inc'):
+            continue
+        lines = open(path).read().split('\n')
+        label, committed, guarded = None, None, False
+        for i, line in enumerate(lines):
+            text = line.strip()
+            # One colon or two: a local label is still a new label, and reading
+            # only `::` let a flag set at the end of one script look like it
+            # belonged to the next.
+            m = re.match(r'([A-Za-z_]\w*):{1,2}$', text)
+            if m:
+                label, committed, guarded = m.group(1), None, False
+                continue
+            # A space check before the handover is the correct pattern and
+            # makes the order below harmless.
+            if re.match(r'(checkitemspace|getpartysize|checkpcitem)\b', text):
+                guarded = True
+            if re.match(r'(removeobject|hideobject|setflag FLAG_(HIDE|ITEM|HIDDEN_ITEM|'
+                        r'RECEIVED|GOT|CAN_USE))', text):
+                committed = (i + 1, text)
+            if re.match(r'(giveitem|additem|giveegg|givemon)\b', text) and committed \
+               and not guarded and label not in CHECKED_BY_CALLER:
+                # A one-shot scene cannot offer the item again, so the fix there
+                # is the PC rather than a retry. Look ahead for it.
+                if 'Common_EventScript_SendItemToPc' in '\n'.join(lines[i:i + 8]):
+                    continue
+                findings['item handed over after the giver is spent'].append(
+                    '%s %s: line %d %s, then line %d %s'
+                    % (path, label, committed[0], committed[1], i + 1, text))
+
     # --- trainers with nothing to send out -------------------------------
     sizes = trainer_parties()
     used = set()
@@ -218,6 +272,46 @@ def main():
     for trainer in sorted(used):
         if sizes.get(trainer, 1) == 0:
             findings['trainer with an empty party'].append(trainer)
+
+    # --- story battles nobody wired for co-op ----------------------------
+    #
+    # The point of the hack. A gym leader, a rival, an admin or a champion is
+    # meant to be one battle with both players in it; a script that was missed
+    # when the wiring went in gives one player the fight and the other a room
+    # where nothing happens. Juan's rematch was the one that got missed, and
+    # there was no way to notice except by beating Juan twice.
+    #
+    # Checked per script rather than per line: the wiring sits at the top and
+    # the battle can be forty lines of cutscene below it.
+    important = re.compile(
+        r'TRAINER_(BRAWLY|ROXANNE|WATTSON|FLANNERY|NORMAN|WINONA|TATE|LIZA|JUAN'
+        r'|SIDNEY|PHOEBE|GLACIA|DRAKE|WALLACE|STEVEN|MAY_|BRENDAN_|WALLY|ARCHIE'
+        r'|MAXIE|MATT|SHELLY|TABITHA|COURTNEY|BROCK|MISTY|LT_SURGE|ERIKA|KOGA'
+        r'|SABRINA|BLAINE|GIOVANNI|LORELEI|BRUNO|AGATHA|LANCE|RIVAL|TERRY|GARY'
+        r'|BLUE|RED|LEAF|CHAMPION)')
+    wiring = re.compile(r'coopscene|coopnextbattle|coopgate|coop_require_partner')
+    for path in glob.glob('data/maps/*/scripts.inc') + glob.glob('data/scripts/*.inc'):
+        lines = open(path).read().split('\n')
+        blocks, cur = [], None
+        for i, line in enumerate(lines):
+            m = re.match(r'([A-Za-z_]\w*):{1,2}$', line.strip())
+            if m:
+                cur = (m.group(1), [])
+                blocks.append(cur)
+            elif cur:
+                cur[1].append((i + 1, line))
+        for name, body in blocks:
+            if wiring.search('\n'.join(l for _, l in body)):
+                continue
+            for lineno, line in body:
+                m = re.match(r'\s*trainerbattle\w*\s+(.*)', line)
+                if not m:
+                    continue
+                trainer = next((a.strip() for a in m.group(1).split(',')
+                                if a.strip().startswith('TRAINER_')), '')
+                if important.match(trainer):
+                    findings['story battle not wired for co-op'].append(
+                        '%s %s: line %d %s' % (path, name, lineno, trainer))
 
     # --- report ---------------------------------------------------------
     total = sum(len(v) for v in findings.values())

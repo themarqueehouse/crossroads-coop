@@ -142,6 +142,11 @@ SootopolisCity_Gym_1F_EventScript_GoGetFortreeBadge::
 	end
 
 SootopolisCity_Gym_1F_EventScript_JuanRematch::
+	@ Wired like every other gym leader's rematch. This one was missed: Juan
+	@ was the only leader in the game whose rematch one player fought alone
+	@ while the other stood in the room watching nothing happen.
+	coopscene GATE_SOOTOPOLISCITY_GYM_1F_EVENTSCRIPT_JUANREMATCH
+	coopnextbattle_split TRAINER_ANDREA
 	trainerbattle_rematch_double TRAINER_JUAN_1, SootopolisCity_Gym_1F_Text_JuanPreRematch, SootopolisCity_Gym_1F_Text_JuanRematchDefeat, SootopolisCity_Gym_1F_Text_JuanRematchNeedTwoMons
 	msgbox SootopolisCity_Gym_1F_Text_JuanPostRematch, MSGBOX_AUTOCLOSE
 	end

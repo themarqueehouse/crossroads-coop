@@ -2192,7 +2192,10 @@
 #define FLAG_HIDDEN_ITEM_ROUTE23_MAX_ETHER                                 0x51C
 #define FLAG_HIDDEN_ITEM_VICTORY_ROAD_1F_FULL_RESTORE                      0x51D
 #define FLAG_HIDDEN_ITEM_CERULEAN_CAVE_1F_ULTRA_BALL                       0x51E
-#define FLAG_HIDDEN_ITEM_UNUSED_0x28                                       0x51F
+// Claimed. Kanto's Victory Road 1F pointed its hidden Ultra Ball at the HOENN
+// Victory Road's flag, so the two shared one: pick up either and the other was
+// gone for the rest of the game. This is the next free flag in the same block.
+#define FLAG_HIDDEN_ITEM_VICTORY_ROAD_1F_FRLG_ULTRA_BALL                   0x51F
 #define FLAG_HIDDEN_ITEM_ROUTE11_ESCAPE_ROPE                               0x520
 #define FLAG_HIDDEN_ITEM_ROUTE12_HYPER_POTION                              0x521
 #define FLAG_HIDDEN_ITEM_UNUSED_0x2B                                       0x522
