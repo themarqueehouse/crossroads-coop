@@ -1231,3 +1231,12 @@ Debug_EventScript_Script_25::
 	waitstate
 	release
 	end
+
+@ TWENTY POKEMON INTO BOX 1, FAST (R+Start, Scripts..., Script 26).
+@
+@ For the box-queue check. Run on ONE console: the other should end up with
+@ the same twenty, and before the queue stopped dropping things it did not.
+Debug_EventScript_Script_26::
+	callnative Debug_FillABox
+	release
+	end

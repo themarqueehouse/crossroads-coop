@@ -42,9 +42,21 @@ async function runDebugScript(rig, w, slot) {
   await freeUp(rig, w);
 }
 
-const slot0Personality = async (rig, w) => {
-  const b = await rig.readAt(w, OFFSETS.storageAddr + BOXES_OFFSET, 4);
+const slot0Personality = async (rig, w) => personalityAt(rig, w, 0);
+
+// A BoxPokemon's personality, by slot. Non-zero means the slot is occupied,
+// and the value identifies which Pokemon it is -- so comparing the two
+// consoles slot by slot says whether the boxes really match.
+const BOX_MON_SIZE = 80;
+const personalityAt = async (rig, w, slot) => {
+  const b = await rig.readAt(w, OFFSETS.storageAddr + BOXES_OFFSET + slot * BOX_MON_SIZE, 4);
   return (b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24)) >>> 0;
+};
+
+const boxSlots = async (rig, w, n) => {
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(await personalityAt(rig, w, i));
+  return out;
 };
 
 async function main() {
@@ -74,6 +86,40 @@ async function main() {
             'the boxes are not shared -- anything player 2 stores is lost');
     t.check('both consoles hold the SAME Pokemon', host === guest,
             'the boxes diverged, which is how a deposit overwrites one you cannot see');
+
+    // ------------------------------------------- a burst of box changes
+    //
+    // Moving a handful of Pokemon around in a box makes a burst of writes,
+    // and the queue that carries them to the other console used to hold four
+    // and throw the oldest away when it was full. Nobody was told. The
+    // partner's box was then missing Pokemon it had no way of knowing about,
+    // and the next deposit into one of those slots landed on top of one --
+    // which is three of the bug reports against this hack.
+    //
+    // Twenty at once, which is well past any queue, and then both consoles
+    // have to agree about all twenty.
+    console.log('\n--- twenty at once, which used to be too many ---');
+    await runDebugScript(rig, 0, 26);
+    await rig.wait(1800);
+
+    const mine = await boxSlots(rig, 0, 20);
+    let theirs = await boxSlots(rig, 1, 20);
+    for (let i = 0; i < 20 && theirs.some((v, n) => v !== mine[n]); i++) {
+      await rig.wait(120);
+      theirs = await boxSlots(rig, 1, 20);
+    }
+
+    const filled = mine.filter((v) => v !== 0).length;
+    const matched = mine.filter((v, i) => v !== 0 && v === theirs[i]).length;
+    t.note('box 1 after the burst',
+           `player 1 holds ${filled}, player 2 agrees about ${matched}`);
+    t.note('overflows', `${await rig.u16(0, OFFSETS.dbgBoxOverflowsAddr)} changes refused for want of room`);
+
+    t.check('all twenty arrived on player 1', filled === 20,
+            `only ${filled} of 20 went into the box at all`);
+    t.check('and player 2 has every one of them', matched === filled,
+            `player 2 is missing ${filled - matched} of them -- those slots look ` +
+            'empty to them, and the next thing deposited there overwrites one');
 
     await rig.shot('/tmp/claude-0/stage6-boxes');
     process.exitCode = t.summary() ? 0 : 1;

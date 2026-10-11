@@ -1235,7 +1235,9 @@ struct CoopBoxOp
 // first. Four is enough for any burst a person can produce by hand; a fuller
 // queue drops the oldest rather than the newest, since the newest is the one
 // still on screen.
-#define COOP_BOX_QUEUE_SLOTS 4
+// Sixteen rather than four. Four is one box-tidying session: move five
+// Pokemon around in a few seconds and the queue is past it.
+#define COOP_BOX_QUEUE_SLOTS 16
 
 static EWRAM_DATA struct CoopBoxOp sBoxQueue[COOP_BOX_QUEUE_SLOTS] = {0};
 static EWRAM_DATA u8 sBoxQueueHead = 0;
@@ -1247,12 +1249,36 @@ static EWRAM_DATA bool8 sApplyingBoxOp = FALSE;
 
 #define BOX_SLOT_TOTAL (TOTAL_BOXES_COUNT * IN_BOX_COUNT)
 
+// Something was dropped, and the boxes have to be walked again to find it.
+static EWRAM_DATA bool8 sBoxResyncNeeded = FALSE;
+// How many times that has happened, for the test rig.
+EWRAM_DATA u16 gCoopDbgBoxOverflows = 0;
+
 static void EnqueueBoxOp(const struct CoopBoxOp *op)
 {
     u8 next = (sBoxQueueHead + 1) % COOP_BOX_QUEUE_SLOTS;
 
     if (next == sBoxQueueTail)
-        sBoxQueueTail = (sBoxQueueTail + 1) % COOP_BOX_QUEUE_SLOTS;
+    {
+        // Full. This used to throw away the oldest queued change and carry on
+        // quietly, which is fine for a position update and ruinous for a
+        // Pokemon.
+        //
+        // What it costs: the partner never hears about that deposit, so their
+        // box shows the slot as empty. Later one of them puts something into
+        // the slot that looks free, that write travels, and it lands on top of
+        // a Pokemon the other player can see. It is gone, and nothing on
+        // either screen ever said so. Three of the bug reports against this
+        // hack are "PC Pokemon disappear".
+        //
+        // So nothing is dropped. The new change is refused, which leaves it
+        // in the box it was made in, and the boxes are walked again from the
+        // top once the queue has drained -- which finds every deposit the
+        // partner is missing and sends it properly.
+        sBoxResyncNeeded = TRUE;
+        gCoopDbgBoxOverflows++;
+        return;
+    }
 
     sBoxQueue[sBoxQueueHead] = *op;
     sBoxQueueHead = next;
@@ -1371,6 +1397,21 @@ void Coop_UpdateBoxSync(void)
         }
     }
 
+    // A change was refused for want of room. Once everything queued has gone
+    // out, walk the boxes again: every occupied slot is re-sent, so whatever
+    // the partner is missing arrives.
+    //
+    // Occupied slots only, which is deliberate. A missing deposit is how a
+    // Pokemon gets overwritten and lost; a missing withdrawal only leaves the
+    // partner looking at one that is no longer there, and the next real change
+    // to that slot clears it. One of those is worth a minute of background
+    // traffic and the other is not.
+    if (sBoxResyncNeeded && !sBoxJoinRunning && sBoxQueueHead == sBoxQueueTail)
+    {
+        sBoxResyncNeeded = FALSE;
+        Coop_BeginBoxJoinSync();
+    }
+
     // One at a time: the transfer layer carries a single stream, and the join
     // sync shares it with ordinary deposits.
     if (sBoxQueueHead != sBoxQueueTail && !CoopSync_IsSending())
@@ -1387,6 +1428,7 @@ static void ResetBoxSync(void)
     sBoxQueueTail = 0;
     sBoxJoinCursor = 0;
     sBoxJoinRunning = FALSE;
+    sBoxResyncNeeded = FALSE;
     sApplyingBoxOp = FALSE;
 }
 

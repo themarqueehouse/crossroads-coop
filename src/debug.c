@@ -407,6 +407,7 @@ extern const u8 Debug_EventScript_Script_22[];
 extern const u8 Debug_EventScript_Script_23[];
 extern const u8 Debug_EventScript_Script_24[];
 extern const u8 Debug_EventScript_Script_25[];
+extern const u8 Debug_EventScript_Script_26[];
 extern const u8 DebugScript_DaycareMonsNotCompatible[];
 extern const u8 DebugScript_OneDaycareMons[];
 extern const u8 DebugScript_ZeroDaycareMons[];
@@ -698,6 +699,7 @@ static const struct DebugMenuOption sDebugMenu_Actions_Scripts[] =
     { COMPOUND_STRING("Script 23"), DebugAction_ExecuteScript, Debug_EventScript_Script_23 },
     { COMPOUND_STRING("Script 24"), DebugAction_ExecuteScript, Debug_EventScript_Script_24 },
     { COMPOUND_STRING("Script 25"), DebugAction_ExecuteScript, Debug_EventScript_Script_25 },
+    { COMPOUND_STRING("Script 26"), DebugAction_ExecuteScript, Debug_EventScript_Script_26 },
     { NULL }
 };
 
@@ -1682,6 +1684,27 @@ void Debug_ClearParty(struct ScriptContext *ctx)
 {
     ZeroPlayerPartyMons();
     gPlayerPartyCount = 0;
+}
+
+// Put twenty Pokemon into box 1, one after another, as fast as the storage
+// system will take them.
+//
+// This is box tidying, compressed: moving a handful of Pokemon around makes
+// the same burst of writes. It used to overrun the co-op box queue, which
+// threw the oldest changes away without telling anybody -- so the partner's
+// box was missing Pokemon it could not know about, and the next deposit into
+// one of those slots landed on top of one. Twenty is comfortably past the
+// queue, which is the point.
+void Debug_FillABox(struct ScriptContext *ctx)
+{
+    struct Pokemon mon;
+    u8 i;
+
+    for (i = 0; i < 20; i++)
+    {
+        CreateMon(&mon, SPECIES_ZIGZAGOON, 5 + i, USE_RANDOM_IVS, OTID_STRUCT_PLAYER_ID);
+        SetBoxMonAt(0, i, &mon.box);
+    }
 }
 
 void Debug_ClearCoopPlayer2(struct ScriptContext *ctx)
