@@ -12,6 +12,7 @@ SSAnne_Exterior_OnFrame::
 	.2byte 0
 
 SSAnne_Exterior_ExitSSAnne::
+	coopscene GATE_STORY_SS_ANNE_LEAVE
 	lockall
 	getplayerxy VAR_0x8004, VAR_0x8005
 	call_if_le VAR_0x8005, 6, SSAnne_Exterior_WalkDown

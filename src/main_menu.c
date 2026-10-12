@@ -15,6 +15,7 @@
 #include "main.h"
 #include "main_menu.h"
 #include "coop.h"
+#include "net_link.h"
 #include "menu.h"
 #include "list_menu.h"
 #include "mystery_event_menu.h"
@@ -645,6 +646,12 @@ static u32 InitMainMenu(bool8 returningFromOptionsMenu)
 #define tIsScrolled data[14]
 #define tWirelessAdapterConnected data[15]
 #define tCoopFadedBack data[11]   // the two-player gate's own state
+#define tSlotWait data[10]        // frames spent waiting to learn our slot
+
+// How long the menu will hold its input waiting for the relay to say which
+// player this console is. Two seconds: the round trip is milliseconds when the
+// relay is up, and this only has to outlast it.
+#define COOP_SLOT_WAIT_FRAMES 120
 
 #define tArrowTaskIsScrolled data[15]   // For scroll indicator arrow task
 
@@ -976,6 +983,34 @@ static void Task_HandleMainMenuInput(u8 taskId)
         DrawMainMenuWindowBorder(&sWindowTemplates_MainMenu[0], MAIN_MENU_BORDER_TILE);
         gTasks[taskId].func = Task_CoopJoinWithoutSave;
         return;
+    }
+
+    // Nobody presses anything until we know who they are.
+    //
+    // The wrapper latches the link up as soon as it starts connecting, but the
+    // slot comes back from the relay a round trip later -- and this menu is on
+    // screen before that. Until the answer arrives, Player 2's console is
+    // indistinguishable from Player 1's, so it offered the menu and its player
+    // pressed NEW GAME for a character the link was about to replace. Reported
+    // twice, as "we both had to click new game".
+    //
+    // Input is held rather than the menu redrawn, because the menu above is
+    // already on screen and taking it away and putting it back is a great deal
+    // of drawing for something that lasts under a second. The moment the slot
+    // arrives, one of two things happens with no further input: the branch
+    // above takes Player 2's console into the join, or this one stops holding
+    // and Player 1's menu answers as usual.
+    //
+    // The wait is bounded. A relay that never answers should still leave a
+    // playable single-player game, so after COOP_SLOT_WAIT_FRAMES this console
+    // gives up and behaves as it did before any of this existed.
+    if (gNetLinkActive && !NetLink_SlotIsKnown())
+    {
+        if (gTasks[taskId].tSlotWait < COOP_SLOT_WAIT_FRAMES)
+        {
+            gTasks[taskId].tSlotWait++;
+            return;
+        }
     }
 
     if (HandleMainMenuInput(taskId))

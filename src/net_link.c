@@ -168,6 +168,25 @@ u8 NetLink_GetMultiplayerId(void)
     return id;
 }
 
+// Whether the relay has told us which player this console is yet.
+//
+// It matters because slot 0 means two different things to the function above:
+// "I am Player 1" and "nobody has said". The wrapper publishes its status the
+// moment it starts connecting, which latches gNetLinkActive, but the slot only
+// arrives after a round trip to the relay -- and the main menu is on screen
+// well before that. So Player 2's console spent the gap looking exactly like
+// Player 1's, took the ordinary menu path, and made its player press NEW GAME
+// for a character that was about to be replaced over the link. Which is the
+// one thing the joining path exists to avoid.
+//
+// The wrapper now publishes NET_SLOT_UNKNOWN until it has an answer, so the
+// two cases are distinguishable. An older wrapper, or a plain emulator,
+// publishes 0 and this reads as known -- the behaviour before this existed.
+bool8 NetLink_SlotIsKnown(void)
+{
+    return gNetMailbox.localId < NET_MAX_PLAYERS;
+}
+
 u8 NetLink_GetPlayerCount(void)
 {
     u8 count = gNetMailbox.playerCount;

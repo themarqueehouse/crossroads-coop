@@ -108,6 +108,7 @@ LittlerootTown_OnFrame:
 	.2byte 0
 
 LittlerootTown_EventScript_StepOffTruckMale::
+	coopscene GATE_STORY_STEP_OFF_TRUCK
 	lockall
 	setvar VAR_0x8004, 5
 	setvar VAR_0x8005, 8
@@ -119,6 +120,7 @@ LittlerootTown_EventScript_StepOffTruckMale::
 	end
 
 LittlerootTown_EventScript_StepOffTruckFemale::
+	coopscene GATE_STORY_STEP_OFF_TRUCK
 	lockall
 	setvar VAR_0x8004, 14
 	setvar VAR_0x8005, 8

@@ -46,6 +46,11 @@ const unsigned gCoopWorldOffsets[] = {
     offsetof(struct SaveBlock1, location),
     offsetof(struct WarpData, mapNum),
     offsetof(struct SaveBlock1, money),
+    // The vars array, and the index of the one the starter screen writes its
+    // choice into, so a test can read back which Pokemon was picked without
+    // decrypting a party slot.
+    offsetof(struct SaveBlock1, vars),
+    VAR_TEMP_E - VARS_START,
     // The flags that say the story has actually begun. A save with badges but
     // a brand-new game's story flags still runs Birch at you on Route 101,
     // which is how the first one shipped.

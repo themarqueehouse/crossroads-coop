@@ -27,6 +27,11 @@
 // ring arrays are sized from it, not because 3+ would work.
 #define NET_MAX_PLAYERS 2
 
+// Published in the mailbox's localId byte while the wrapper is connecting and
+// does not yet know which player this console is. Any value outside the player
+// range would do; this one is the obvious one.
+#define NET_SLOT_UNKNOWN 0xFF
+
 // Ring depth, in logical link commands. The game produces at most one command
 // per video frame, so 8 slots is ~133ms of buffer before backpressure. Must be
 // a power of two: the index arithmetic relies on the & mask.
@@ -140,6 +145,7 @@ u32 NetLinkMain1(u8 *shouldAdvanceLinkState, u16 *sendCmd, u16 (*recvCmds)[CMD_L
 u8 NetLink_GetMultiplayerId(void);
 u8 NetLink_GetPlayerCount(void);
 bool8 NetLink_IsMaster(void);
+bool8 NetLink_SlotIsKnown(void);
 u32 NetLink_GetSendQueueLength(void);
 bool8 NetLink_SendQueueWasFull(void);
 u8 NetLink_BacklogDepth(void);

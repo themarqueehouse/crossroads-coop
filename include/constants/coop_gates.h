@@ -91,6 +91,32 @@
 #define GATE_STORY_SCOTT_PETALBURG    (GATE_STORY_BASE + 15)
 #define GATE_STORY_PETALBURG_WOODS    (GATE_STORY_BASE + 16)
 
+// The three scenes inside the player's own house, which are the first three
+// scenes of the game and were missed when the opening was wired map by map.
+// Reported from play: one player set the clock on their own, and the other
+// had to press A through every line of it on their own copy.
+//
+// The clock is an interaction rather than a trigger, so it refuses when the
+// partner is elsewhere and says so, which is the right answer for a beat that
+// blocks the stairs behind it.
+#define GATE_STORY_MOVING_IN          (GATE_STORY_BASE + 17)
+#define GATE_STORY_GO_SET_CLOCK       (GATE_STORY_BASE + 18)
+#define GATE_STORY_WALL_CLOCK         (GATE_STORY_BASE + 19)
+
+// Trigger scenes on a SHARED story var, found by auditing every on-frame table
+// in the game rather than by hitting them. Each one is a scene the game starts
+// at the player and then advances the var out from under it, so whichever
+// console got there first took the scene away from the other -- who is left
+// standing on the tile with nothing going to happen. Four of these also warp,
+// which separates the pair outright.
+#define GATE_STORY_STEP_OFF_TRUCK     (GATE_STORY_BASE + 20)
+#define GATE_STORY_SS_TICKET          (GATE_STORY_BASE + 21)
+#define GATE_STORY_SPACE_CENTER       (GATE_STORY_BASE + 22)
+#define GATE_STORY_ONE_ISLAND_ARRIVE  (GATE_STORY_BASE + 23)
+#define GATE_STORY_SS_ANNE_LEAVE      (GATE_STORY_BASE + 24)
+#define GATE_STORY_RAYQUAZA           (GATE_STORY_BASE + 25)
+#define GATE_STORY_BRINEY_SAIL        (GATE_STORY_BASE + 26)
+
 // Gym leaders. One each, numbered from 200 so story gates can grow freely
 // between here and GATE_STORY_BASE.
 #define GATE_GYM_BASE 200

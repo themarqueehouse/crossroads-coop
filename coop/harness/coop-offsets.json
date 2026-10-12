@@ -86,6 +86,7 @@
   "saveBlock2Addr": 33647596,
   "sb1Location": 4,
   "sb1Money": 1168,
+  "sb1Vars": 5692,
   "sb2PlayerGender": 16,
   "sceneAdvanceSentAddr": 33556966,
   "sceneAdvanceUsedAddr": 33557048,
@@ -97,5 +98,6 @@
   "storageAddr": 33595852,
   "tempFlagsSize": 4,
   "usedPeerGateSeqAddr": 33557000,
+  "varTempEIndex": 14,
   "warpMapNum": 1
 }

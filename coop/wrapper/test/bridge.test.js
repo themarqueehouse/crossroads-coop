@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Mailbox, RING_CAPACITY } from '../src/mailbox.js';
+import { Mailbox, RING_CAPACITY, SLOT_UNKNOWN } from '../src/mailbox.js';
 import { Bridge, HOST_CONNECTING, HOST_READY, HOST_LOST, MAX_PEER_BACKLOG } from '../src/bridge.js';
 import { RomSim, initMailbox, wordsToBytes, bytesToWords } from './rom-sim.js';
 
@@ -16,14 +16,14 @@ function fakeLink() {
   return { sent, send: (cmd) => sent.push(cmd) };
 }
 
-function makeConsole(offset = AT) {
+function makeConsole(offset = AT, opts = {}) {
   const buffer = new ArrayBuffer(HEAP_BYTES);
   initMailbox(buffer, offset);
   const mailbox = new Mailbox(buffer, offset);
   const rom = new RomSim(buffer, offset);
   const link = fakeLink();
   const events = [];
-  const bridge = new Bridge({ mailbox, link, onEvent: (e) => events.push(e) });
+  const bridge = new Bridge({ mailbox, link, onEvent: (e) => events.push(e), ...opts });
   return { buffer, mailbox, rom, link, bridge, events };
 }
 
@@ -44,6 +44,36 @@ test('the bridge does not pump until the session is READY', () => {
   assert.deepEqual(r, { sent: 0, delivered: 0, stalled: false });
   assert.equal(c.link.sent.length, 0, 'nothing goes on the wire before READY');
   assert.equal(c.mailbox.outPending, 1, 'and the frame stays with the ROM');
+});
+
+// The ROM reads one byte for "which player am I". Slot 0 is a real answer, so
+// it cannot double as "no answer yet" -- that ambiguity put the main menu in
+// front of Player 2 for as long as the relay took to reply, which was long
+// enough for them to press NEW GAME.
+test('an unknown slot is published as unknown, not as player 1', () => {
+  const c = makeConsole();
+  c.bridge.setStatus(HOST_CONNECTING);
+
+  assert.equal(c.mailbox.localId, SLOT_UNKNOWN,
+               'the ROM is told nobody has said yet');
+  assert.notEqual(c.mailbox.localId, 0, 'and specifically not that it is player 1');
+});
+
+test('a slot the player chose themselves needs no round trip', () => {
+  const c = makeConsole(AT, { slot: 1 });
+  c.bridge.setStatus(HOST_CONNECTING);
+
+  assert.equal(c.mailbox.localId, 1, 'published before the relay answers');
+  assert.equal(c.bridge.peerId, 0);
+});
+
+test('the relay still has the last word on the slot', () => {
+  const c = makeConsole(AT, { slot: 1 });
+  c.bridge.setStatus(HOST_CONNECTING);
+  c.bridge.setIdentity({ localId: 0, playerCount: 2 });
+
+  assert.equal(c.mailbox.localId, 0, 'corrected to what the relay assigned');
+  assert.equal(c.bridge.peerId, 1);
 });
 
 test('identity sets the peer id and is published to the ROM', () => {

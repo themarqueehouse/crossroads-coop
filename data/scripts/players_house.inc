@@ -40,13 +40,38 @@ PlayersHouse_1F_EventScript_MomGoSeeRoom::
 	releaseall
 	end
 
+@ Setting the clock is a story beat -- it is what unblocks the stairs and ends
+@ the opening -- so both players are in it and one of them drives it. Looking
+@ at a clock that is already running is not a story beat and is an ordinary
+@ thing to do alone, so the split happens here, before the scene is shared.
+@
+@ The coopscene stays at the top level of the script that runs rather than
+@ going in a subroutine both houses could share: it hands the partner a
+@ pointer to resume from, and a pointer into the middle of a called routine
+@ would have them run its `return` with nothing on their stack.
 LittlerootTown_BrendansHouse_2F_EventScript_WallClock::
+	goto_if_set FLAG_SET_WALL_CLOCK, LittlerootTown_BrendansHouse_2F_EventScript_LookAtRunningClock
+	coopscene GATE_STORY_WALL_CLOCK
+	lockall
+	setvar VAR_0x8004, MALE
+	goto PlayersHouse_2F_EventScript_WallClock
+	end
+
+LittlerootTown_BrendansHouse_2F_EventScript_LookAtRunningClock::
 	lockall
 	setvar VAR_0x8004, MALE
 	goto PlayersHouse_2F_EventScript_WallClock
 	end
 
 LittlerootTown_MaysHouse_2F_EventScript_WallClock::
+	goto_if_set FLAG_SET_WALL_CLOCK, LittlerootTown_MaysHouse_2F_EventScript_LookAtRunningClock
+	coopscene GATE_STORY_WALL_CLOCK
+	lockall
+	setvar VAR_0x8004, FEMALE
+	goto PlayersHouse_2F_EventScript_WallClock
+	end
+
+LittlerootTown_MaysHouse_2F_EventScript_LookAtRunningClock::
 	lockall
 	setvar VAR_0x8004, FEMALE
 	goto PlayersHouse_2F_EventScript_WallClock
@@ -55,7 +80,12 @@ LittlerootTown_MaysHouse_2F_EventScript_WallClock::
 PlayersHouse_2F_EventScript_WallClock::
 	goto_if_set FLAG_SET_WALL_CLOCK, PlayersHouse_2F_EventScript_CheckWallClock
 	msgbox PlayersHouse_2F_Text_ClockIsStopped, MSGBOX_DEFAULT
+	@ One clock, one person setting it. The other player watches the dialogue
+	@ and gets the flag; handing them their own clock screen would ask them to
+	@ set the same shared clock a second time.
+	goto_if_coop_guest PlayersHouse_2F_EventScript_WallClockSetByPartner
 	call PlayersHouse_2F_EventScript_SetWallClock
+PlayersHouse_2F_EventScript_WallClockSetByPartner:
 	delay 30
 	setvar VAR_LITTLEROOT_INTRO_STATE, 6
 	setflag FLAG_SET_WALL_CLOCK
@@ -416,6 +446,7 @@ PlayersHouse_1F_Movement_MovePlayerAwayFromDoor:
 	step_end
 
 PlayersHouse_1F_EventScript_GetSSTicketAndSeeLatiTV::
+	coopscene GATE_STORY_SS_TICKET
 	lockall
 	checkplayergender
 	call_if_eq VAR_RESULT, MALE, PlayersHouse_1F_EventScript_SetUpObjectEventVarsMale

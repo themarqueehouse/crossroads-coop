@@ -22,7 +22,8 @@
 // Incoming peer frames get a JS-side holding queue for the same reason, so a
 // network burst is absorbed rather than discarded.
 
-import { HOST_DOWN, HOST_CONNECTING, HOST_READY, HOST_LOST, RING_CAPACITY } from './mailbox.js';
+import { HOST_DOWN, HOST_CONNECTING, HOST_READY, HOST_LOST, RING_CAPACITY,
+         SLOT_UNKNOWN } from './mailbox.js';
 
 // If the peer runs this far ahead of what our ROM has consumed, something is
 // structurally wrong (a stalled local emulator, or a peer not honouring
@@ -37,13 +38,25 @@ export class Bridge {
    * @param {{send: (cmd: Uint8Array) => void}} opts.link transport (the net client)
    * @param {(event: object) => void} [opts.onEvent] diagnostics sink
    */
-  constructor({ mailbox, link, onEvent = () => {} }) {
+  constructor({ mailbox, link, onEvent = () => {}, slot = null }) {
     this.mailbox = mailbox;
     this.link = link;
     this.onEvent = onEvent;
 
-    this.localId = 0;
-    this.peerId = 1;
+    // Which player we are, or null for "the relay has not said".
+    //
+    // This started as 0, which the ROM cannot tell apart from "I am Player 1":
+    // the mailbox carries one byte and slot 0 is a legitimate value. So the
+    // link would come up, the ROM would read 0, and Player 2's console spent
+    // the round trip to the relay looking exactly like Player 1's -- long
+    // enough to put the main menu in front of its player and have them press
+    // NEW GAME. Null publishes SLOT_UNKNOWN instead, and the ROM waits.
+    //
+    // When the player picked their own slot in the form, that is the answer
+    // already and there is nothing to wait for; the relay confirms it a moment
+    // later, or corrects it, and either way setIdentity has the last word.
+    this.localId = slot === 0 || slot === 1 ? slot : null;
+    this.peerId = this.localId === 0 ? 1 : 0;
     this.status = HOST_DOWN;
     this.playerCount = 0;
 
@@ -62,7 +75,7 @@ export class Bridge {
 
   /** Called when the relay tells us who we are. */
   setIdentity({ localId, playerCount }) {
-    if (localId !== undefined && localId !== this.localId) {
+    if (localId !== undefined && localId !== null && localId !== this.localId) {
       this.localId = localId;
       this.peerId = localId === 0 ? 1 : 0;
     }
@@ -79,7 +92,7 @@ export class Bridge {
     if (status === HOST_READY && was !== HOST_READY) {
       this.peerQueue.length = 0;
       this.mailbox.resetRings();
-      this.onEvent({ type: 'session-ready', localId: this.localId });
+      this.onEvent({ type: 'session-ready', localId: this.localId ?? 0 });
     }
 
     if (status === HOST_LOST && was !== HOST_LOST) {
@@ -93,7 +106,7 @@ export class Bridge {
   publish() {
     this.mailbox.setSession({
       status: this.status,
-      localId: this.localId,
+      localId: this.localId === null ? SLOT_UNKNOWN : this.localId,
       playerCount: this.playerCount,
     });
   }

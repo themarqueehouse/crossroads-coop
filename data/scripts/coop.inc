@@ -145,149 +145,24 @@ CoopEventScript_FirstRunDone:
 @ both players are standing here and both choose; a gate afterwards holds
 @ whoever picks first until the other has, so the rest of the scene runs for
 @ the two of them together.
-CoopEventScript_ChooseStarter::
-	dynmultipush CoopText_Kanto,  0
-	dynmultipush CoopText_Johto,  1
-	dynmultipush CoopText_Hoenn,  2
-	dynmultipush CoopText_Sinnoh, 3
-	dynmultipush CoopText_Unova,  4
-	dynmultipush CoopText_Kalos,  5
-	dynmultipush CoopText_Alola,  6
-	dynmultipush CoopText_Galar,  7
-	dynmultipush CoopText_Paldea, 8
-	dynmultistack 0, 0, TRUE, 6, FALSE, 0, NULL
-	switch VAR_RESULT
-	case 0, CoopEventScript_StartersKanto
-	case 1, CoopEventScript_StartersJohto
-	case 2, CoopEventScript_StartersHoenn
-	case 3, CoopEventScript_StartersSinnoh
-	case 4, CoopEventScript_StartersUnova
-	case 5, CoopEventScript_StartersKalos
-	case 6, CoopEventScript_StartersAlola
-	case 7, CoopEventScript_StartersGalar
-	case 8, CoopEventScript_StartersPaldea
-	@ B out of the region menu and you are asked again. There is no way on
-	@ from here without a Pokemon.
-	goto CoopEventScript_ChooseStarter
-
-CoopEventScript_StartersKanto:
-	setvar VAR_TEMP_B, SPECIES_BULBASAUR
-	setvar VAR_TEMP_C, SPECIES_CHARMANDER
-	setvar VAR_TEMP_D, SPECIES_SQUIRTLE
-	dynmultipush CoopText_Bulbasaur, 0
-	dynmultipush CoopText_Charmander, 1
-	dynmultipush CoopText_Squirtle, 2
-	goto CoopEventScript_PickStarter
-
-CoopEventScript_StartersJohto:
-	setvar VAR_TEMP_B, SPECIES_CHIKORITA
-	setvar VAR_TEMP_C, SPECIES_CYNDAQUIL
-	setvar VAR_TEMP_D, SPECIES_TOTODILE
-	dynmultipush CoopText_Chikorita, 0
-	dynmultipush CoopText_Cyndaquil, 1
-	dynmultipush CoopText_Totodile, 2
-	goto CoopEventScript_PickStarter
-
-CoopEventScript_StartersHoenn:
-	setvar VAR_TEMP_B, SPECIES_TREECKO
-	setvar VAR_TEMP_C, SPECIES_TORCHIC
-	setvar VAR_TEMP_D, SPECIES_MUDKIP
-	dynmultipush CoopText_Treecko, 0
-	dynmultipush CoopText_Torchic, 1
-	dynmultipush CoopText_Mudkip, 2
-	goto CoopEventScript_PickStarter
-
-CoopEventScript_StartersSinnoh:
-	setvar VAR_TEMP_B, SPECIES_TURTWIG
-	setvar VAR_TEMP_C, SPECIES_CHIMCHAR
-	setvar VAR_TEMP_D, SPECIES_PIPLUP
-	dynmultipush CoopText_Turtwig, 0
-	dynmultipush CoopText_Chimchar, 1
-	dynmultipush CoopText_Piplup, 2
-	goto CoopEventScript_PickStarter
-
-CoopEventScript_StartersUnova:
-	setvar VAR_TEMP_B, SPECIES_SNIVY
-	setvar VAR_TEMP_C, SPECIES_TEPIG
-	setvar VAR_TEMP_D, SPECIES_OSHAWOTT
-	dynmultipush CoopText_Snivy, 0
-	dynmultipush CoopText_Tepig, 1
-	dynmultipush CoopText_Oshawott, 2
-	goto CoopEventScript_PickStarter
-
-CoopEventScript_StartersKalos:
-	setvar VAR_TEMP_B, SPECIES_CHESPIN
-	setvar VAR_TEMP_C, SPECIES_FENNEKIN
-	setvar VAR_TEMP_D, SPECIES_FROAKIE
-	dynmultipush CoopText_Chespin, 0
-	dynmultipush CoopText_Fennekin, 1
-	dynmultipush CoopText_Froakie, 2
-	goto CoopEventScript_PickStarter
-
-CoopEventScript_StartersAlola:
-	setvar VAR_TEMP_B, SPECIES_ROWLET
-	setvar VAR_TEMP_C, SPECIES_LITTEN
-	setvar VAR_TEMP_D, SPECIES_POPPLIO
-	dynmultipush CoopText_Rowlet, 0
-	dynmultipush CoopText_Litten, 1
-	dynmultipush CoopText_Popplio, 2
-	goto CoopEventScript_PickStarter
-
-CoopEventScript_StartersGalar:
-	setvar VAR_TEMP_B, SPECIES_GROOKEY
-	setvar VAR_TEMP_C, SPECIES_SCORBUNNY
-	setvar VAR_TEMP_D, SPECIES_SOBBLE
-	dynmultipush CoopText_Grookey, 0
-	dynmultipush CoopText_Scorbunny, 1
-	dynmultipush CoopText_Sobble, 2
-	goto CoopEventScript_PickStarter
-
-CoopEventScript_StartersPaldea:
-	setvar VAR_TEMP_B, SPECIES_SPRIGATITO
-	setvar VAR_TEMP_C, SPECIES_FUECOCO
-	setvar VAR_TEMP_D, SPECIES_QUAXLY
-	dynmultipush CoopText_Sprigatito, 0
-	dynmultipush CoopText_Fuecoco, 1
-	dynmultipush CoopText_Quaxly, 2
-	goto CoopEventScript_PickStarter
-
-@ The three the region above pushed, with the species themselves in
-@ VAR_TEMP_B/C/D so one copy of this serves all nine.
+@ All nine regions' starters, on the game's own starter screen.
 @
-@ B goes back to the region list rather than out: there is nothing on the
-@ other side of this script but a player with no Pokemon.
-CoopEventScript_PickStarter:
-	dynmultistack 0, 0, FALSE, 3, FALSE, 0, NULL
-	switch VAR_RESULT
-	case 0, CoopEventScript_TakeFirst
-	case 1, CoopEventScript_TakeSecond
-	case 2, CoopEventScript_TakeThird
-	goto CoopEventScript_ChooseStarter
-
-CoopEventScript_TakeFirst:
-	copyvar VAR_TEMP_E, VAR_TEMP_B
-	setvar VAR_TEMP_F, 0
-	goto CoopEventScript_GiveStarter
-
-CoopEventScript_TakeSecond:
-	copyvar VAR_TEMP_E, VAR_TEMP_C
-	setvar VAR_TEMP_F, 1
-	goto CoopEventScript_GiveStarter
-
-CoopEventScript_TakeThird:
-	copyvar VAR_TEMP_E, VAR_TEMP_D
-	setvar VAR_TEMP_F, 2
-
-@ No waitstate after the callnative. ScriptGiveMon returns having done the
-@ work; waitstate blocks until something calls ScriptContext_Enable, and a
-@ plain callnative sets up no such wait -- so the script sat there for ever
-@ with the player locked, one line short of finishing.
+@ It used to be two text menus -- pick a region, then pick one of its three --
+@ which named the Pokemon and showed nothing. Asked for directly: a picture of
+@ the one being chosen, and not being made to pick a region first. So this uses
+@ the screen Birch's bag uses, which already draws the three Pokeballs, the
+@ front sprite and the name, with up and down turning between regions. The
+@ species comes back in VAR_TEMP_E and which of the three it was in VAR_TEMP_F.
+CoopEventScript_ChooseStarter::
+	special CoopChooseStarterAllRegions
+	waitstate
 CoopEventScript_GiveStarter:
 	callnative Coop_GiveChosenStarter
 	msgbox CoopText_StarterChosen, MSGBOX_DEFAULT
 	@ Whoever chose first waits here. Without it the faster player walks on
-	@ into the rest of Birch's scene while their partner is still reading a
-	@ list of regions, and the two spend the next conversation a beat apart.
+	@ into the rest of Birch's scene while their partner is still looking
+	@ through the regions, and the two spend the next conversation a beat
+	@ apart.
 	coopgate GATE_STORY_STARTERS_PICKED
 	return
 

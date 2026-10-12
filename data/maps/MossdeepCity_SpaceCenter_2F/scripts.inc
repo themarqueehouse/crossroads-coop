@@ -29,6 +29,7 @@ MossdeepCity_SpaceCenter_2F_OnFrame:
 	.2byte 0
 
 MossdeepCity_SpaceCenter_2F_EventScript_ThreeMagmaGrunts::
+	coopscene GATE_STORY_SPACE_CENTER
 	playse SE_PIN
 	applymovement LOCALID_PLAYER, Common_Movement_ExclamationMark
 	waitmovement 0

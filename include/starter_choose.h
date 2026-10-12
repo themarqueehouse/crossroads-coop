@@ -8,6 +8,8 @@ extern const u32 gBirchBagGrass_Gfx[];
 extern const u32 gPokeballSelection_Gfx[];
 
 u16 GetStarterPokemon(u16 chosenStarterId);
+void CoopChooseStarterAllRegions(void);
+void CoopClearStarterAllRegions(void);
 u16 GetStarterPokemon_Frlg(u16 chosenStarterId);
 u16 GetStarterPokemonVoid(void);
 u16 GetStarterPokemonVoid_Frlg(void);

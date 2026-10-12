@@ -2905,14 +2905,44 @@ void CoopDoPlayerNamingScreen(void)
                    CB2_CoopFirstRunNamed);
 }
 
+// Rebuild the avatar for the gender just chosen.
+//
+// playerGender decides which sprite the player's object event is built from,
+// and that happens when the object is created -- on a map load. Setting the
+// variable on its own therefore changes who you are everywhere except on
+// screen: the player who picked the girl kept walking around as the boy until
+// they went through a door, which is exactly what was reported. Their partner
+// saw it correctly the whole time, because the peer sprite is built from the
+// gender in the position broadcast rather than from a local object.
+static void RefreshPlayerAvatarGraphics(void)
+{
+    struct ObjectEvent *player;
+
+    if (gPlayerAvatar.objectEventId >= OBJECT_EVENTS_COUNT)
+        return;
+
+    player = &gObjectEvents[gPlayerAvatar.objectEventId];
+    if (!player->active)
+        return;
+
+    // Only the on-foot sprite. Being asked who you are happens in the first
+    // minute of a session, standing in a town; there is no bike or surf state
+    // to preserve, and reading the current state back would mean mapping a
+    // flag set to a state id for no benefit.
+    ObjectEventSetGraphicsId(player,
+                             GetPlayerAvatarGraphicsIdByStateId(PLAYER_AVATAR_STATE_NORMAL));
+}
+
 void Coop_SetGenderMale(struct ScriptContext *ctx)
 {
     gSaveBlock2Ptr->playerGender = MALE;
+    RefreshPlayerAvatarGraphics();
 }
 
 void Coop_SetGenderFemale(struct ScriptContext *ctx)
 {
     gSaveBlock2Ptr->playerGender = FEMALE;
+    RefreshPlayerAvatarGraphics();
 }
 
 // The chosen starter, from VAR_TEMP_E.

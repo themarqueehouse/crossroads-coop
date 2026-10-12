@@ -255,6 +255,9 @@ export class CoopApp {
       mailbox: this.mailbox,
       link: { send: (cmd) => this.client.send(cmd) },
       onEvent: (e) => this.onBridgeEvent(e),
+      // The player already chose, so the ROM can be told now rather than after
+      // a round trip to the relay. See the note in the Bridge constructor.
+      slot,
     });
 
     this.client = new NetClient({

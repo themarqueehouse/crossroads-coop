@@ -953,6 +953,9 @@ enum BattleTransition GetSpecialBattleTransition(enum BattleTransitionGroup id)
 
 void ChooseStarter(void)
 {
+    // Birch's own bag, with the three the region has. Cleared explicitly
+    // because the co-op entry point sets it and this screen is shared.
+    CoopClearStarterAllRegions();
     SetMainCallback2(CB2_ChooseStarter);
     gMain.savedCallback = CB2_GiveStarter;
 }

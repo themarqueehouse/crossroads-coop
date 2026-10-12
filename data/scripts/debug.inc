@@ -1240,3 +1240,12 @@ Debug_EventScript_Script_26::
 	callnative Debug_FillABox
 	release
 	end
+
+@ The co-op starter screen on its own, so a test can drive it without walking
+@ the opening to Birch's bag first. Same two commands the real scene runs.
+Debug_EventScript_Script_27::
+	special CoopChooseStarterAllRegions
+	waitstate
+	callnative Coop_GiveChosenStarter
+	release
+	end

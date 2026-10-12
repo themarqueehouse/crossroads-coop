@@ -167,7 +167,7 @@ ARRAYS = {
     "gCoopWorldOffsets": [
         "flags", "numFlagBytes", "dexSeen", "dexCaught", "numDexFlagBytes",
         "flagBadge01", "tempFlagsSize", "bag", "encryptionKey",
-        "sb1Location", "warpMapNum", "sb1Money",
+        "sb1Location", "warpMapNum", "sb1Money", "sb1Vars", "varTempEIndex",
         "flagAdventureStarted", "flagPokedexGet",
     ],
 }

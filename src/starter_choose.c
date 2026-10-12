@@ -17,6 +17,8 @@
 #include "strings.h"
 #include "task.h"
 #include "text.h"
+#include "string_util.h"
+#include "overworld.h"
 #include "text_window.h"
 #include "trainer_pokemon_sprites.h"
 #include "trig.h"
@@ -44,6 +46,7 @@ static void Task_DeclineStarter(u8 taskId);
 static void Task_MoveStarterChooseCursor(u8 taskId);
 static void Task_CreateStarterLabel(u8 taskId);
 static void CreateStarterPokemonLabel(u8 selection);
+static void ShowStarterRegionName(void);
 static u8 CreatePokemonFrontSprite(enum Species species, u8 x, u8 y);
 static void SpriteCB_SelectionHand(struct Sprite *sprite);
 static void SpriteCB_Pokeball(struct Sprite *sprite);
@@ -123,6 +126,54 @@ static const u16 sStarterMon_Frlg[STARTER_MON_COUNT] =
     SPECIES_CHARMANDER,
     SPECIES_SQUIRTLE,
 };
+
+// ---------------------------------------------------------------------------
+// Every region's three, for co-op.
+//
+// Two players share one world, so the pair pick their starters here rather than
+// taking Birch's one bag between them -- and once you are choosing at all there
+// is no reason to be held to the three that belong to the region the save
+// happens to be set to. Asked for directly: all of them, with a picture.
+//
+// Laid out as pages of three so the screen it is shown on does not change at
+// all: the same bag, the same three Pokeballs, the same front sprite and name
+// when one is highlighted. Up and down turn the page.
+// ---------------------------------------------------------------------------
+
+#define STARTER_REGION_COUNT 9
+
+// Where the pages open. Hoenn, because that is the game this is, and because
+// starting on the page the story's own rival expects keeps the rest of it
+// sensible for a player who just presses A.
+#define STARTER_REGION_HOENN 2
+
+static const u16 sStarterMon_AllRegions[STARTER_REGION_COUNT][STARTER_MON_COUNT] =
+{
+    { SPECIES_BULBASAUR,  SPECIES_CHARMANDER, SPECIES_SQUIRTLE  },
+    { SPECIES_CHIKORITA,  SPECIES_CYNDAQUIL,  SPECIES_TOTODILE  },
+    { SPECIES_TREECKO,    SPECIES_TORCHIC,    SPECIES_MUDKIP    },
+    { SPECIES_TURTWIG,    SPECIES_CHIMCHAR,   SPECIES_PIPLUP    },
+    { SPECIES_SNIVY,      SPECIES_TEPIG,      SPECIES_OSHAWOTT  },
+    { SPECIES_CHESPIN,    SPECIES_FENNEKIN,   SPECIES_FROAKIE   },
+    { SPECIES_ROWLET,     SPECIES_LITTEN,     SPECIES_POPPLIO   },
+    { SPECIES_GROOKEY,    SPECIES_SCORBUNNY,  SPECIES_SOBBLE    },
+    { SPECIES_SPRIGATITO, SPECIES_FUECOCO,    SPECIES_QUAXLY    },
+};
+
+static const u8 sStarterRegionNames[STARTER_REGION_COUNT][8] =
+{
+    _("KANTO"), _("JOHTO"), _("HOENN"), _("SINNOH"), _("UNOVA"),
+    _("KALOS"), _("ALOLA"), _("GALAR"), _("PALDEA"),
+};
+
+static const u8 sText_StarterRegionHint[] = _("{STR_VAR_1}\nUP or DOWN for another region.");
+
+// Which page is showing, and whether the screen is in all-regions mode at all.
+// Module state rather than task data because the sprite callbacks and the label
+// need it, and because the vanilla three-Pokemon path must keep behaving
+// exactly as it did: with this FALSE, nothing below changes anything.
+static bool8 sAllRegions;
+static u8 sStarterRegion;
 
 static const struct BgTemplate sBgTemplates[3] =
 {
@@ -350,6 +401,20 @@ static const struct SpriteTemplate sSpriteTemplate_StarterCircle =
 };
 
 // .text
+
+// The species behind one of the three Pokeballs on screen.
+//
+// Everything in this file that needs to know what is being chosen goes through
+// here, so paging through the regions is a matter of which row it reads.
+static u16 GetShownStarter(u16 slot)
+{
+    if (slot >= STARTER_MON_COUNT)
+        slot = 0;
+    if (sAllRegions)
+        return sStarterMon_AllRegions[sStarterRegion][slot];
+    return sStarterMon[slot];
+}
+
 u16 GetStarterPokemon(u16 chosenStarterId)
 {
     if (chosenStarterId > STARTER_MON_COUNT)
@@ -479,6 +544,27 @@ void CB2_ChooseStarter(void)
     gSprites[spriteId].sBallId = 2;
 
     sStarterLabelWindowId = WINDOW_NONE;
+    ShowStarterRegionName();
+}
+
+// Entry point for the co-op starter choice: the same screen, with all nine
+// regions behind it.
+//
+// Separate from ChooseStarter rather than a flag on it so the single-player
+// path through Birch's bag is untouched, and so this cannot be reached by
+// accident -- it is called from one script.
+void CoopChooseStarterAllRegions(void)
+{
+    sAllRegions = TRUE;
+    sStarterRegion = STARTER_REGION_HOENN;
+    SetMainCallback2(CB2_ChooseStarter);
+    gMain.savedCallback = CB2_ReturnToFieldContinueScriptPlayMapMusic;
+}
+
+void CoopClearStarterAllRegions(void)
+{
+    sAllRegions = FALSE;
+    sStarterRegion = STARTER_REGION_HOENN;
 }
 
 static void CB2_StarterChoose(void)
@@ -515,7 +601,7 @@ static void Task_HandleStarterChooseInput(u8 taskId)
         gTasks[taskId].tCircleSpriteId = spriteId;
 
         // Create Pokémon sprite
-        spriteId = CreatePokemonFrontSprite(GetStarterPokemon(gTasks[taskId].tStarterSelection), sPokeballCoords[selection][0], sPokeballCoords[selection][1]);
+        spriteId = CreatePokemonFrontSprite(GetShownStarter(gTasks[taskId].tStarterSelection), sPokeballCoords[selection][0], sPokeballCoords[selection][1]);
         gSprites[spriteId].affineAnims = &sAffineAnims_StarterPokemon;
         gSprites[spriteId].callback = SpriteCB_StarterPokemon;
 
@@ -532,6 +618,36 @@ static void Task_HandleStarterChooseInput(u8 taskId)
         gTasks[taskId].tStarterSelection++;
         gTasks[taskId].func = Task_MoveStarterChooseCursor;
     }
+    else if (sAllRegions && (JOY_NEW(DPAD_UP) || JOY_NEW(DPAD_DOWN)))
+    {
+        // Turn the page. The three Pokeballs stay where they are and the
+        // highlighted slot stays highlighted; only what is behind them changes,
+        // which is why nothing has to be torn down and rebuilt here.
+        if (JOY_NEW(DPAD_UP))
+            sStarterRegion = sStarterRegion == 0 ? STARTER_REGION_COUNT - 1
+                                                 : sStarterRegion - 1;
+        else
+            sStarterRegion = sStarterRegion == STARTER_REGION_COUNT - 1
+                           ? 0 : sStarterRegion + 1;
+
+        PlaySE(SE_SELECT);
+        ShowStarterRegionName();
+        gTasks[taskId].func = Task_MoveStarterChooseCursor;
+    }
+}
+
+// The region name, in the message box at the bottom that is otherwise empty
+// until the confirmation question.
+static void ShowStarterRegionName(void)
+{
+    if (!sAllRegions)
+        return;
+
+    StringCopy(gStringVar1, sStarterRegionNames[sStarterRegion]);
+    StringExpandPlaceholders(gStringVar4, sText_StarterRegionHint);
+    FillWindowPixelBuffer(0, PIXEL_FILL(1));
+    AddTextPrinterParameterized(0, FONT_NORMAL, gStringVar4, 0, 1, 0, NULL);
+    ScheduleBgCopyTilemapToVram(0);
 }
 
 static void Task_WaitForStarterSprite(u8 taskId)
@@ -546,7 +662,7 @@ static void Task_WaitForStarterSprite(u8 taskId)
 
 static void Task_AskConfirmStarter(u8 taskId)
 {
-    PlayCry_Normal(GetStarterPokemon(gTasks[taskId].tStarterSelection), 0);
+    PlayCry_Normal(GetShownStarter(gTasks[taskId].tStarterSelection), 0);
     FillWindowPixelBuffer(0, PIXEL_FILL(1));
     AddTextPrinterParameterized(0, FONT_NORMAL, gText_ConfirmStarterChoice, 0, 1, 0, NULL);
     ScheduleBgCopyTilemapToVram(0);
@@ -563,6 +679,16 @@ static void Task_HandleConfirmStarterInput(u8 taskId)
     case 0:  // YES
         // Return the starter choice and exit.
         gSpecialVar_Result = gTasks[taskId].tStarterSelection;
+        if (sAllRegions)
+        {
+            // The slot alone does not say what was chosen once there are
+            // twenty-seven of them, so the species goes back as well. The
+            // co-op script reads VAR_TEMP_E; VAR_TEMP_F keeps the slot, which
+            // is what the rest of the story uses to ask "which of the three
+            // did you start with".
+            VarSet(VAR_TEMP_E, GetShownStarter(gTasks[taskId].tStarterSelection));
+            VarSet(VAR_TEMP_F, gTasks[taskId].tStarterSelection);
+        }
         ResetAllPicSprites();
         SetMainCallback2(gMain.savedCallback);
         break;
@@ -594,7 +720,7 @@ static void CreateStarterPokemonLabel(u8 selection)
     s32 width;
     u8 labelLeft, labelRight, labelTop, labelBottom;
 
-    enum Species species = GetStarterPokemon(selection);
+    enum Species species = GetShownStarter(selection);
     CopyMonCategoryText(species, categoryText);
     speciesName = GetSpeciesName(species);
 

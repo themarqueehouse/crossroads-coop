@@ -53,6 +53,11 @@ export const DIAG = {
 };
 
 // Mirrors enum NetHostStatus.
+// Published in the localId byte while the slot is not yet known. The ROM reads
+// anything outside the player range as "nobody has said yet" and waits rather
+// than assuming it is Player 1. Mirrors NET_SLOT_UNKNOWN in include/net_link.h.
+export const SLOT_UNKNOWN = 0xff;
+
 export const HOST_DOWN = 0;
 export const HOST_CONNECTING = 1;
 export const HOST_READY = 2;

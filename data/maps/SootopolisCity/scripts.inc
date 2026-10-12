@@ -458,6 +458,7 @@ SootopolisCity_Movement_GroudonIdle:
 
 @ If not at PokeCenter, assumed to have arrived via Dive
 SootopolisCity_EventScript_StartRayquazaScene::
+	coopscene GATE_STORY_RAYQUAZA
 	lockall
 	special StorePlayerCoordsInVars
 	goto_if_ne VAR_0x8004, 43, SootopolisCity_EventScript_RayquazaSceneFromDive

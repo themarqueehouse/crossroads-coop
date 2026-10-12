@@ -55,6 +55,7 @@ LittlerootTown_BrendansHouse_1F_OnFrame:
 	.2byte 0
 
 LittlerootTown_BrendansHouse_1F_EventScript_GoUpstairsToSetClock::
+	coopscene GATE_STORY_GO_SET_CLOCK
 	lockall
 	msgbox PlayersHouse_1F_Text_GoSetTheClock, MSGBOX_DEFAULT
 	closemessage
@@ -71,6 +72,7 @@ LittlerootTown_BrendansHouse_1F_Movement_PushTowardStairs:
 	step_end
 
 LittlerootTown_BrendansHouse_1F_EventScript_EnterHouseMovingIn::
+	coopscene GATE_STORY_MOVING_IN
 	lockall
 	setvar VAR_0x8004, LOCALID_PLAYERS_HOUSE_1F_MOM
 	setvar VAR_0x8005, MALE

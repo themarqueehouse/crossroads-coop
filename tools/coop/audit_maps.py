@@ -313,6 +313,77 @@ def main():
                     findings['story battle not wired for co-op'].append(
                         '%s %s: line %d %s' % (path, name, lineno, trainer))
 
+    # --- trigger scenes on a shared var, not wired for co-op --------------
+    #
+    # The other half of the co-op wiring problem, and the harder half to
+    # notice. A trigger scene is one the game starts AT the player: an on-frame
+    # table matching a story var. When that var is shared -- and the story vars
+    # all are -- the console that gets there first runs the scene and advances
+    # the var, and the trigger stops matching for the other player, who is left
+    # standing on the tile with nothing going to happen and no way to make it.
+    # Several of them warp as well, which separates the pair outright.
+    #
+    # Only scenes that say something, move the player or start a fight count. A
+    # trigger that poses the camera or places an NPC is presentation, belongs to
+    # each console, and is correctly unshared -- as is anything keyed on a
+    # VAR_TEMP_*, which is per-map scratch rather than shared state.
+    bodies = {}
+    for path in sorted(glob.glob('data/maps/*/scripts.inc')
+                       + glob.glob('data/scripts/*.inc')):
+        cur = None
+        for i, line in enumerate(open(path).read().split('\n')):
+            m = re.match(r'([A-Za-z_]\w*):{1,2}$', line.strip())
+            if m:
+                cur = m.group(1)
+                bodies[cur] = []
+            elif cur is not None:
+                bodies[cur].append(line)
+
+    def script_text(label, seen=()):
+        """A script plus whatever it hands straight off to."""
+        if label not in bodies or label in seen or len(seen) > 4:
+            return ''
+        text = '\n'.join(bodies[label])
+        for m in re.finditer(r'^\s*(?:goto|call)(?:_if\w*)?\s+(?:[A-Z_0-9]+,\s*)?'
+                             r'([A-Za-z_]\w*)\s*$', text, re.M):
+            text += '\n' + script_text(m.group(1), seen + (label,))
+        return text
+
+    does_something = re.compile(r'\b(msgbox|message|warp\w*|trainerbattle\w*|givemon|'
+                                r'giveitem|fadescreenswapbuffers|playbgm)\b')
+
+    # Scenes that are meant to belong to one console.
+    PER_CONSOLE = {
+        # Each player walks their own path across the ice and falls through
+        # their own tile. Mirroring it would drop the partner through the floor
+        # from wherever they happened to be standing.
+        'SootopolisCity_Gym_1F_EventScript_FallThroughIce',
+        # The roaming weather's own cleanup, which runs on whichever console
+        # notices and is idempotent.
+        'AbnormalWeather_EventScript_EndEventAndCleanup_1',
+        # Side content, entered and played one at a time by design.
+        'ContestHall_EventScript_Contest',
+        'LilycoveCity_ContestLobby_EventScript_TryDoContestArtist',
+        'LilycoveCity_ContestLobby_EventScript_TryDoLinkContestArtist',
+        'BattleFrontier_ReceptionGate_EventScript_FirstTimeEntering',
+        'FuchsiaCity_SafariZone_Entrance_EventScript_ExitWarpIn',
+        'FuchsiaCity_SafariZone_Entrance_EventScript_ExitEarly',
+        'FuchsiaCity_SafariZone_Entrance_EventScript_ExitWalkIn',
+    }
+    for path in glob.glob('data/maps/*/scripts.inc'):
+        area = os.path.basename(os.path.dirname(path))
+        for m in re.finditer(r'map_script_2\s+(VAR_[A-Z0-9_]+),\s*\d+,\s*([A-Za-z_]\w*)',
+                             open(path).read()):
+            var, label = m.group(1), m.group(2)
+            if var.startswith('VAR_TEMP'):
+                continue
+            text = script_text(label)
+            if label in PER_CONSOLE or wiring.search(text) \
+               or not does_something.search(text):
+                continue
+            findings['trigger scene on a shared var, not wired for co-op'].append(
+                '%s: %s keyed on %s' % (area, label, var))
+
     # --- report ---------------------------------------------------------
     total = sum(len(v) for v in findings.values())
     if not total:

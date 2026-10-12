@@ -17,7 +17,41 @@ static void ScriptMovement_UnfreezeActiveObjects(u8 taskId);
 static void ScriptMovement_MoveObjects(u8 taskId);
 static void ScriptMovement_TakeStep(u8 taskId, u8 moveScrId, u8 objEventId, const u8 *movementScript);
 
-static EWRAM_DATA const u8 *sMovementScripts[OBJECT_EVENTS_COUNT] = {0};
+// How many objects can be under scripted movement at once.
+//
+// NOT the number of objects a map can hold. Everything in this file lives in
+// one task: data[0] is a bitmask of which movements have finished, and data[1]
+// onwards is a byte per slot holding the object each one is moving. A task has
+// NUM_TASK_DATA s16 of data, so the mask holds sixteen bits and the bytes after
+// it hold thirty -- and both of those are properties of struct Task, not of the
+// world.
+//
+// Tying the loops here to OBJECT_EVENTS_COUNT was therefore fine only while the
+// two numbers happened to agree. Raising the object limit to 32 broke this file
+// in two ways at once, neither of them visible at compile time:
+//
+//   The mask. IsMovementScriptFinished tests data[0] & (1 << slot) against a
+//   u16. For slot 16 and up that is always zero, so those movements never
+//   report finished -- and `waitmovement` on one parks the script in
+//   CONTEXT_WAITING with the player's controls locked, for ever. After a
+//   `fadescreen FADE_TO_BLACK`, which is how half the cutscenes in the game
+//   begin, that is a console frozen on a black screen.
+//
+//   The bytes. Walking 32 of them from &data[1] runs two past the end of
+//   data[], which is the next task's function pointer: read by
+//   ScriptMovement_UnfreezeActiveObjects as an object index, and written by
+//   SetObjectEventIdAtMovementScript.
+//
+// Sixteen simultaneous scripted movements is what the game has always had and
+// far more than any cutscene asks for, so the limit stays with the task that
+// holds it and the object count is free to grow.
+#define MOVEMENT_SCRIPT_SLOTS 16
+
+STATIC_ASSERT(MOVEMENT_SCRIPT_SLOTS <= 16, MovementSlotsExceedFinishedMask);
+STATIC_ASSERT(1 + (MOVEMENT_SCRIPT_SLOTS + 1) / 2 <= NUM_TASK_DATA,
+              MovementSlotsExceedTaskData);
+
+static EWRAM_DATA const u8 *sMovementScripts[MOVEMENT_SCRIPT_SLOTS] = {0};
 
 bool8 ScriptMovement_StartObjectMovementScript(u8 localId, u8 mapNum, u8 mapGroup, const u8 *movementScript)
 {
@@ -40,7 +74,7 @@ bool8 ScriptMovement_IsObjectMovementFinished(u8 localId, u8 mapNum, u8 mapGroup
         return TRUE;
     taskId = GetMoveObjectsTaskId();
     moveScrId = GetMovementScriptIdFromObjectEventId(taskId, objEventId);
-    if (moveScrId == OBJECT_EVENTS_COUNT)
+    if (moveScrId == MOVEMENT_SCRIPT_SLOTS)
         return TRUE;
     return IsMovementScriptFinished(taskId, moveScrId);
 }
@@ -52,7 +86,7 @@ bool32 ScriptMovement_IsAllObjectMovementFinished(void)
     {
         u32 finishedMovements = gTasks[taskId].data[0];
         const u8 *objEventIds = (u8 *)&gTasks[taskId].data[1];
-        for (u32 i = 0; i < OBJECT_EVENTS_COUNT; i++)
+        for (u32 i = 0; i < MOVEMENT_SCRIPT_SLOTS; i++)
         {
             if (objEventIds[i] != 0xFF && !(finishedMovements & (1 << i)))
                 return FALSE;
@@ -94,7 +128,7 @@ static bool8 ScriptMovement_TryAddNewMovement(u8 taskId, u8 objEventId, const u8
     u8 moveScrId;
 
     moveScrId = GetMovementScriptIdFromObjectEventId(taskId, objEventId);
-    if (moveScrId != OBJECT_EVENTS_COUNT)
+    if (moveScrId != MOVEMENT_SCRIPT_SLOTS)
     {
         if (IsMovementScriptFinished(taskId, moveScrId) == 0)
         {
@@ -107,7 +141,7 @@ static bool8 ScriptMovement_TryAddNewMovement(u8 taskId, u8 objEventId, const u8
         }
     }
     moveScrId = GetMovementScriptIdFromObjectEventId(taskId, LOCALID_PLAYER);
-    if (moveScrId == OBJECT_EVENTS_COUNT)
+    if (moveScrId == MOVEMENT_SCRIPT_SLOTS)
     {
         return TRUE;
     }
@@ -124,12 +158,12 @@ static u8 GetMovementScriptIdFromObjectEventId(u8 taskId, u8 objEventId)
     u8 i;
 
     moveScriptId = (u8 *)&gTasks[taskId].data[1];
-    for (i = 0; i < OBJECT_EVENTS_COUNT; i++, moveScriptId++)
+    for (i = 0; i < MOVEMENT_SCRIPT_SLOTS; i++, moveScriptId++)
     {
         if (*moveScriptId == objEventId)
             return i;
     }
-    return OBJECT_EVENTS_COUNT;
+    return MOVEMENT_SCRIPT_SLOTS;
 }
 
 static void LoadObjectEventIdPtrFromMovementScript(u8 taskId, u8 moveScrId, u8 **pObjEventId)
@@ -202,7 +236,7 @@ static void ScriptMovement_UnfreezeActiveObjects(u8 taskId)
     u8 i;
 
     pObjEventId = (u8 *)&gTasks[taskId].data[1];
-    for (i = 0; i < OBJECT_EVENTS_COUNT; i++, pObjEventId++)
+    for (i = 0; i < MOVEMENT_SCRIPT_SLOTS; i++, pObjEventId++)
     {
         if (*pObjEventId != 0xFF)
             UnfreezeObjectEvent(&gObjectEvents[*pObjEventId]);
@@ -214,7 +248,7 @@ static void ScriptMovement_MoveObjects(u8 taskId)
     u8 i;
     u8 objEventId;
 
-    for (i = 0; i < OBJECT_EVENTS_COUNT; i++)
+    for (i = 0; i < MOVEMENT_SCRIPT_SLOTS; i++)
     {
         LoadObjectEventIdFromMovementScript(taskId, i, &objEventId);
         if (objEventId != 0xFF)

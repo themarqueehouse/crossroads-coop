@@ -8,6 +8,7 @@ Route104_OnFrame:
 	.2byte 0
 
 Route104_EventScript_StartSailToDewford::
+	coopscene GATE_STORY_BRINEY_SAIL
 	lockall
 	goto Route104_EventScript_SailToDewford
 	end
