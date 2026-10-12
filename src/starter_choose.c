@@ -46,7 +46,8 @@ static void Task_DeclineStarter(u8 taskId);
 static void Task_MoveStarterChooseCursor(u8 taskId);
 static void Task_CreateStarterLabel(u8 taskId);
 static void CreateStarterPokemonLabel(u8 selection);
-static void ShowStarterRegionName(void);
+static void ShowStarterBrowsePosition(u8 selection);
+static void ShowBrowsedStarterSprite(u8 taskId);
 static u8 CreatePokemonFrontSprite(enum Species species, u8 x, u8 y);
 static void SpriteCB_SelectionHand(struct Sprite *sprite);
 static void SpriteCB_Pokeball(struct Sprite *sprite);
@@ -166,14 +167,17 @@ static const u8 sStarterRegionNames[STARTER_REGION_COUNT][8] =
     _("KALOS"), _("ALOLA"), _("GALAR"), _("PALDEA"),
 };
 
-static const u8 sText_StarterRegionHint[] = _("{STR_VAR_1}\nUP or DOWN for another region.");
+static const u8 sText_StarterBrowseHint[] =
+    _("{STR_VAR_1}  ({STR_VAR_2})\nLEFT and RIGHT to look through them.");
 
-// Which page is showing, and whether the screen is in all-regions mode at all.
-// Module state rather than task data because the sprite callbacks and the label
+#define STARTER_ALL_COUNT (STARTER_REGION_COUNT * STARTER_MON_COUNT)
+
+// Whether the screen is showing all twenty-seven rather than Birch's three.
+//
+// Module state rather than task data because the label and the sprite both
 // need it, and because the vanilla three-Pokemon path must keep behaving
 // exactly as it did: with this FALSE, nothing below changes anything.
 static bool8 sAllRegions;
-static u8 sStarterRegion;
 
 static const struct BgTemplate sBgTemplates[3] =
 {
@@ -408,10 +412,14 @@ static const struct SpriteTemplate sSpriteTemplate_StarterCircle =
 // here, so paging through the regions is a matter of which row it reads.
 static u16 GetShownStarter(u16 slot)
 {
+    if (sAllRegions)
+    {
+        if (slot >= STARTER_ALL_COUNT)
+            slot = 0;
+        return sStarterMon_AllRegions[slot / STARTER_MON_COUNT][slot % STARTER_MON_COUNT];
+    }
     if (slot >= STARTER_MON_COUNT)
         slot = 0;
-    if (sAllRegions)
-        return sStarterMon_AllRegions[sStarterRegion][slot];
     return sStarterMon[slot];
 }
 
@@ -524,6 +532,18 @@ void CB2_ChooseStarter(void)
     ShowBg(3);
 
     taskId = CreateTask(Task_StarterChoose, 0);
+    gTasks[taskId].tPkmnSpriteId = SPRITE_NONE;
+
+    if (sAllRegions)
+    {
+        // One Pokemon in the middle, not three balls to choose between, so no
+        // balls and no hand to point at them. Opening on Hoenn's middle keeps
+        // a player who just presses A where the story expects them.
+        gTasks[taskId].tStarterSelection = STARTER_REGION_HOENN * STARTER_MON_COUNT + 1;
+        sStarterLabelWindowId = WINDOW_NONE;
+        return;
+    }
+
     gTasks[taskId].tStarterSelection = 1;
 
     // Create hand sprite
@@ -544,7 +564,6 @@ void CB2_ChooseStarter(void)
     gSprites[spriteId].sBallId = 2;
 
     sStarterLabelWindowId = WINDOW_NONE;
-    ShowStarterRegionName();
 }
 
 // Entry point for the co-op starter choice: the same screen, with all nine
@@ -556,7 +575,6 @@ void CB2_ChooseStarter(void)
 void CoopChooseStarterAllRegions(void)
 {
     sAllRegions = TRUE;
-    sStarterRegion = STARTER_REGION_HOENN;
     SetMainCallback2(CB2_ChooseStarter);
     gMain.savedCallback = CB2_ReturnToFieldContinueScriptPlayMapMusic;
 }
@@ -564,7 +582,6 @@ void CoopChooseStarterAllRegions(void)
 void CoopClearStarterAllRegions(void)
 {
     sAllRegions = FALSE;
-    sStarterRegion = STARTER_REGION_HOENN;
 }
 
 static void CB2_StarterChoose(void)
@@ -578,11 +595,20 @@ static void CB2_StarterChoose(void)
 
 static void Task_StarterChoose(u8 taskId)
 {
-    CreateStarterPokemonLabel(gTasks[taskId].tStarterSelection);
+    // The message box first, then the name label on top of it.
+    //
+    // The other way round -- which is how this was -- draws the box's frame
+    // over the bottom of the label, and the first thing the player saw was a
+    // Pokemon whose name was half behind a text box. Only the opening draw was
+    // affected, because moving the cursor redraws the label and not the box,
+    // which is a good way to not notice.
     DrawStdFrameWithCustomTileAndPalette(0, FALSE, 0x2A8, 0xD);
     AddTextPrinterParameterized(0, FONT_NORMAL, gText_BirchInTrouble, 0, 1, 0, NULL);
     PutWindowTilemap(0);
     ScheduleBgCopyTilemapToVram(0);
+    ShowBrowsedStarterSprite(taskId);
+    ShowStarterBrowsePosition(gTasks[taskId].tStarterSelection);
+    CreateStarterPokemonLabel(gTasks[taskId].tStarterSelection);
     gTasks[taskId].func = Task_HandleStarterChooseInput;
 }
 
@@ -596,6 +622,14 @@ static void Task_HandleStarterChooseInput(u8 taskId)
 
         ClearStarterLabel();
 
+        // Already on screen and already in the middle, so there is nothing to
+        // open and nothing to fly out: go straight to the question.
+        if (sAllRegions)
+        {
+            gTasks[taskId].func = Task_AskConfirmStarter;
+            return;
+        }
+
         // Create white circle background
         spriteId = CreateSprite(&sSpriteTemplate_StarterCircle, sPokeballCoords[selection][0], sPokeballCoords[selection][1], 1);
         gTasks[taskId].tCircleSpriteId = spriteId;
@@ -608,46 +642,78 @@ static void Task_HandleStarterChooseInput(u8 taskId)
         gTasks[taskId].tPkmnSpriteId = spriteId;
         gTasks[taskId].func = Task_WaitForStarterSprite;
     }
-    else if (JOY_NEW(DPAD_LEFT) && selection > 0)
+    else if (JOY_NEW(DPAD_LEFT))
     {
-        gTasks[taskId].tStarterSelection--;
-        gTasks[taskId].func = Task_MoveStarterChooseCursor;
-    }
-    else if (JOY_NEW(DPAD_RIGHT) && selection < STARTER_MON_COUNT - 1)
-    {
-        gTasks[taskId].tStarterSelection++;
-        gTasks[taskId].func = Task_MoveStarterChooseCursor;
-    }
-    else if (sAllRegions && (JOY_NEW(DPAD_UP) || JOY_NEW(DPAD_DOWN)))
-    {
-        // Turn the page. The three Pokeballs stay where they are and the
-        // highlighted slot stays highlighted; only what is behind them changes,
-        // which is why nothing has to be torn down and rebuilt here.
-        if (JOY_NEW(DPAD_UP))
-            sStarterRegion = sStarterRegion == 0 ? STARTER_REGION_COUNT - 1
-                                                 : sStarterRegion - 1;
+        if (sAllRegions)
+            gTasks[taskId].tStarterSelection =
+                selection == 0 ? STARTER_ALL_COUNT - 1 : selection - 1;
+        else if (selection > 0)
+            gTasks[taskId].tStarterSelection--;
         else
-            sStarterRegion = sStarterRegion == STARTER_REGION_COUNT - 1
-                           ? 0 : sStarterRegion + 1;
-
-        PlaySE(SE_SELECT);
-        ShowStarterRegionName();
+            return;
+        gTasks[taskId].func = Task_MoveStarterChooseCursor;
+    }
+    else if (JOY_NEW(DPAD_RIGHT))
+    {
+        if (sAllRegions)
+            gTasks[taskId].tStarterSelection =
+                selection == STARTER_ALL_COUNT - 1 ? 0 : selection + 1;
+        else if (selection < STARTER_MON_COUNT - 1)
+            gTasks[taskId].tStarterSelection++;
+        else
+            return;
         gTasks[taskId].func = Task_MoveStarterChooseCursor;
     }
 }
 
-// The region name, in the message box at the bottom that is otherwise empty
-// until the confirmation question.
-static void ShowStarterRegionName(void)
+// Where in the run of twenty-seven we are, under the picture.
+//
+// The region is named because it is useful to know where a Pokemon is from,
+// not because the list is divided by it -- left and right run straight through
+// from the first to the last and wrap round.
+static void ShowStarterBrowsePosition(u8 selection)
 {
+    u8 position[8];
+
     if (!sAllRegions)
         return;
 
-    StringCopy(gStringVar1, sStarterRegionNames[sStarterRegion]);
-    StringExpandPlaceholders(gStringVar4, sText_StarterRegionHint);
+    StringCopy(gStringVar1, sStarterRegionNames[selection / STARTER_MON_COUNT]);
+    ConvertIntToDecimalStringN(position, selection + 1, STR_CONV_MODE_LEFT_ALIGN, 2);
+    StringCopy(gStringVar2, position);
+    StringAppend(gStringVar2, gText_Slash);
+    ConvertIntToDecimalStringN(position, STARTER_ALL_COUNT, STR_CONV_MODE_LEFT_ALIGN, 2);
+    StringAppend(gStringVar2, position);
+
+    StringExpandPlaceholders(gStringVar4, sText_StarterBrowseHint);
     FillWindowPixelBuffer(0, PIXEL_FILL(1));
     AddTextPrinterParameterized(0, FONT_NORMAL, gStringVar4, 0, 1, 0, NULL);
     ScheduleBgCopyTilemapToVram(0);
+}
+
+// The Pokemon currently under the cursor, shown while browsing.
+//
+// The screen Birch's bag uses only reveals the Pokemon once you have committed
+// to a ball -- fine for three you already know, useless for twenty-seven. So
+// in all-regions mode the front sprite is created up front and swapped as the
+// cursor moves, which is the whole point of the change: you can see what you
+// are choosing before you choose it.
+static void ShowBrowsedStarterSprite(u8 taskId)
+{
+    u8 spriteId;
+
+    if (!sAllRegions)
+        return;
+
+    if (gTasks[taskId].tPkmnSpriteId != SPRITE_NONE)
+    {
+        FreeAndDestroyMonPicSprite(gTasks[taskId].tPkmnSpriteId);
+        gTasks[taskId].tPkmnSpriteId = SPRITE_NONE;
+    }
+
+    spriteId = CreatePokemonFrontSprite(GetShownStarter(gTasks[taskId].tStarterSelection),
+                                        STARTER_PKMN_POS_X, STARTER_PKMN_POS_Y);
+    gTasks[taskId].tPkmnSpriteId = spriteId;
 }
 
 static void Task_WaitForStarterSprite(u8 taskId)
@@ -695,6 +761,13 @@ static void Task_HandleConfirmStarterInput(u8 taskId)
     case 1:  // NO
     case MENU_B_PRESSED:
         PlaySE(SE_SELECT);
+        if (sAllRegions)
+        {
+            // Nothing opened, so there is nothing to put away: the picture was
+            // already on screen and the browser is about to redraw it.
+            gTasks[taskId].func = Task_DeclineStarter;
+            break;
+        }
         spriteId = gTasks[taskId].tPkmnSpriteId;
         FreeOamMatrix(gSprites[spriteId].oam.matrixNum);
         FreeAndDestroyMonPicSprite(spriteId);
@@ -725,8 +798,19 @@ static void CreateStarterPokemonLabel(u8 selection)
     speciesName = GetSpeciesName(species);
 
     winTemplate = sWindowTemplate_StarterLabel;
-    winTemplate.tilemapLeft = sStarterLabelCoords[selection][0];
-    winTemplate.tilemapTop = sStarterLabelCoords[selection][1];
+    if (sAllRegions)
+    {
+        // One fixed place under the picture. The per-slot coordinates below
+        // describe where each of three Pokeballs is, which says nothing once
+        // there is one Pokemon in the middle and twenty-seven of them.
+        winTemplate.tilemapLeft = 8;
+        winTemplate.tilemapTop = 10;
+    }
+    else
+    {
+        winTemplate.tilemapLeft = sStarterLabelCoords[selection][0];
+        winTemplate.tilemapTop = sStarterLabelCoords[selection][1];
+    }
 
     sStarterLabelWindowId = AddWindow(&winTemplate);
     FillWindowPixelBuffer(sStarterLabelWindowId, PIXEL_FILL(0));
@@ -740,10 +824,10 @@ static void CreateStarterPokemonLabel(u8 selection)
     PutWindowTilemap(sStarterLabelWindowId);
     ScheduleBgCopyTilemapToVram(0);
 
-    labelLeft = sStarterLabelCoords[selection][0] * 8 - 4;
-    labelRight = (sStarterLabelCoords[selection][0] + 13) * 8 + 4;
-    labelTop = sStarterLabelCoords[selection][1] * 8;
-    labelBottom = (sStarterLabelCoords[selection][1] + 4) * 8;
+    labelLeft = winTemplate.tilemapLeft * 8 - 4;
+    labelRight = (winTemplate.tilemapLeft + 13) * 8 + 4;
+    labelTop = winTemplate.tilemapTop * 8;
+    labelBottom = (winTemplate.tilemapTop + 4) * 8;
     SetGpuReg(REG_OFFSET_WIN0H, WIN_RANGE(labelLeft, labelRight));
     SetGpuReg(REG_OFFSET_WIN0V, WIN_RANGE(labelTop, labelBottom));
 }
@@ -768,6 +852,8 @@ static void Task_MoveStarterChooseCursor(u8 taskId)
 static void Task_CreateStarterLabel(u8 taskId)
 {
     CreateStarterPokemonLabel(gTasks[taskId].tStarterSelection);
+    ShowBrowsedStarterSprite(taskId);
+    ShowStarterBrowsePosition(gTasks[taskId].tStarterSelection);
     gTasks[taskId].func = Task_HandleStarterChooseInput;
 }
 

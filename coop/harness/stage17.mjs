@@ -13,13 +13,15 @@
 // scene does. What is worth establishing:
 //
 //   1. the screen comes up at all, rather than the script locking on waitstate
-//   2. up and down page between regions -- the whole point of the change
+//   2. left and right run straight through all twenty-seven, across what used
+//      to be region boundaries -- the whole point of the change
 //   3. confirming hands back the species that was on screen, not the slot
 //   4. a Pokemon of that species actually lands in the party
 //   5. the script comes back and the player has control again
 //
-// Sinnoh, by paging once from Hoenn, because a Turtwig proves the page turned
-// and a Treecko would not.
+// Three presses right from where it opens, which is Hoenn's middle: that lands
+// in Sinnoh, so a Sinnoh starter proves the list is continuous and a Hoenn one
+// proves it is still fenced off by region.
 //
 //   node coop/harness/stage17.mjs path/to/rom.gba
 import { startRig, tally, OFFSETS, runDebugScriptOn } from './rig.mjs';
@@ -27,14 +29,11 @@ import { startRig, tally, OFFSETS, runDebugScriptOn } from './rig.mjs';
 const PORT = 8805;
 const ROM = process.argv[2] || '/home/claude/crossroads/pokeemerald.gba';
 
-// src/starter_choose.c, sStarterMon_AllRegions. Hoenn is the page the screen
-// opens on, Sinnoh the next one down.
+// src/starter_choose.c, sStarterMon_AllRegions. The screen opens on Hoenn's
+// middle, so three to the right is the middle of Sinnoh.
 //
-// A whole page rather than one Pokemon, because the screen opens with the
-// MIDDLE of the three under the cursor, not the first -- which is how the first
-// run of this reported a failure while the page had turned perfectly and handed
-// back a Chimchar. What matters is that the species came from the next region,
-// not which of its three the cursor happened to be resting on.
+// A whole region rather than one Pokemon, so this keeps testing what it is
+// about -- that the list runs on -- if the opening position is ever moved.
 const HOENN = [252, 255, 258];      // Treecko, Torchic, Mudkip
 const SINNOH = [387, 390, 393];     // Turtwig, Chimchar, Piplup
 
@@ -82,16 +81,18 @@ async function main() {
             'the script is not running -- waitstate never got a screen to wait for');
     await rig.shot('/tmp/claude-0/stage17-hoenn');
 
-    // ------------------------------------------------- paging
+    // ------------------------------------------------- running through the list
     //
-    // One press down: Hoenn to Sinnoh. Then A on the leftmost of the three,
-    // which is Turtwig, and A again on the YES of the confirmation.
-    await rig.tap(0, 'Down', 8);
-    await rig.wait(90);
+    // Three to the right, off the end of Hoenn's three and into Sinnoh's. Then
+    // A to be asked, and A again on the YES.
+    for (let i = 0; i < 3; i++) {
+      await rig.tap(0, 'Right', 8);
+      await rig.wait(60);
+    }
     await rig.shot('/tmp/claude-0/stage17-sinnoh');
 
     await rig.tap(0, 'A', 8);
-    await rig.wait(180);          // the ball opens and the sprite flies in
+    await rig.wait(120);
     await rig.tap(0, 'A', 8);
     await rig.wait(240);          // confirm, then back to the field
 
@@ -102,9 +103,9 @@ async function main() {
     t.note('party after', after.map((m) => `L${m.level}`).join(' ') || 'empty');
     await rig.shot('/tmp/claude-0/stage17-after');
 
-    t.check('paging reached another region', SINNOH.includes(species),
+    t.check('the list runs past the end of a region', SINNOH.includes(species),
             HOENN.includes(species)
-              ? 'still on the Hoenn page -- down did not turn it'
+              ? 'stopped at the end of Hoenn -- the list is still fenced by region'
               : `expected one of Sinnoh's three (${SINNOH}), got ${species}`);
 
     t.check('a Pokemon arrived', after.length === before.length + 1,
