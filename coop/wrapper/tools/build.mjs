@@ -51,9 +51,33 @@ function checkImports(dir) {
   // `from '...'`, `import '...'`, and `src="..."` in the HTML.
   const specRe = /(?:from|import)\s*\(?\s*['"]([^'"]+)['"]|src=["']([^"']+)["']/g;
 
+  // Comments are not code, and prose is full of things that look like imports.
+  //
+  // A line explaining that the ROM "cannot tell slot 0 apart from \"I am Player
+  // 1\"" failed this check and took the site build down with it, because the
+  // words before the quotes were `apart from`. The quickest way to stop a
+  // sentence being parsed as an import is to stop reading sentences.
+  //
+  // Line comments only. Block comments would need the string-literal state
+  // machine this is deliberately not, and every comment in this codebase that
+  // could contain prose is a line comment.
+  const withoutComments = (text) =>
+    text.split('\n')
+        .map((line) => {
+          const at = line.indexOf('//');
+          if (at < 0) return line;
+          // Not a comment if the slashes are inside quotes -- a URL, mostly.
+          const before = line.slice(0, at);
+          const quotes = (before.match(/['"`]/g) || []).length;
+          return quotes % 2 === 0 ? before : line;
+        })
+        .join('\n');
+
   for (const f of files) {
     if (!/\.(js|mjs|html)$/.test(f.rel)) continue;
-    const src = readFileSync(f.abs, 'utf8');
+    const src = /\.html$/.test(f.rel)
+      ? readFileSync(f.abs, 'utf8')
+      : withoutComments(readFileSync(f.abs, 'utf8'));
     for (const m of src.matchAll(specRe)) {
       const spec = m[1] ?? m[2];
       if (!spec) continue;
